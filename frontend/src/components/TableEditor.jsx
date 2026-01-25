@@ -358,6 +358,47 @@ export default function TableEditor({ table, onUpdate }) {
                           className="w-full h-8 bg-gray-700 border border-gray-600 rounded cursor-pointer"
                         />
                       </div>
+                      <div>
+                        <label className="text-xs text-gray-400 mb-1 block">Cell Borders</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <label className="flex items-center gap-1 text-xs cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={cell.showBorderTop !== false}
+                              onChange={(e) => handleCellUpdate(rowIndex, colIndex, { showBorderTop: e.target.checked })}
+                              className="w-3 h-3 rounded bg-gray-700 border-gray-600 text-blue-600"
+                            />
+                            Top
+                          </label>
+                          <label className="flex items-center gap-1 text-xs cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={cell.showBorderRight !== false}
+                              onChange={(e) => handleCellUpdate(rowIndex, colIndex, { showBorderRight: e.target.checked })}
+                              className="w-3 h-3 rounded bg-gray-700 border-gray-600 text-blue-600"
+                            />
+                            Right
+                          </label>
+                          <label className="flex items-center gap-1 text-xs cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={cell.showBorderBottom !== false}
+                              onChange={(e) => handleCellUpdate(rowIndex, colIndex, { showBorderBottom: e.target.checked })}
+                              className="w-3 h-3 rounded bg-gray-700 border-gray-600 text-blue-600"
+                            />
+                            Bottom
+                          </label>
+                          <label className="flex items-center gap-1 text-xs cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={cell.showBorderLeft !== false}
+                              onChange={(e) => handleCellUpdate(rowIndex, colIndex, { showBorderLeft: e.target.checked })}
+                              className="w-3 h-3 rounded bg-gray-700 border-gray-600 text-blue-600"
+                            />
+                            Left
+                          </label>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
