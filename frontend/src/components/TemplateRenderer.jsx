@@ -123,32 +123,32 @@ export default function TemplateRenderer({ template, syllabus }) {
       );
     }
 
-    if (element.type === 'table' && element.rows && Array.isArray(element.rows)) {
+    if (element.type === 'table' && element.data && Array.isArray(element.data)) {
       return (
         <table
           key={element.id}
           style={{
             ...baseStyle,
             borderCollapse: 'collapse',
-            width: `${element.width || 400}px`,
           }}
         >
           <tbody>
-            {element.rows.map((row, rowIndex) => (
+            {element.data.map((row, rowIndex) => (
               <tr key={rowIndex}>
-                {Array.isArray(row.cells) && row.cells.map((cell, cellIndex) => (
+                {Array.isArray(row) && row.map((cell, colIndex) => (
                   <td
-                    key={cellIndex}
+                    key={colIndex}
                     style={{
-                      border: `${cell.borderWidth || 1}px solid ${cell.borderColor || '#000'}`,
-                      padding: `${cell.padding || 8}px`,
-                      backgroundColor: cell.bgColor || '#fff',
-                      fontSize: `${cell.fontSize || 14}px`,
+                      width: element.cellWidth ? `${element.cellWidth}px` : 'auto',
+                      height: element.cellHeight ? `${element.cellHeight}px` : 'auto',
+                      border: `${element.borderWidth || 1}px solid ${element.borderColor || '#000'}`,
+                      padding: '8px',
+                      backgroundColor: cell.bg || '#fff',
+                      fontSize: `${cell.fontSize || 12}px`,
                       fontFamily: cell.fontFamily || 'Arial',
                       fontWeight: cell.fontWeight || 'normal',
                       color: cell.color || '#000',
                       textAlign: cell.align || 'left',
-                      width: cell.width ? `${cell.width}px` : 'auto',
                     }}
                   >
                     {cell.content}
@@ -186,6 +186,7 @@ export default function TemplateRenderer({ template, syllabus }) {
           height: `${headerHeight}px`,
           backgroundColor: renderedDocument.styles?.headerBg || '#f8f9fa',
           borderBottom: '1px solid #ddd',
+          overflow: 'visible',
         }}
       >
         {renderedDocument.header?.elements?.map(renderElement)}
@@ -209,6 +210,7 @@ export default function TemplateRenderer({ template, syllabus }) {
           height: `${footerHeight}px`,
           backgroundColor: renderedDocument.styles?.footerBg || '#f8f9fa',
           borderTop: '1px solid #ddd',
+          overflow: 'visible',
         }}
       >
         {renderedDocument.footer?.elements?.map(renderElement)}
