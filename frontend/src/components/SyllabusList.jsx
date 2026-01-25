@@ -1,4 +1,5 @@
 import { syllabusAPI } from '../services/api';
+import { User, Calendar, BookOpen, Printer, Edit, Trash2, Eye } from 'lucide-react';
 
 export default function SyllabusList({ syllabi, onEditSyllabus, onDeleteSyllabus, onViewSyllabus, onViewPrint, loading }) {
   const handleDelete = async (id) => {
@@ -68,23 +69,17 @@ export default function SyllabusList({ syllabi, onEditSyllabus, onDeleteSyllabus
 
             <div className="space-y-2 text-sm text-gray-600 mb-4">
               <div className="flex items-center">
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
+                <User className="w-4 h-4 mr-2" />
                 <span className="truncate">{syllabus.instructorName}</span>
               </div>
 
               <div className="flex items-center">
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+                <Calendar className="w-4 h-4 mr-2" />
                 <span>{syllabus.semester} {syllabus.year}</span>
               </div>
 
               <div className="flex items-center">
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
+                <BookOpen className="w-4 h-4 mr-2" />
                 <span>{syllabus.credits} Credits</span>
               </div>
             </div>
@@ -97,27 +92,31 @@ export default function SyllabusList({ syllabi, onEditSyllabus, onDeleteSyllabus
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => onViewSyllabus(syllabus)}
-                className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+                className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
               >
+                <Eye className="w-4 h-4" />
                 View
               </button>
               <button
                 onClick={() => onViewPrint(syllabus)}
-                className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
+                className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors flex items-center justify-center gap-1"
                 title="Print/Export"
               >
-                🖨️ Print
+                <Printer className="w-4 h-4" />
+                Print
               </button>
               <button
                 onClick={() => onEditSyllabus(syllabus)}
-                className="px-3 py-2 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors"
+                className="px-3 py-2 border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors flex items-center gap-1"
               >
+                <Edit className="w-4 h-4" />
                 Edit
               </button>
               <button
                 onClick={() => handleDelete(syllabus._id)}
-                className="px-3 py-2 border border-red-300 text-red-600 text-sm rounded-md hover:bg-red-50 transition-colors"
+                className="px-3 py-2 border border-red-300 text-red-600 text-sm rounded-md hover:bg-red-50 transition-colors flex items-center gap-1"
               >
+                <Trash2 className="w-4 h-4" />
                 Delete
               </button>
             </div>

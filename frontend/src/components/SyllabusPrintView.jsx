@@ -3,6 +3,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle } from 'docx';
 import { saveAs } from 'file-saver';
+import { X, Printer, FileText, File } from 'lucide-react';
 import { settingsAPI } from '../services/api';
 
 export default function SyllabusPrintView({ syllabus, onClose }) {
@@ -341,31 +342,44 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
               <button
                 onClick={handlePrint}
                 disabled={exporting}
-                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50 transition-colors text-sm font-medium"
+                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50 transition-colors text-sm font-medium flex items-center gap-2"
               >
-                🖨️ Print
+                <Printer className="w-4 h-4" />
+                Print
               </button>
               <button
                 onClick={handleExportPDF}
                 disabled={exporting}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 transition-colors text-sm font-medium"
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 transition-colors text-sm font-medium flex items-center gap-2"
               >
-                {exporting ? 'Exporting...' : '📄 Export PDF'}
+                {exporting ? (
+                  'Exporting...'
+                ) : (
+                  <>
+                    <File className="w-4 h-4" />
+                    Export PDF
+                  </>
+                )}
               </button>
               <button
                 onClick={handleExportWord}
                 disabled={exporting}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors text-sm font-medium"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors text-sm font-medium flex items-center gap-2"
               >
-                {exporting ? 'Exporting...' : '📝 Export Word'}
+                {exporting ? (
+                  'Exporting...'
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4" />
+                    Export Word
+                  </>
+                )}
               </button>
               <button
                 onClick={onClose}
                 className="text-gray-400 hover:text-gray-600 transition-colors ml-2"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X className="w-6 h-6" />
               </button>
             </div>
           </div>
