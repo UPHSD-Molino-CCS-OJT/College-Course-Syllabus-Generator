@@ -24,6 +24,11 @@ const INITIAL_FORM_DATA = {
   lateSubmissionPolicy: '',
   academicIntegrity: '',
   disabilities: '',
+  dateRevised: '',
+  dateOfEffectivity: '',
+  reviewed: '',
+  recommendingApproval: '',
+  approved: '',
   status: 'draft',
   template: null,
 };
@@ -138,6 +143,7 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
     { id: 'grading', name: 'Grading' },
     { id: 'schedule', name: 'Schedule' },
     { id: 'policies', name: 'Policies' },
+    { id: 'approval', name: 'Approval' },
   ];
 
   return (
@@ -605,6 +611,69 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
                 rows="3"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Accommodation policies..."
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Approval Tab */}
+        {activeTab === 'approval' && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date Revised</label>
+              <input
+                type="date"
+                name="dateRevised"
+                value={formData.dateRevised ? new Date(formData.dateRevised).toISOString().split('T')[0] : ''}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date of Effectivity</label>
+              <input
+                type="date"
+                name="dateOfEffectivity"
+                value={formData.dateOfEffectivity ? new Date(formData.dateOfEffectivity).toISOString().split('T')[0] : ''}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Reviewed By</label>
+              <input
+                type="text"
+                name="reviewed"
+                value={formData.reviewed}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Name of reviewer..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Recommending Approval</label>
+              <input
+                type="text"
+                name="recommendingApproval"
+                value={formData.recommendingApproval}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Name of person recommending approval..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Approved By</label>
+              <input
+                type="text"
+                name="approved"
+                value={formData.approved}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Name of approver..."
               />
             </div>
           </div>

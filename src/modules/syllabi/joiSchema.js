@@ -48,6 +48,12 @@ module.exports = {
     academicIntegrity: Joi.string().max(1000).allow(""),
     disabilities: Joi.string().max(1000).allow(""),
     
+    dateRevised: Joi.date().allow(null),
+    dateOfEffectivity: Joi.date().allow(null),
+    reviewed: Joi.string().max(200).allow(""),
+    recommendingApproval: Joi.string().max(200).allow(""),
+    approved: Joi.string().max(200).allow(""),
+    
     status: Joi.string().valid("draft", "published", "archived"),
     template: Joi.string().allow(null),
     createdBy: Joi.string().allow(null),
@@ -84,6 +90,12 @@ module.exports = {
     lateSubmissionPolicy: Joi.string().max(1000).allow(""),
     academicIntegrity: Joi.string().max(1000).allow(""),
     disabilities: Joi.string().max(1000).allow(""),
+    
+    dateRevised: Joi.date().allow(null),
+    dateOfEffectivity: Joi.date().allow(null),
+    reviewed: Joi.string().max(200).allow(""),
+    recommendingApproval: Joi.string().max(200).allow(""),
+    approved: Joi.string().max(200).allow(""),
     
     status: Joi.string().valid("draft", "published", "archived"),
     template: Joi.string().allow(null),

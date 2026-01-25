@@ -158,6 +158,26 @@ const syllabusSchema = new mongoose.Schema(
       maxlength: 1000,
     },
 
+    // Approval Information
+    dateRevised: {
+      type: Date,
+    },
+    dateOfEffectivity: {
+      type: Date,
+    },
+    reviewed: {
+      type: String,
+      maxlength: 200,
+    },
+    recommendingApproval: {
+      type: String,
+      maxlength: 200,
+    },
+    approved: {
+      type: String,
+      maxlength: 200,
+    },
+
     // Status
     status: {
       type: String,

@@ -21,6 +21,11 @@ export default function DataFieldPicker({ onInsert, compact = false }) {
     { value: '{{attendancePolicy}}', label: 'Attendance Policy' },
     { value: '{{lateSubmissionPolicy}}', label: 'Late Submission Policy' },
     { value: '{{academicIntegrity}}', label: 'Academic Integrity' },
+    { value: '{{dateRevised}}', label: 'Date Revised' },
+    { value: '{{dateOfEffectivity}}', label: 'Date of Effectivity' },
+    { value: '{{reviewed}}', label: 'Reviewed By' },
+    { value: '{{recommendingApproval}}', label: 'Recommending Approval' },
+    { value: '{{approved}}', label: 'Approved By' },
   ];
 
   const handleSelect = (e) => {
