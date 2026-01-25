@@ -197,13 +197,11 @@ export default function TemplateRenderer({ template, syllabus }) {
 
   return (
     <div
+      className="mx-auto bg-white rounded-lg shadow-lg"
       style={{
         width: `${dimensions.width}px`,
         height: `${dimensions.height}px`,
         position: 'relative',
-        backgroundColor: '#fff',
-        margin: '0 auto',
-        boxShadow: '0 0 10px rgba(0,0,0,0.1)',
       }}
     >
       {/* Header */}
