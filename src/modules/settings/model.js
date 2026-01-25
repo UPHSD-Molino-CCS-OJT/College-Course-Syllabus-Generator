@@ -35,12 +35,11 @@ const brandingSettingsSchema = new mongoose.Schema(
       type: [{
         type: {
           type: String,
-          enum: ['text', 'image'],
+          enum: ['text', 'image', 'group'],
           required: true,
         },
         content: {
-          type: String, // For text: actual text; For image: base64 string
-          required: true,
+          type: String, // For text: actual text; For image: base64 string; For group: not used
         },
         alignment: {
           type: String,
@@ -54,6 +53,22 @@ const brandingSettingsSchema = new mongoose.Schema(
           width: { type: Number }, // For images
           height: { type: Number }, // For images
         },
+        children: [{
+          type: {
+            type: String,
+            enum: ['text', 'image'],
+          },
+          content: {
+            type: String,
+          },
+          styles: {
+            fontWeight: { type: String, default: 'normal' },
+            fontSize: { type: String, default: 'medium' },
+            color: { type: String, default: '#000000' },
+            width: { type: Number },
+            height: { type: Number },
+          },
+        }], // For group type: child elements
         order: {
           type: Number,
           default: 0,
@@ -70,12 +85,11 @@ const brandingSettingsSchema = new mongoose.Schema(
       type: [{
         type: {
           type: String,
-          enum: ['text', 'image'],
+          enum: ['text', 'image', 'group'],
           required: true,
         },
         content: {
           type: String,
-          required: true,
         },
         alignment: {
           type: String,
@@ -89,6 +103,22 @@ const brandingSettingsSchema = new mongoose.Schema(
           width: { type: Number },
           height: { type: Number },
         },
+        children: [{
+          type: {
+            type: String,
+            enum: ['text', 'image'],
+          },
+          content: {
+            type: String,
+          },
+          styles: {
+            fontWeight: { type: String, default: 'normal' },
+            fontSize: { type: String, default: 'medium' },
+            color: { type: String, default: '#000000' },
+            width: { type: Number },
+            height: { type: Number },
+          },
+        }],
         order: {
           type: Number,
           default: 0,
