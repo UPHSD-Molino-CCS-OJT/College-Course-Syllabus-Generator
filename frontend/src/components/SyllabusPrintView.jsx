@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle, Header, ImageRun } from 'docx';
 import { saveAs } from 'file-saver';
 import { X, Printer, FileText, File } from 'lucide-react';
 import { settingsAPI } from '../services/api';
@@ -77,6 +77,63 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
   const handleExportWord = async () => {
     setExporting(true);
     try {
+      // Prepare header elements
+      const headerElements = [];
+
+      // Add logo to header if available
+      if (settings?.institutionLogo) {
+        try {
+          // Convert base64 to buffer
+          const base64Data = settings.institutionLogo.split(',')[1];
+          const binaryString = atob(base64Data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+
+          headerElements.push(
+            new Paragraph({
+              children: [
+                new ImageRun({
+                  data: bytes,
+                  transformation: {
+                    width: 100,
+                    height: 100,
+                  },
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+              spacing: { after: 100 },
+            })
+          );
+        } catch (error) {
+          console.error('Error adding logo to header:', error);
+        }
+      }
+
+      // Add institution name to header
+      if (settings?.institutionName) {
+        headerElements.push(
+          new Paragraph({
+            text: settings.institutionName,
+            bold: true,
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 50 },
+          })
+        );
+      }
+
+      // Add header text if available
+      if (settings?.headerText) {
+        headerElements.push(
+          new Paragraph({
+            text: settings.headerText,
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 100 },
+          })
+        );
+      }
+
       const doc = new Document({
         sections: [{
           properties: {
@@ -85,19 +142,17 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
               height: 12240, // Legal landscape height in twips (8.5" = 8.5 * 1440)
             },
           },
-          children: [
-            // Header
-            new Paragraph({
-              text: settings?.institutionName || 'College Name',
-              heading: HeadingLevel.HEADING_1,
-              alignment: AlignmentType.CENTER,
-              spacing: { after: 200 },
+          headers: {
+            default: new Header({
+              children: headerElements.length > 0 ? headerElements : [
+                new Paragraph({
+                  text: 'College Course Syllabus',
+                  alignment: AlignmentType.CENTER,
+                }),
+              ],
             }),
-            ...(settings?.headerText ? [new Paragraph({
-              text: settings.headerText,
-              alignment: AlignmentType.CENTER,
-              spacing: { after: 400 },
-            })] : []),
+          },
+          children: [
 
             // Course Title
             new Paragraph({
