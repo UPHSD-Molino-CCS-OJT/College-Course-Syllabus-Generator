@@ -1,30 +1,19 @@
 version: "3.8"
 
 services:
-  mysql:
-    container_name: mysql
-    image: mysql
+  mongodb:
+    container_name: mongodb
+    image: mongo:latest
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: test
-      MYSQL_USER: test
-      MYSQL_PASSWORD: test
+      MONGO_INITDB_ROOT_USERNAME: test
+      MONGO_INITDB_ROOT_PASSWORD: test
+      MONGO_INITDB_DATABASE: test
     ports:
-      - "3306:3306"
+      - "27017:27017"
     volumes:
-      - mysql-data:/var/lib/mysql
+      - mongodb-data:/data/db
     healthcheck:
-      test:
-        [
-          "CMD",
-          "mysqladmin",
-          "ping",
-          "-h",
-          "localhost",
-          "-u",
-          "root",
-          "-p${MYSQL_ROOT_PASSWORD}",
-        ]
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -39,20 +28,21 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
-      USERNAME: test
-      PASSWORD: test
-      DATABASE: test
-      HOST: mysql
+      MONGODB_USER: test
+      MONGODB_PASSWORD: test
+      MONGODB_DATABASE: test
+      MONGODB_HOST: mongodb
+      MONGODB_PORT: 27017
     ports:
       - "3000:3000"
     # networks:
     #   - main-network
     depends_on:
-      mysql:
+      mongodb:
         condition: service_healthy
     restart: always
 
 volumes:
-  mysql-data:
+  mongodb-data:
 # networks:
 #   main-network:
