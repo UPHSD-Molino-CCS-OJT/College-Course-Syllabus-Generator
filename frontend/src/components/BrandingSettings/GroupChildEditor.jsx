@@ -1,4 +1,4 @@
-import { Trash2, Type, Image, Folder } from 'lucide-react';
+import { Trash2, Type, Image, Folder, GripVertical } from 'lucide-react';
 import { useState } from 'react';
 
 export default function GroupChildEditor({ 
@@ -11,6 +11,8 @@ export default function GroupChildEditor({
   onUpdateNestedChild
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [draggedNestedIndex, setDraggedNestedIndex] = useState(null);
+  const [dragOverNestedIndex, setDragOverNestedIndex] = useState(null);
   
   const handleImageUpload = (file) => {
     if (file) {
@@ -20,6 +22,44 @@ export default function GroupChildEditor({
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleNestedDragStart = (e, index) => {
+    e.stopPropagation();
+    setDraggedNestedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleNestedDragOver = (e, index) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedNestedIndex !== null && draggedNestedIndex !== index) {
+      setDragOverNestedIndex(index);
+    }
+  };
+
+  const handleNestedDrop = (e, dropIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (draggedNestedIndex === null || draggedNestedIndex === dropIndex) {
+      setDraggedNestedIndex(null);
+      setDragOverNestedIndex(null);
+      return;
+    }
+
+    const children = [...(child.children || [])];
+    const [draggedItem] = children.splice(draggedNestedIndex, 1);
+    children.splice(dropIndex, 0, draggedItem);
+    
+    onUpdate(childIndex, 'children', children);
+    setDraggedNestedIndex(null);
+    setDragOverNestedIndex(null);
+  };
+
+  const handleNestedDragEnd = () => {
+    setDraggedNestedIndex(null);
+    setDragOverNestedIndex(null);
   };
 
   return (
@@ -238,26 +278,45 @@ export default function GroupChildEditor({
               ) : (
                 <div className="space-y-1">
                   {child.children.map((nestedChild, nestedIndex) => (
-                    <GroupChildEditor
+                    <div
                       key={nestedChild.id || nestedIndex}
-                      child={nestedChild}
-                      childIndex={nestedIndex}
-                      onUpdate={(idx, field, value) => 
-                        onUpdateNestedChild && onUpdateNestedChild(childIndex, idx, field, value)
-                      }
-                      onRemove={(idx) => 
-                        onRemoveNestedChild && onRemoveNestedChild(childIndex, idx)
-                      }
-                      onAddNestedChild={(nestedIdx, type) => 
-                        onAddNestedChild && onAddNestedChild(childIndex, type, nestedIdx)
-                      }
-                      onRemoveNestedChild={(nestedIdx, deepIdx) =>
-                        onRemoveNestedChild && onRemoveNestedChild(childIndex, nestedIdx, deepIdx)
-                      }
-                      onUpdateNestedChild={(nestedIdx, deepIdx, field, value) =>
-                        onUpdateNestedChild && onUpdateNestedChild(childIndex, nestedIdx, deepIdx, field, value)
-                      }
-                    />
+                      draggable
+                      onDragStart={(e) => handleNestedDragStart(e, nestedIndex)}
+                      onDragOver={(e) => handleNestedDragOver(e, nestedIndex)}
+                      onDrop={(e) => handleNestedDrop(e, nestedIndex)}
+                      onDragEnd={handleNestedDragEnd}
+                      className={`relative ${
+                        draggedNestedIndex === nestedIndex ? 'opacity-50' : ''
+                      } ${
+                        dragOverNestedIndex === nestedIndex ? 'border-t-2 border-purple-400' : ''
+                      }`}
+                    >
+                      {/* Drag handle indicator */}
+                      <div className="absolute left-0.5 top-3 text-gray-400 cursor-grab active:cursor-grabbing z-10">
+                        <GripVertical size={12} />
+                      </div>
+                      <div className="pl-5">
+                        <GroupChildEditor
+                          child={nestedChild}
+                          childIndex={nestedIndex}
+                          onUpdate={(idx, field, value) => 
+                            onUpdateNestedChild && onUpdateNestedChild(childIndex, idx, field, value)
+                          }
+                          onRemove={(idx) => 
+                            onRemoveNestedChild && onRemoveNestedChild(childIndex, idx)
+                          }
+                          onAddNestedChild={(nestedIdx, type) => 
+                            onAddNestedChild && onAddNestedChild(childIndex, type, nestedIdx)
+                          }
+                          onRemoveNestedChild={(nestedIdx, deepIdx) =>
+                            onRemoveNestedChild && onRemoveNestedChild(childIndex, nestedIdx, deepIdx)
+                          }
+                          onUpdateNestedChild={(nestedIdx, deepIdx, field, value) =>
+                            onUpdateNestedChild && onUpdateNestedChild(childIndex, nestedIdx, deepIdx, field, value)
+                          }
+                        />
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}

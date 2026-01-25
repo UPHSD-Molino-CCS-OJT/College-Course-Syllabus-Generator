@@ -1,4 +1,5 @@
-import { Type, Image, Folder } from 'lucide-react';
+import { Type, Image, Folder, GripVertical } from 'lucide-react';
+import { useState } from 'react';
 import GroupChildEditor from './GroupChildEditor';
 
 export default function GroupBlockEditor({ 
@@ -8,6 +9,46 @@ export default function GroupBlockEditor({
   onRemoveChild, 
   onUpdateChild 
 }) {
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+
+  const handleDragStart = (e, index) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const children = [...(block.children || [])];
+    const [draggedItem] = children.splice(draggedIndex, 1);
+    children.splice(dropIndex, 0, draggedItem);
+    
+    onUpdate('children', children);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
   return (
     <>
       {/* Group Layout */}
@@ -95,12 +136,29 @@ export default function GroupBlockEditor({
         ) : (
           <div className="space-y-2">
             {block.children.map((child, childIndex) => (
-              <GroupChildEditor
+              <div
                 key={child.id || childIndex}
-                child={child}
-                childIndex={childIndex}
-                onUpdate={onUpdateChild}
-                onRemove={onRemoveChild}
+                draggable
+                onDragStart={(e) => handleDragStart(e, childIndex)}
+                onDragOver={(e) => handleDragOver(e, childIndex)}
+                onDrop={(e) => handleDrop(e, childIndex)}
+                onDragEnd={handleDragEnd}
+                className={`relative ${
+                  draggedIndex === childIndex ? 'opacity-50' : ''
+                } ${
+                  dragOverIndex === childIndex ? 'border-t-2 border-purple-500' : ''
+                }`}
+              >
+                {/* Drag handle indicator */}
+                <div className="absolute left-1 top-4 text-gray-400 cursor-grab active:cursor-grabbing z-10">
+                  <GripVertical size={14} />
+                </div>
+                <div className="pl-6">
+                  <GroupChildEditor
+                    child={child}
+                    childIndex={childIndex}
+                    onUpdate={onUpdateChild}
+                    onRemove={onRemoveChild}
                 onAddNestedChild={(parentIdx, type) => {
                   // Add to nested group
                   const newChild = {
@@ -144,7 +202,9 @@ export default function GroupBlockEditor({
                   );
                   onUpdateChild(parentIdx, 'children', updatedChildren);
                 }}
-              />
+                />
+                </div>
+              </div>
             ))}
           </div>
         )}
