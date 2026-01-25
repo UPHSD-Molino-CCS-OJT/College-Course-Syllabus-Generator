@@ -22,6 +22,10 @@ export default function PreviewSection({ settings, renderContentBlock, onEditBlo
                   ? 'flex items-center gap-4 flex-wrap'
                   : 'space-y-2'
               }
+              style={{
+                justifyContent:
+                  settings.headerLayout === 'horizontal' ? 'space-between' : 'initial',
+              }}
             >
               {settings.headerContent
                 .sort((a, b) => a.order - b.order)
@@ -72,6 +76,10 @@ export default function PreviewSection({ settings, renderContentBlock, onEditBlo
                   ? 'flex items-center gap-4 flex-wrap'
                   : 'space-y-2'
               }
+              style={{
+                justifyContent:
+                  settings.footerLayout === 'horizontal' ? 'space-between' : 'initial',
+              }}
             >
               {settings.footerContent
                 .sort((a, b) => a.order - b.order)
