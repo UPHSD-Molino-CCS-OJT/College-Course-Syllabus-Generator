@@ -292,7 +292,7 @@ function App() {
 
       {editingCanvas && (
         <CanvasEditor
-          syllabus={editingCanvas}
+          template={editingCanvas}
           onClose={() => setEditingCanvas(null)}
           onSave={handleCanvasSave}
         />
