@@ -334,7 +334,7 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
 
       {/* Modal */}
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 no-print">
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="bg-white rounded-lg shadow-xl w-full max-h-[90vh] overflow-hidden flex flex-col" style={{ maxWidth: 'calc(356mm + 48px)' }}>
           {/* Modal Header */}
           <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 flex justify-between items-center">
             <h2 className="text-xl font-bold text-gray-900">Print/Export Syllabus</h2>
