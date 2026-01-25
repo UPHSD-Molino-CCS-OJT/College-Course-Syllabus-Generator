@@ -4,6 +4,7 @@ import UserList from './components/UserList';
 import SyllabusForm from './components/SyllabusForm';
 import SyllabusList from './components/SyllabusList';
 import SyllabusView from './components/SyllabusView';
+import SyllabusTemplateView from './components/SyllabusTemplateView';
 import { userAPI, syllabusAPI } from './services/api';
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
   const [syllabi, setSyllabi] = useState([]);
   const [editingSyllabus, setEditingSyllabus] = useState(null);
   const [viewingSyllabus, setViewingSyllabus] = useState(null);
+  const [viewingTemplate, setViewingTemplate] = useState(null);
   const [syllabiLoading, setSyllabiLoading] = useState(false);
   const [syllabusPage, setSyllabusPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState('');
@@ -105,6 +107,10 @@ function App() {
 
   const handleViewSyllabus = (syllabus) => {
     setViewingSyllabus(syllabus);
+  };
+
+  const handleViewTemplate = (syllabus) => {
+    setViewingTemplate(syllabus);
   };
 
   const handleDeleteSyllabus = (id) => {
@@ -224,6 +230,7 @@ function App() {
 
             {/* Syllabus List */}
             <SyllabusList
+              onViewTemplate={handleViewTemplate}
               syllabi={syllabi}
               onEditSyllabus={handleEditSyllabus}
               onDeleteSyllabus={handleDeleteSyllabus}
@@ -260,6 +267,12 @@ function App() {
                 syllabus={viewingSyllabus}
                 onClose={() => setViewingSyllabus(null)}
                 onEdit={handleEditSyllabus}
+              />            )}
+            {/* Syllabus Template View Modal */}
+            {viewingTemplate && (
+              <SyllabusTemplateView
+                syllabus={viewingTemplate}
+                onClose={() => setViewingTemplate(null)}
               />
             )}
           </>
