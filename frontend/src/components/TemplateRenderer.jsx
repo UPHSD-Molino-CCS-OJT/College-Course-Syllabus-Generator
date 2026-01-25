@@ -66,7 +66,7 @@ export default function TemplateRenderer({ template, syllabus }) {
       );
     }
 
-    if (element.type === 'table') {
+    if (element.type === 'table' && element.rows && Array.isArray(element.rows)) {
       return (
         <table
           key={element.id}
@@ -77,9 +77,9 @@ export default function TemplateRenderer({ template, syllabus }) {
           }}
         >
           <tbody>
-            {element.rows?.map((row, rowIndex) => (
+            {element.rows.map((row, rowIndex) => (
               <tr key={rowIndex}>
-                {row.cells?.map((cell, cellIndex) => (
+                {Array.isArray(row.cells) && row.cells.map((cell, cellIndex) => (
                   <td
                     key={cellIndex}
                     style={{
