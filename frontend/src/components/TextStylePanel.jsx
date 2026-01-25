@@ -30,6 +30,31 @@ export default function TextStylePanel({ element, onUpdate }) {
     { value: 'justify', label: 'Justify', icon: '⬌' }
   ];
 
+  const syllabusFields = [
+    { value: '{{courseCode}}', label: 'Course Code' },
+    { value: '{{courseTitle}}', label: 'Course Title' },
+    { value: '{{department}}', label: 'Department' },
+    { value: '{{credits}}', label: 'Credits' },
+    { value: '{{semester}}', label: 'Semester' },
+    { value: '{{year}}', label: 'Year' },
+    { value: '{{instructorName}}', label: 'Instructor Name' },
+    { value: '{{instructorEmail}}', label: 'Instructor Email' },
+    { value: '{{officeHours}}', label: 'Office Hours' },
+    { value: '{{officeLocation}}', label: 'Office Location' },
+    { value: '{{description}}', label: 'Course Description' },
+    { value: '{{prerequisites}}', label: 'Prerequisites' },
+    { value: '{{textbooks}}', label: 'Textbooks' },
+    { value: '{{gradingScale}}', label: 'Grading Scale' },
+    { value: '{{attendancePolicy}}', label: 'Attendance Policy' },
+    { value: '{{lateSubmissionPolicy}}', label: 'Late Submission Policy' },
+    { value: '{{academicIntegrity}}', label: 'Academic Integrity' },
+  ];
+
+  const insertField = (field) => {
+    const currentContent = element.content || '';
+    onUpdate({ content: currentContent + field });
+  };
+
   return (
     <div className="p-4 text-white">
       <h3 className="text-lg font-semibold mb-4 border-b border-gray-700 pb-2">Text Properties</h3>
@@ -171,11 +196,37 @@ export default function TextStylePanel({ element, onUpdate }) {
       {/* Text Content */}
       <div className="mb-4">
         <label className="block text-sm font-medium mb-2">Content</label>
+        
+        {/* Data Field Picker */}
+        <div className="mb-2">
+          <label className="block text-xs text-gray-400 mb-1">Insert Syllabus Data</label>
+          <select
+            onChange={(e) => {
+              if (e.target.value) {
+                insertField(e.target.value);
+                e.target.value = '';
+              }
+            }}
+            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">-- Insert Field --</option>
+            {syllabusFields.map((field) => (
+              <option key={field.value} value={field.value}>
+                {field.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Select a field to insert placeholder that will be replaced with actual data
+          </p>
+        </div>
+
         <textarea
           value={element.content}
           onChange={(e) => onUpdate({ content: e.target.value })}
           rows={4}
           className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          placeholder="Enter text or use the dropdown above to insert data fields"
         />
       </div>
     </div>

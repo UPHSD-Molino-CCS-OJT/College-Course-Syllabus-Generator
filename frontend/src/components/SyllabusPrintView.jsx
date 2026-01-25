@@ -5,6 +5,7 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Tabl
 import { saveAs } from 'file-saver';
 import { X, Printer, FileText, File } from 'lucide-react';
 import { settingsAPI } from '../services/api';
+import TemplateRenderer from './TemplateRenderer';
 
 export default function SyllabusPrintView({ syllabus, onClose }) {
   const printRef = useRef();
@@ -50,10 +51,22 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
       });
 
       const imgData = canvas.toDataURL('image/png');
+      
+      // Determine page size based on template or default to legal landscape
+      let orientation = 'landscape';
+      let format = 'legal';
+      
+      if (syllabus.template && typeof syllabus.template === 'object') {
+        orientation = syllabus.template.orientation || 'landscape';
+        format = syllabus.template.pageSize === 'longBond' ? [355.6, 215.9] : 
+                syllabus.template.pageSize === 'a4' ? 'a4' :
+                syllabus.template.pageSize === 'letter' ? 'letter' : 'legal';
+      }
+      
       const pdf = new jsPDF({
-        orientation: 'landscape',
+        orientation: orientation,
         unit: 'mm',
-        format: 'legal', // Legal paper size (8.5" x 14")
+        format: format,
       });
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -77,6 +90,10 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
   const handleExportWord = async () => {
     setExporting(true);
     try {
+      // TODO: Add template support for Word export
+      // Currently Word export uses the default layout
+      // Future enhancement: Parse template canvasDocument and generate equivalent Word structure
+      
       // Prepare header elements
       const headerElements = [];
 
@@ -466,6 +483,39 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
   }
 
   const fontSize = settings.fontSize === 'small' ? '12px' : settings.fontSize === 'large' ? '16px' : '14px';
+  
+  // Check if syllabus uses a template
+  const usesTemplate = syllabus.template && typeof syllabus.template === 'object' && syllabus.template.canvasDocument;
+  
+  // Get page dimensions
+  const getPageStyle = () => {
+    if (usesTemplate) {
+      const pageSize = syllabus.template.pageSize || 'longBond';
+      const orientation = syllabus.template.orientation || 'landscape';
+      
+      // Map to CSS page size
+      const pageMap = {
+        legal: 'legal',
+        letter: 'letter',
+        a4: 'A4',
+        longBond: 'legal', // Use legal as closest match
+      };
+      
+      return {
+        size: `${pageMap[pageSize] || 'legal'} ${orientation}`,
+        width: orientation === 'landscape' ? 
+          (pageSize === 'longBond' ? '1248px' : pageSize === 'letter' ? '1056px' : pageSize === 'a4' ? '1123px' : '1344px') :
+          '816px',
+      };
+    }
+    
+    return {
+      size: 'legal landscape',
+      width: '356mm',
+    };
+  };
+  
+  const pageStyle = getPageStyle();
 
   return (
     <>
@@ -485,7 +535,7 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
             width: 100%;
           }
           @page {
-            size: legal landscape; /* Legal paper (8.5" x 14") in landscape */
+            size: ${pageStyle.size};
             margin: 1cm;
           }
         }
@@ -545,13 +595,23 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
 
           {/* Printable Content */}
           <div className="flex-1 overflow-y-auto p-6 bg-gray-100">
+            {usesTemplate ? (
+              /* Template-based view */
+              <div id="printable-syllabus" ref={printRef} className="mx-auto">
+                <TemplateRenderer 
+                  template={syllabus.template} 
+                  syllabus={syllabus}
+                />
+              </div>
+            ) : (
+              /* Default view */
             <div
               id="printable-syllabus"
               ref={printRef}
               className="bg-white mx-auto shadow-lg"
               style={{
-                width: '356mm', // Legal landscape width (14")
-                minHeight: '216mm', // Legal landscape height (8.5")
+                width: pageStyle.width,
+                minHeight: '216mm',
                 padding: '20mm',
                 fontFamily: settings.fontFamily,
                 fontSize: fontSize,
@@ -808,6 +868,7 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
                 </div>
               ) : null}
             </div>
+            )}
           </div>
         </div>
       </div>
