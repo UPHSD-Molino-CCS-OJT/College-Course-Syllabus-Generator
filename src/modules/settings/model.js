@@ -2,6 +2,40 @@ const mongoose = require("mongoose");
 const { validatePayload } = require("../../utils");
 const brandingSettingsJoiSchema = require("./joiSchema");
 
+// Define child element schema recursively to support nested groups
+const childElementSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ['text', 'image', 'group'],
+    required: true,
+  },
+  content: {
+    type: String,
+  },
+  alignment: {
+    type: String,
+    enum: ['left', 'center', 'right'],
+    default: 'center',
+  },
+  layout: {
+    type: String,
+    enum: ['vertical', 'horizontal'],
+    default: 'horizontal',
+  },
+  styles: {
+    fontWeight: { type: String, default: 'normal' },
+    fontSize: { type: String, default: 'medium' },
+    color: { type: String, default: '#000000' },
+    width: { type: Number },
+    height: { type: Number },
+  },
+}, { _id: false, strict: false });
+
+// Add children array to support nesting (will be populated with same schema)
+childElementSchema.add({
+  children: [childElementSchema]
+});
+
 const brandingSettingsSchema = new mongoose.Schema(
   {
     institutionName: {
@@ -39,36 +73,26 @@ const brandingSettingsSchema = new mongoose.Schema(
           required: true,
         },
         content: {
-          type: String, // For text: actual text; For image: base64 string; For group: not used
+          type: String,
         },
         alignment: {
           type: String,
           enum: ['left', 'center', 'right'],
           default: 'center',
         },
+        layout: {
+          type: String,
+          enum: ['vertical', 'horizontal'],
+          default: 'horizontal',
+        },
         styles: {
           fontWeight: { type: String, default: 'normal' },
           fontSize: { type: String, default: 'medium' },
           color: { type: String, default: '#000000' },
-          width: { type: Number }, // For images
-          height: { type: Number }, // For images
+          width: { type: Number },
+          height: { type: Number },
         },
-        children: [{
-          type: {
-            type: String,
-            enum: ['text', 'image'],
-          },
-          content: {
-            type: String,
-          },
-          styles: {
-            fontWeight: { type: String, default: 'normal' },
-            fontSize: { type: String, default: 'medium' },
-            color: { type: String, default: '#000000' },
-            width: { type: Number },
-            height: { type: Number },
-          },
-        }], // For group type: child elements
+        children: [childElementSchema],
         order: {
           type: Number,
           default: 0,
@@ -96,6 +120,11 @@ const brandingSettingsSchema = new mongoose.Schema(
           enum: ['left', 'center', 'right'],
           default: 'center',
         },
+        layout: {
+          type: String,
+          enum: ['vertical', 'horizontal'],
+          default: 'horizontal',
+        },
         styles: {
           fontWeight: { type: String, default: 'normal' },
           fontSize: { type: String, default: 'medium' },
@@ -103,22 +132,7 @@ const brandingSettingsSchema = new mongoose.Schema(
           width: { type: Number },
           height: { type: Number },
         },
-        children: [{
-          type: {
-            type: String,
-            enum: ['text', 'image'],
-          },
-          content: {
-            type: String,
-          },
-          styles: {
-            fontWeight: { type: String, default: 'normal' },
-            fontSize: { type: String, default: 'medium' },
-            color: { type: String, default: '#000000' },
-            width: { type: Number },
-            height: { type: Number },
-          },
-        }],
+        children: [childElementSchema],
         order: {
           type: Number,
           default: 0,

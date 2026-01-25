@@ -1,9 +1,12 @@
 const Joi = require("joi");
 
-// Child element schema (for group children)
+// Create recursive schema for nested groups
+// Use Joi.link() to allow self-referencing
 const childElementSchema = Joi.object({
-  type: Joi.string().valid("text", "image").required(),
-  content: Joi.string().required(),
+  type: Joi.string().valid("text", "image", "group").required(),
+  content: Joi.string().optional(),
+  alignment: Joi.string().valid("left", "center", "right").default("center"),
+  layout: Joi.string().valid("vertical", "horizontal").default("horizontal"),
   styles: Joi.object({
     fontWeight: Joi.string().default("normal"),
     fontSize: Joi.string().default("medium"),
@@ -11,13 +14,15 @@ const childElementSchema = Joi.object({
     width: Joi.number().optional(),
     height: Joi.number().optional(),
   }).optional(),
-});
+  children: Joi.array().items(Joi.link('#childElement')).optional(),
+}).id('childElement');
 
-// Content block schema for header/footer
+// Content block schema for header/footer (top level)
 const contentBlockSchema = Joi.object({
   type: Joi.string().valid("text", "image", "group").required(),
   content: Joi.string().optional(),
   alignment: Joi.string().valid("left", "center", "right").default("center"),
+  layout: Joi.string().valid("vertical", "horizontal").default("horizontal"),
   styles: Joi.object({
     fontWeight: Joi.string().default("normal"),
     fontSize: Joi.string().default("medium"),
