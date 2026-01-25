@@ -206,8 +206,9 @@ export default function CanvasPage({
           style={{
             left: element.x,
             top: element.y,
-            display: 'inline-block',
-            maxWidth: element.width || 'none',
+            display: element.autoWidth !== false ? 'inline-block' : 'block',
+            width: element.autoWidth !== false ? 'auto' : (element.width || 200),
+            maxWidth: element.autoWidth !== false ? (element.width || 'none') : 'none',
             ...textStyle
           }}
           onClick={(e) => {

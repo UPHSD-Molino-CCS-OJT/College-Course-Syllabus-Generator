@@ -332,15 +332,40 @@ export default function TextStylePanel({ element, onUpdate }) {
 
       {/* Width */}
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-2">Width (px)</label>
-        <input
-          type="number"
-          min="50"
-          max="1000"
-          value={element.width || 200}
-          onChange={(e) => onUpdate({ width: parseInt(e.target.value) })}
-          className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-medium">Width</label>
+          <label className="flex items-center gap-2 text-xs cursor-pointer">
+            <input
+              type="checkbox"
+              checked={element.autoWidth !== false}
+              onChange={(e) => onUpdate({ autoWidth: e.target.checked })}
+              className="w-4 h-4 rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-blue-500"
+            />
+            Auto-fit
+          </label>
+        </div>
+        {!element.autoWidth && (
+          <input
+            type="number"
+            min="50"
+            max="1000"
+            value={element.width || 200}
+            onChange={(e) => onUpdate({ width: parseInt(e.target.value) })}
+            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Fixed width (px)"
+          />
+        )}
+        {element.autoWidth !== false && (
+          <input
+            type="number"
+            min="50"
+            max="1000"
+            value={element.width || 200}
+            onChange={(e) => onUpdate({ width: parseInt(e.target.value) })}
+            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Max width (px)"
+          />
+        )}
       </div>
 
       {/* Position */}

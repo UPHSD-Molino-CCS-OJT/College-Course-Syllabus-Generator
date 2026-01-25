@@ -65,7 +65,8 @@ export default function TemplateRenderer({ template, syllabus }) {
         fontFamily: element.fontFamily,
         fontWeight: element.fontWeight,
         color: element.color,
-        maxWidth: element.width ? `${element.width}px` : 'none',
+        width: element.autoWidth !== false ? 'auto' : (element.width ? `${element.width}px` : '200px'),
+        maxWidth: element.autoWidth !== false ? (element.width ? `${element.width}px` : 'none') : 'none',
         whiteSpace: 'pre-wrap',
         wordWrap: 'break-word',
         fontStyle: element.italic ? 'italic' : 'normal',
@@ -77,8 +78,9 @@ export default function TemplateRenderer({ template, syllabus }) {
 
       const containerStyle = {
         ...baseStyle,
-        display: 'inline-block',
-        maxWidth: element.width ? `${element.width}px` : 'none',
+        display: element.autoWidth !== false ? 'inline-block' : 'block',
+        width: element.autoWidth !== false ? 'auto' : (element.width ? `${element.width}px` : '200px'),
+        maxWidth: element.autoWidth !== false ? (element.width ? `${element.width}px` : 'none') : 'none',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: element.verticalAlign === 'middle' ? 'center' : element.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start',
