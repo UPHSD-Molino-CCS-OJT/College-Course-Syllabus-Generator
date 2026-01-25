@@ -1,6 +1,6 @@
 import { syllabusAPI } from '../services/api';
 
-export default function SyllabusList({ syllabi, onEditSyllabus, onDeleteSyllabus, onViewSyllabus, loading }) {
+export default function SyllabusList({ syllabi, onEditSyllabus, onDeleteSyllabus, onViewSyllabus, onViewPrint, loading }) {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this syllabus?')) {
       try {
@@ -94,12 +94,19 @@ export default function SyllabusList({ syllabi, onEditSyllabus, onDeleteSyllabus
             </p>
 
             {/* Card Actions */}
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => onViewSyllabus(syllabus)}
                 className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
               >
                 View
+              </button>
+              <button
+                onClick={() => onViewPrint(syllabus)}
+                className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
+                title="Print/Export"
+              >
+                🖨️ Print
               </button>
               <button
                 onClick={() => onEditSyllabus(syllabus)}
