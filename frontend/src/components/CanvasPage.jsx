@@ -15,6 +15,7 @@ export default function CanvasPage({
   const [draggingElement, setDraggingElement] = useState(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [editingTextId, setEditingTextId] = useState(null);
+  const [editingCell, setEditingCell] = useState(null); // { elementId, rowIndex, colIndex }
   const [resizingCell, setResizingCell] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const canvasRef = useRef(null);
@@ -167,6 +168,26 @@ export default function CanvasPage({
     setEditingTextId(null);
   };
 
+  const handleCellDoubleClick = (e, element, zone, rowIndex, colIndex) => {
+    e.stopPropagation();
+    setEditingCell({ elementId: element.id, rowIndex, colIndex });
+  };
+
+  const handleCellChange = (e, element, zone, rowIndex, colIndex) => {
+    const newData = element.data.map((row, rIdx) =>
+      row.map((cell, cIdx) =>
+        rIdx === rowIndex && cIdx === colIndex
+          ? { ...cell, content: e.target.value }
+          : cell
+      )
+    );
+    onUpdateElement(zone, element.id, { data: newData });
+  };
+
+  const handleCellBlur = () => {
+    setEditingCell(null);
+  };
+
   const renderElement = (element, zone) => {
     const isSelected = selectedElement?.id === element.id;
     const isEditing = editingTextId === element.id;
@@ -272,58 +293,84 @@ export default function CanvasPage({
             <tbody>
               {element.data.map((row, rowIndex) => (
                 <tr key={rowIndex}>
-                  {row.map((cell, colIndex) => (
-                    <td
-                      key={colIndex}
-                      className="relative group"
-                      style={{
-                        width: cell.width || element.cellWidth,
-                        height: cell.height || element.cellHeight,
-                        borderTop: (cell.showBorderTop !== undefined ? cell.showBorderTop : element.showBorderTop !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
-                        borderRight: (cell.showBorderRight !== undefined ? cell.showBorderRight : element.showBorderRight !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
-                        borderBottom: (cell.showBorderBottom !== undefined ? cell.showBorderBottom : element.showBorderBottom !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
-                        borderLeft: (cell.showBorderLeft !== undefined ? cell.showBorderLeft : element.showBorderLeft !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
-                        backgroundColor: cell.bg,
-                        fontSize: cell.fontSize,
-                        fontFamily: cell.fontFamily,
-                        fontWeight: cell.fontWeight,
-                        color: cell.color,
-                        textAlign: cell.align,
-                        verticalAlign: cell.verticalAlign || 'top',
-                        padding: '8px',
-                        whiteSpace: 'pre-wrap',
-                        wordWrap: 'break-word',
-                      }}
-                      onMouseDown={(e) => {
-                        // Check if clicking on resize handle
-                        if (e.target.classList.contains('resize-handle')) {
-                          return;
-                        }
-                        handleMouseDown(e, element, zone);
-                      }}
-                    >
-                      {cell.content}
-                      {isSelected && (
-                        <>
-                          {/* Right edge resize handle */}
-                          <div
-                            className="resize-handle absolute top-0 right-0 w-1 h-full bg-blue-500 opacity-0 group-hover:opacity-100 cursor-ew-resize"
-                            onMouseDown={(e) => handleCellResizeStart(e, element, zone, rowIndex, colIndex, 'width')}
+                  {row.map((cell, colIndex) => {
+                    const isCellEditing = editingCell?.elementId === element.id && 
+                                         editingCell?.rowIndex === rowIndex && 
+                                         editingCell?.colIndex === colIndex;
+                    
+                    return (
+                      <td
+                        key={colIndex}
+                        className="relative group"
+                        style={{
+                          width: cell.width || element.cellWidth,
+                          height: cell.height || element.cellHeight,
+                          borderTop: (cell.showBorderTop !== undefined ? cell.showBorderTop : element.showBorderTop !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
+                          borderRight: (cell.showBorderRight !== undefined ? cell.showBorderRight : element.showBorderRight !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
+                          borderBottom: (cell.showBorderBottom !== undefined ? cell.showBorderBottom : element.showBorderBottom !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
+                          borderLeft: (cell.showBorderLeft !== undefined ? cell.showBorderLeft : element.showBorderLeft !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
+                          backgroundColor: cell.bg,
+                          fontSize: cell.fontSize,
+                          fontFamily: cell.fontFamily,
+                          fontWeight: cell.fontWeight,
+                          color: cell.color,
+                          textAlign: cell.align,
+                          verticalAlign: cell.verticalAlign || 'top',
+                          padding: isCellEditing ? '0' : '8px',
+                          whiteSpace: 'pre-wrap',
+                          wordWrap: 'break-word',
+                        }}
+                        onMouseDown={(e) => {
+                          // Check if clicking on resize handle or editing
+                          if (e.target.classList.contains('resize-handle') || isCellEditing) {
+                            return;
+                          }
+                          handleMouseDown(e, element, zone);
+                        }}
+                        onDoubleClick={(e) => handleCellDoubleClick(e, element, zone, rowIndex, colIndex)}
+                      >
+                        {isCellEditing ? (
+                          <textarea
+                            autoFocus
+                            value={cell.content}
+                            onChange={(e) => handleCellChange(e, element, zone, rowIndex, colIndex)}
+                            onBlur={handleCellBlur}
+                            className="w-full h-full bg-white border-2 border-blue-500 outline-none resize-none p-2"
+                            style={{
+                              fontSize: cell.fontSize,
+                              fontFamily: cell.fontFamily,
+                              fontWeight: cell.fontWeight,
+                              color: cell.color,
+                              textAlign: cell.align,
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
                           />
-                          {/* Bottom edge resize handle */}
-                          <div
-                            className="resize-handle absolute bottom-0 left-0 w-full h-1 bg-blue-500 opacity-0 group-hover:opacity-100 cursor-ns-resize"
-                            onMouseDown={(e) => handleCellResizeStart(e, element, zone, rowIndex, colIndex, 'height')}
-                          />
-                          {/* Corner resize handle */}
-                          <div
-                            className="resize-handle absolute bottom-0 right-0 w-3 h-3 bg-blue-500 opacity-0 group-hover:opacity-100 cursor-nwse-resize"
-                            onMouseDown={(e) => handleCellResizeStart(e, element, zone, rowIndex, colIndex, 'both')}
-                          />
-                        </>
-                      )}
-                    </td>
-                  ))}
+                        ) : (
+                          cell.content
+                        )}
+                        {isSelected && !isCellEditing && (
+                          <>
+                            {/* Right edge resize handle */}
+                            <div
+                              className="resize-handle absolute top-0 right-0 w-1 h-full bg-blue-500 opacity-0 group-hover:opacity-100 cursor-ew-resize"
+                              onMouseDown={(e) => handleCellResizeStart(e, element, zone, rowIndex, colIndex, 'width')}
+                            />
+                            {/* Bottom edge resize handle */}
+                            <div
+                              className="resize-handle absolute bottom-0 left-0 w-full h-1 bg-blue-500 opacity-0 group-hover:opacity-100 cursor-ns-resize"
+                              onMouseDown={(e) => handleCellResizeStart(e, element, zone, rowIndex, colIndex, 'height')}
+                            />
+                            {/* Corner resize handle */}
+                            <div
+                              className="resize-handle absolute bottom-0 right-0 w-3 h-3 bg-blue-500 opacity-0 group-hover:opacity-100 cursor-nwse-resize"
+                              onMouseDown={(e) => handleCellResizeStart(e, element, zone, rowIndex, colIndex, 'both')}
+                            />
+                          </>
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
