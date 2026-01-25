@@ -65,7 +65,6 @@ export default function TemplateRenderer({ template, syllabus }) {
         fontFamily: element.fontFamily,
         fontWeight: element.fontWeight,
         color: element.color,
-        textAlign: element.align || 'left',
         width: `${element.width || 200}px`,
         whiteSpace: 'pre-wrap',
         wordWrap: 'break-word',
@@ -74,8 +73,18 @@ export default function TemplateRenderer({ template, syllabus }) {
         textTransform: element.textTransform || 'none',
         letterSpacing: element.letterSpacing ? `${element.letterSpacing}px` : 'normal',
         lineHeight: element.lineHeight || 1.5,
+      };
+
+      const containerStyle = {
+        ...baseStyle,
+        width: `${element.width || 200}px`,
         display: 'flex',
-        alignItems: element.verticalAlign === 'middle' ? 'center' : element.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start',
+        flexDirection: 'column',
+        justifyContent: element.verticalAlign === 'middle' ? 'center' : element.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start',
+      };
+
+      const innerStyle = {
+        textAlign: element.align || 'left',
       };
 
       if (element.bold) {
@@ -83,14 +92,10 @@ export default function TemplateRenderer({ template, syllabus }) {
       }
 
       return (
-        <div
-          key={element.id}
-          style={{
-            ...baseStyle,
-            ...textStyle
-          }}
-        >
-          {element.content}
+        <div key={element.id} style={containerStyle}>
+          <div style={{ ...textStyle, ...innerStyle }}>
+            {element.content}
+          </div>
         </div>
       );
     }
