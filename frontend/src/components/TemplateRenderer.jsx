@@ -46,22 +46,79 @@ export default function TemplateRenderer({ template, syllabus }) {
     };
 
     if (element.type === 'text') {
+      const textStyle = {
+        fontSize: `${element.fontSize}px`,
+        fontFamily: element.fontFamily,
+        fontWeight: element.fontWeight,
+        color: element.color,
+        textAlign: element.align || 'left',
+        width: `${element.width || 200}px`,
+        whiteSpace: 'pre-wrap',
+        wordWrap: 'break-word',
+        fontStyle: element.italic ? 'italic' : 'normal',
+        textDecoration: element.underline ? 'underline' : 'none',
+      };
+
+      if (element.bold) {
+        textStyle.fontWeight = 'bold';
+      }
+
       return (
         <div
           key={element.id}
           style={{
             ...baseStyle,
-            fontSize: `${element.fontSize}px`,
-            fontFamily: element.fontFamily,
-            fontWeight: element.fontWeight,
-            color: element.color,
-            textAlign: element.align || 'left',
-            width: `${element.width || 200}px`,
-            whiteSpace: 'pre-wrap',
-            wordWrap: 'break-word',
+            ...textStyle
           }}
         >
           {element.content}
+        </div>
+      );
+    }
+
+    if (element.type === 'image') {
+      return (
+        <div
+          key={element.id}
+          style={{
+            ...baseStyle,
+            width: `${element.width}px`,
+            height: `${element.height}px`,
+          }}
+        >
+          <img
+            src={element.src}
+            alt={element.alt || 'Image'}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: element.maintainAspectRatio ? 'contain' : 'cover',
+            }}
+          />
+        </div>
+      );
+    }
+
+    if (element.type === 'line') {
+      return (
+        <div
+          key={element.id}
+          style={baseStyle}
+        >
+          <svg width={element.width || 300} height={Math.max(element.strokeWidth || 2, 10)}>
+            <line
+              x1="0"
+              y1={(element.strokeWidth || 2) / 2}
+              x2={element.width || 300}
+              y2={(element.strokeWidth || 2) / 2}
+              stroke={element.strokeColor || '#000000'}
+              strokeWidth={element.strokeWidth || 2}
+              strokeDasharray={
+                element.strokeStyle === 'dashed' ? '5,5' :
+                element.strokeStyle === 'dotted' ? '2,2' : 'none'
+              }
+            />
+          </svg>
         </div>
       );
     }
