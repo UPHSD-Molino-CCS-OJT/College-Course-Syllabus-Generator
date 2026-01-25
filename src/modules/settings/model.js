@@ -14,6 +14,7 @@ const brandingSettingsSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    // Legacy fields (kept for backward compatibility)
     headerText: {
       type: String,
       maxlength: 500,
@@ -23,6 +24,67 @@ const brandingSettingsSchema = new mongoose.Schema(
       type: String,
       maxlength: 500,
       default: "",
+    },
+    // New flexible header/footer content structure
+    headerContent: {
+      type: [{
+        type: {
+          type: String,
+          enum: ['text', 'image'],
+          required: true,
+        },
+        content: {
+          type: String, // For text: actual text; For image: base64 string
+          required: true,
+        },
+        alignment: {
+          type: String,
+          enum: ['left', 'center', 'right'],
+          default: 'center',
+        },
+        styles: {
+          fontWeight: { type: String, default: 'normal' },
+          fontSize: { type: String, default: 'medium' },
+          color: { type: String, default: '#000000' },
+          width: { type: Number }, // For images
+          height: { type: Number }, // For images
+        },
+        order: {
+          type: Number,
+          default: 0,
+        },
+      }],
+      default: [],
+    },
+    footerContent: {
+      type: [{
+        type: {
+          type: String,
+          enum: ['text', 'image'],
+          required: true,
+        },
+        content: {
+          type: String,
+          required: true,
+        },
+        alignment: {
+          type: String,
+          enum: ['left', 'center', 'right'],
+          default: 'center',
+        },
+        styles: {
+          fontWeight: { type: String, default: 'normal' },
+          fontSize: { type: String, default: 'medium' },
+          color: { type: String, default: '#000000' },
+          width: { type: Number },
+          height: { type: Number },
+        },
+        order: {
+          type: Number,
+          default: 0,
+        },
+      }],
+      default: [],
     },
     primaryColor: {
       type: String,
