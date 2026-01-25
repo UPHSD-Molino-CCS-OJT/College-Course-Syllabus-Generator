@@ -263,18 +263,18 @@ export default function InlineEditablePreview({ settings, handlers }) {
     const blocks = settings[section] || [];
 
     return (
-      <div className="bg-gray-100 p-6 border-b-2 border-gray-300">
+      <div className={isPreviewMode ? '' : 'bg-gray-100 p-6 border-b-2 border-gray-300'}>
         {/* Section header with layout toggle (only in edit mode) */}
-        <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-300">
-          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">{title}</h3>
-          {!isPreviewMode && (
+        {!isPreviewMode && (
+          <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-300">
+            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">{title}</h3>
             <LayoutToggle
               layoutField={layoutField}
               currentLayout={settings[layoutField]}
               onLayoutChange={handlers.handleLayoutChange}
             />
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Content */}
         <div
@@ -350,27 +350,146 @@ export default function InlineEditablePreview({ settings, handlers }) {
         </button>
       </div>
 
-      <div className="border border-gray-300 rounded-md overflow-hidden" style={{ fontFamily: settings.fontFamily }}>
-        {/* Header */}
-        {renderSection('headerContent', 'Header')}
+      {isPreviewMode ? (
+        /* Preview Mode: Legal Landscape Paper (14" x 8.5" = 1344px x 816px at 96 DPI) */
+        <div className="space-y-6">
+          {[1, 2].map((pageNum) => (
+            <div
+              key={pageNum}
+              className="mx-auto bg-white shadow-2xl"
+              style={{
+                width: '1344px',
+                height: '816px',
+                fontFamily: settings.fontFamily,
+              }}
+            >
+              {/* Header */}
+              {(settings.headerContent?.length > 0 || pageNum === 1) && (
+                <div className="p-6 border-b">
+                  {settings.headerContent?.length > 0 ? (
+                    <div
+                      className={settings.headerLayout === 'horizontal' ? 'flex items-center gap-4 flex-wrap justify-between' : 'space-y-4'}
+                    >
+                      {settings.headerContent
+                        .sort((a, b) => a.order - b.order)
+                        .map((block, index) => (
+                          <div key={block.id || index}>{renderBlockContent(block)}</div>
+                        ))}
+                    </div>
+                  ) : null}
+                </div>
+              )}
 
-        {/* Preview Content */}
-        <div className="p-6">
-          <h3
-            className="text-lg font-semibold mb-2"
-            style={{ color: settings.secondaryColor }}
-          >
-            Course Syllabus
-          </h3>
-          <p className="text-gray-700">
-            This is a preview of how your syllabus will look with the current
-            header and footer settings. Click any element to edit it.
-          </p>
+              {/* Page Content */}
+              <div className="p-8 flex-1">
+                <h1 className="text-3xl font-bold mb-4" style={{ color: settings.secondaryColor }}>
+                  {pageNum === 1 ? 'Course Syllabus' : 'Course Syllabus - Page 2'}
+                </h1>
+                <div className="space-y-4 text-gray-700">
+                  <p>
+                    <strong>Course Code:</strong> CS 101 | <strong>Course Title:</strong> Introduction to Computer Science
+                  </p>
+                  <p>
+                    <strong>Instructor:</strong> Dr. Jane Smith | <strong>Term:</strong> Spring 2026
+                  </p>
+                  <div className="mt-6">
+                    <h2 className="text-xl font-semibold mb-2">Course Description</h2>
+                    <p className="text-justify">
+                      {pageNum === 1
+                        ? 'This course provides a comprehensive introduction to the field of computer science. Students will learn fundamental programming concepts, problem-solving techniques, and computational thinking. Topics include algorithms, data structures, software development principles, and an overview of computer systems. The course emphasizes hands-on programming experience using modern programming languages and tools.'
+                        : 'Through a combination of lectures, laboratory exercises, and projects, students will develop practical skills in writing, testing, and debugging programs. The course also introduces students to important concepts in software engineering, including version control, documentation, and collaborative development. Upon completion, students will have a solid foundation for further study in computer science and related disciplines.'}
+                    </p>
+                  </div>
+                  {pageNum === 1 && (
+                    <>
+                      <div className="mt-6">
+                        <h2 className="text-xl font-semibold mb-2">Learning Objectives</h2>
+                        <ul className="list-disc list-inside space-y-1">
+                          <li>Understand fundamental programming concepts and paradigms</li>
+                          <li>Develop problem-solving skills using computational thinking</li>
+                          <li>Write, test, and debug programs in a high-level programming language</li>
+                          <li>Apply basic algorithms and data structures to solve problems</li>
+                        </ul>
+                      </div>
+                      <div className="mt-6">
+                        <h2 className="text-xl font-semibold mb-2">Required Materials</h2>
+                        <ul className="list-disc list-inside space-y-1">
+                          <li>Textbook: "Introduction to Computing" (Latest Edition)</li>
+                          <li>Laptop with required software installed</li>
+                          <li>Access to online learning platform</li>
+                        </ul>
+                      </div>
+                    </>
+                  )}
+                  {pageNum === 2 && (
+                    <>
+                      <div className="mt-6">
+                        <h2 className="text-xl font-semibold mb-2">Grading Policy</h2>
+                        <ul className="list-disc list-inside space-y-1">
+                          <li>Programming Assignments: 40%</li>
+                          <li>Midterm Exam: 20%</li>
+                          <li>Final Exam: 25%</li>
+                          <li>Class Participation: 10%</li>
+                          <li>Final Project: 5%</li>
+                        </ul>
+                      </div>
+                      <div className="mt-6">
+                        <h2 className="text-xl font-semibold mb-2">Course Schedule</h2>
+                        <p className="text-sm">
+                          Week 1-2: Introduction to Programming | Week 3-4: Control Structures |
+                          Week 5-6: Functions and Modules | Week 7-8: Data Structures |
+                          Week 9-10: Object-Oriented Programming | Week 11-12: Algorithms |
+                          Week 13-14: Software Development | Week 15-16: Final Project
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              {(settings.footerContent?.length > 0 || pageNum === 1) && (
+                <div className="p-6 border-t">
+                  {settings.footerContent?.length > 0 ? (
+                    <div
+                      className={settings.footerLayout === 'horizontal' ? 'flex items-center gap-4 flex-wrap justify-between' : 'space-y-4'}
+                    >
+                      {settings.footerContent
+                        .sort((a, b) => a.order - b.order)
+                        .map((block, index) => (
+                          <div key={block.id || index}>{renderBlockContent(block)}</div>
+                        ))}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
+      ) : (
+        /* Edit Mode: Original compact view */
+        <div className="border border-gray-300 rounded-md overflow-hidden" style={{ fontFamily: settings.fontFamily }}>
+          {/* Header */}
+          {renderSection('headerContent', 'Header')}
 
-        {/* Footer */}
-        {renderSection('footerContent', 'Footer')}
-      </div>
+          {/* Preview Content */}
+          <div className="p-6">
+            <h3
+              className="text-lg font-semibold mb-2"
+              style={{ color: settings.secondaryColor }}
+            >
+              Course Syllabus
+            </h3>
+            <p className="text-gray-700">
+              This is a preview of how your syllabus will look with the current
+              header and footer settings. Click any element to edit it.
+            </p>
+          </div>
+
+          {/* Footer */}
+          {renderSection('footerContent', 'Footer')}
+        </div>
+      )}
 
       {/* Edit Modal */}
       <BlockEditModal
