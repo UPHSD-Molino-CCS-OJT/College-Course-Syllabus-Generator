@@ -18,5 +18,8 @@
     "express-rate-limit": "^7.4.1",
     "joi": "^17.13.3",
     "mongoose": "^8.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
   }
 }
