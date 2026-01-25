@@ -2,6 +2,236 @@ import { useState, useEffect } from 'react';
 import { settingsAPI } from '../services/api';
 import { Plus, Trash2, MoveUp, MoveDown, Image, Type } from 'lucide-react';
 
+// Content Block Editor Component (extracted to prevent re-creation on every render)
+const ContentBlockEditor = ({ 
+  section, 
+  sectionLabel, 
+  settings, 
+  addContentBlock, 
+  removeContentBlock, 
+  updateContentBlock, 
+  moveContentBlock, 
+  handleImageUploadForBlock 
+}) => {
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <label className="block text-sm font-medium text-gray-700">
+          {sectionLabel} Content Blocks
+        </label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => addContentBlock(section, 'text')}
+            className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 text-sm"
+          >
+            <Type size={16} />
+            Add Text
+          </button>
+          <button
+            type="button"
+            onClick={() => addContentBlock(section, 'image')}
+            className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 text-green-700 rounded-md hover:bg-green-100 text-sm"
+          >
+            <Image size={16} />
+            Add Image
+          </button>
+        </div>
+      </div>
+
+      {settings[section].length === 0 ? (
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+          <p className="text-gray-500 text-sm">
+            No content blocks yet. Add text or image blocks to customize your {sectionLabel.toLowerCase()}.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {settings[section].map((block, index) => (
+            <div
+              key={block.id || index}
+              className="border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {block.type === 'text' ? (
+                    <Type size={16} className="text-blue-600" />
+                  ) : (
+                    <Image size={16} className="text-green-600" />
+                  )}
+                  <span className="text-sm font-medium text-gray-700">
+                    {block.type === 'text' ? 'Text Block' : 'Image Block'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => moveContentBlock(section, index, 'up')}
+                    disabled={index === 0}
+                    className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                    title="Move up"
+                  >
+                    <MoveUp size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveContentBlock(section, index, 'down')}
+                    disabled={index === settings[section].length - 1}
+                    className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                    title="Move down"
+                  >
+                    <MoveDown size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeContentBlock(section, index)}
+                    className="p-1 text-red-400 hover:text-red-600"
+                    title="Remove"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {block.type === 'text' ? (
+                <>
+                  <textarea
+                    value={block.content}
+                    onChange={(e) =>
+                      updateContentBlock(section, index, 'content', e.target.value)
+                    }
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    placeholder="Enter text content"
+                  />
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Font Weight</label>
+                      <select
+                        value={block.styles.fontWeight}
+                        onChange={(e) =>
+                          updateContentBlock(section, index, 'styles.fontWeight', e.target.value)
+                        }
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                      >
+                        <option value="normal">Normal</option>
+                        <option value="bold">Bold</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Font Size</label>
+                      <select
+                        value={block.styles.fontSize}
+                        onChange={(e) =>
+                          updateContentBlock(section, index, 'styles.fontSize', e.target.value)
+                        }
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                      >
+                        <option value="small">Small</option>
+                        <option value="medium">Medium</option>
+                        <option value="large">Large</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Color</label>
+                      <input
+                        type="color"
+                        value={block.styles.color}
+                        onChange={(e) =>
+                          updateContentBlock(section, index, 'styles.color', e.target.value)
+                        }
+                        className="w-full h-8 border border-gray-300 rounded cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) =>
+                        handleImageUploadForBlock(section, index, e.target.files[0])
+                      }
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                  </div>
+                  {block.content && (
+                    <div className="flex items-start gap-3">
+                      <img
+                        src={block.content}
+                        alt="Preview"
+                        className="w-20 h-20 object-contain border border-gray-300 rounded"
+                      />
+                      <div className="flex-1 grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">Width (px)</label>
+                          <input
+                            type="number"
+                            value={block.styles.width || 100}
+                            onChange={(e) =>
+                              updateContentBlock(
+                                section,
+                                index,
+                                'styles.width',
+                                parseInt(e.target.value)
+                              )
+                            }
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            min="10"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">Height (px)</label>
+                          <input
+                            type="number"
+                            value={block.styles.height || 100}
+                            onChange={(e) =>
+                              updateContentBlock(
+                                section,
+                                index,
+                                'styles.height',
+                                parseInt(e.target.value)
+                              )
+                            }
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            min="10"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Alignment</label>
+                <div className="flex gap-2">
+                  {['left', 'center', 'right'].map((align) => (
+                    <button
+                      key={align}
+                      type="button"
+                      onClick={() => updateContentBlock(section, index, 'alignment', align)}
+                      className={`flex-1 px-3 py-1 text-xs rounded border ${
+                        block.alignment === align
+                          ? 'bg-blue-100 border-blue-500 text-blue-700'
+                          : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {align.charAt(0).toUpperCase() + align.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function BrandingSettings() {
   const [settings, setSettings] = useState({
     institutionName: '',
@@ -28,8 +258,24 @@ export default function BrandingSettings() {
     try {
       const response = await settingsAPI.getSettings();
       if (response.data.settings) {
-        setSettings(response.data.settings);
-        setLogoPreview(response.data.settings.institutionLogo);
+        const loadedSettings = response.data.settings;
+        
+        // Ensure all content blocks have stable IDs
+        if (loadedSettings.headerContent) {
+          loadedSettings.headerContent = loadedSettings.headerContent.map((block, index) => ({
+            ...block,
+            id: block.id || Date.now() + index + Math.random(),
+          }));
+        }
+        if (loadedSettings.footerContent) {
+          loadedSettings.footerContent = loadedSettings.footerContent.map((block, index) => ({
+            ...block,
+            id: block.id || Date.now() + index + Math.random(),
+          }));
+        }
+        
+        setSettings(loadedSettings);
+        setLogoPreview(loadedSettings.institutionLogo);
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -80,6 +326,7 @@ export default function BrandingSettings() {
   // Helper functions for managing content blocks
   const addContentBlock = (section, type) => {
     const newBlock = {
+      id: Date.now() + Math.random(), // Stable unique ID
       type,
       content: type === 'text' ? 'Enter text here' : '',
       alignment: 'center',
@@ -143,227 +390,6 @@ export default function BrandingSettings() {
       };
       reader.readAsDataURL(file);
     }
-  };
-
-  // Content Block Editor Component
-  const ContentBlockEditor = ({ section, sectionLabel }) => {
-    return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <label className="block text-sm font-medium text-gray-700">
-            {sectionLabel} Content Blocks
-          </label>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => addContentBlock(section, 'text')}
-              className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 text-sm"
-            >
-              <Type size={16} />
-              Add Text
-            </button>
-            <button
-              type="button"
-              onClick={() => addContentBlock(section, 'image')}
-              className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 text-green-700 rounded-md hover:bg-green-100 text-sm"
-            >
-              <Image size={16} />
-              Add Image
-            </button>
-          </div>
-        </div>
-
-        {settings[section].length === 0 ? (
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-            <p className="text-gray-500 text-sm">
-              No content blocks yet. Add text or image blocks to customize your {sectionLabel.toLowerCase()}.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {settings[section].map((block, index) => (
-              <div
-                key={index}
-                className="border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {block.type === 'text' ? (
-                      <Type size={16} className="text-blue-600" />
-                    ) : (
-                      <Image size={16} className="text-green-600" />
-                    )}
-                    <span className="text-sm font-medium text-gray-700">
-                      {block.type === 'text' ? 'Text Block' : 'Image Block'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => moveContentBlock(section, index, 'up')}
-                      disabled={index === 0}
-                      className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
-                      title="Move up"
-                    >
-                      <MoveUp size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => moveContentBlock(section, index, 'down')}
-                      disabled={index === settings[section].length - 1}
-                      className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
-                      title="Move down"
-                    >
-                      <MoveDown size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => removeContentBlock(section, index)}
-                      className="p-1 text-red-400 hover:text-red-600"
-                      title="Remove"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-
-                {block.type === 'text' ? (
-                  <>
-                    <textarea
-                      value={block.content}
-                      onChange={(e) =>
-                        updateContentBlock(section, index, 'content', e.target.value)
-                      }
-                      rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      placeholder="Enter text content"
-                    />
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">Font Weight</label>
-                        <select
-                          value={block.styles.fontWeight}
-                          onChange={(e) =>
-                            updateContentBlock(section, index, 'styles.fontWeight', e.target.value)
-                          }
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                        >
-                          <option value="normal">Normal</option>
-                          <option value="bold">Bold</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">Font Size</label>
-                        <select
-                          value={block.styles.fontSize}
-                          onChange={(e) =>
-                            updateContentBlock(section, index, 'styles.fontSize', e.target.value)
-                          }
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                        >
-                          <option value="small">Small</option>
-                          <option value="medium">Medium</option>
-                          <option value="large">Large</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">Color</label>
-                        <input
-                          type="color"
-                          value={block.styles.color}
-                          onChange={(e) =>
-                            updateContentBlock(section, index, 'styles.color', e.target.value)
-                          }
-                          className="w-full h-8 border border-gray-300 rounded cursor-pointer"
-                        />
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) =>
-                          handleImageUploadForBlock(section, index, e.target.files[0])
-                        }
-                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                      />
-                    </div>
-                    {block.content && (
-                      <div className="flex items-start gap-3">
-                        <img
-                          src={block.content}
-                          alt="Preview"
-                          className="w-20 h-20 object-contain border border-gray-300 rounded"
-                        />
-                        <div className="flex-1 grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs text-gray-600 mb-1">Width (px)</label>
-                            <input
-                              type="number"
-                              value={block.styles.width || 100}
-                              onChange={(e) =>
-                                updateContentBlock(
-                                  section,
-                                  index,
-                                  'styles.width',
-                                  parseInt(e.target.value)
-                                )
-                              }
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                              min="10"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-gray-600 mb-1">Height (px)</label>
-                            <input
-                              type="number"
-                              value={block.styles.height || 100}
-                              onChange={(e) =>
-                                updateContentBlock(
-                                  section,
-                                  index,
-                                  'styles.height',
-                                  parseInt(e.target.value)
-                                )
-                              }
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                              min="10"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Alignment</label>
-                  <div className="flex gap-2">
-                    {['left', 'center', 'right'].map((align) => (
-                      <button
-                        key={align}
-                        type="button"
-                        onClick={() => updateContentBlock(section, index, 'alignment', align)}
-                        className={`flex-1 px-3 py-1 text-xs rounded border ${
-                          block.alignment === align
-                            ? 'bg-blue-100 border-blue-500 text-blue-700'
-                            : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                        }`}
-                      >
-                        {align.charAt(0).toUpperCase() + align.slice(1)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
   };
 
   return (
@@ -660,10 +686,28 @@ export default function BrandingSettings() {
               </div>
 
               {/* Header Content Editor */}
-              <ContentBlockEditor section="headerContent" sectionLabel="Header" />
+              <ContentBlockEditor 
+                section="headerContent" 
+                sectionLabel="Header"
+                settings={settings}
+                addContentBlock={addContentBlock}
+                removeContentBlock={removeContentBlock}
+                updateContentBlock={updateContentBlock}
+                moveContentBlock={moveContentBlock}
+                handleImageUploadForBlock={handleImageUploadForBlock}
+              />
 
               {/* Footer Content Editor */}
-              <ContentBlockEditor section="footerContent" sectionLabel="Footer" />
+              <ContentBlockEditor 
+                section="footerContent" 
+                sectionLabel="Footer"
+                settings={settings}
+                addContentBlock={addContentBlock}
+                removeContentBlock={removeContentBlock}
+                updateContentBlock={updateContentBlock}
+                moveContentBlock={moveContentBlock}
+                handleImageUploadForBlock={handleImageUploadForBlock}
+              />
 
               {/* Preview */}
               <div className="border-t border-gray-200 pt-6">
@@ -681,7 +725,7 @@ export default function BrandingSettings() {
                         .sort((a, b) => a.order - b.order)
                         .map((block, index) => (
                           <div
-                            key={index}
+                            key={block.id || index}
                             className="my-2"
                             style={{ textAlign: block.alignment }}
                           >
@@ -736,7 +780,7 @@ export default function BrandingSettings() {
                         .sort((a, b) => a.order - b.order)
                         .map((block, index) => (
                           <div
-                            key={index}
+                            key={block.id || index}
                             className="my-2"
                             style={{ textAlign: block.alignment }}
                           >
