@@ -440,8 +440,7 @@ export default function CanvasPage({
           editingZone === 'header' ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200'
         } hover:bg-gray-50/30 transition-colors cursor-pointer`}
         style={{
-          height: document.header.height,
-          backgroundColor: document.styles.headerBg
+          height: document.header.height
         }}
         onClick={() => onZoneClick('header')}
       >
@@ -478,8 +477,7 @@ export default function CanvasPage({
           editingZone === 'footer' ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200'
         } hover:bg-gray-50/30 transition-colors cursor-pointer`}
         style={{
-          height: document.footer.height,
-          backgroundColor: document.styles.footerBg
+          height: document.footer.height
         }}
         onClick={() => onZoneClick('footer')}
       >
