@@ -230,12 +230,12 @@ export default function TableEditor({ table, onUpdate }) {
                         }} 
                         compact={true} 
                       />
-                      <input
-                        type="text"
+                      <textarea
                         value={cell.content}
                         onChange={(e) => handleCellUpdate(rowIndex, colIndex, { content: e.target.value })}
                         placeholder="Cell content"
-                        className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        rows={3}
+                        className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                       />
                       <div className="grid grid-cols-2 gap-1">
                         <input
