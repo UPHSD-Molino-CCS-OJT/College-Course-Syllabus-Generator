@@ -169,29 +169,37 @@ export default function InlineBlock({
         </div>
       </div>
 
-      {/* Inline Editor Panel */}
+      {/* Floating Editor Panel */}
       {isEditing && !isPreviewMode && (
-        <div className="bg-white border-2 border-blue-500 rounded-lg shadow-xl p-4 space-y-4 animate-in slide-in-from-top-2">
-          <div className="flex items-center justify-between pb-3 border-b">
-            <div className="flex items-center gap-2">
-              {block.type === 'text' && <Type size={18} className="text-blue-600" />}
-              {block.type === 'image' && <Image size={18} className="text-green-600" />}
-              {block.type === 'group' && <Folder size={18} className="text-purple-600" />}
-              <span className="font-semibold text-gray-900">
-                {block.type === 'text' && 'Text Block'}
-                {block.type === 'image' && 'Image Block'}
-                {block.type === 'group' && 'Group Container'}
-              </span>
+        <>
+          {/* Backdrop overlay */}
+          <div
+            className="fixed inset-0 bg-black/30 z-40"
+            onClick={onCloseEditor}
+          />
+          
+          {/* Floating editor window */}
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white border-2 border-blue-500 rounded-lg shadow-2xl p-6 space-y-4 z-50 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b">
+              <div className="flex items-center gap-2">
+                {block.type === 'text' && <Type size={18} className="text-blue-600" />}
+                {block.type === 'image' && <Image size={18} className="text-green-600" />}
+                {block.type === 'group' && <Folder size={18} className="text-purple-600" />}
+                <span className="font-semibold text-gray-900">
+                  {block.type === 'text' && 'Text Block'}
+                  {block.type === 'image' && 'Image Block'}
+                  {block.type === 'group' && 'Group Container'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={onCloseEditor}
+                className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium"
+              >
+                <Check size={14} />
+                Done
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={onCloseEditor}
-              className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium"
-            >
-              <Check size={14} />
-              Done
-            </button>
-          </div>
 
           {/* Editor Content */}
           {block.type === 'group' ? (
@@ -259,7 +267,8 @@ export default function InlineBlock({
               </div>
             </>
           )}
-        </div>
+          </div>
+        </>
       )}
     </div>
   );
