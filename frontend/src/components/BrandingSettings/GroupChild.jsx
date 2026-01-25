@@ -29,7 +29,11 @@ export default function GroupChild({
     setIsEditing(!isEditing);
   };
 
-  const handleCloseEditor = () => {
+  const handleCloseEditor = (e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
     setIsEditing(false);
   };
 
@@ -151,11 +155,18 @@ export default function GroupChild({
           {/* Backdrop overlay */}
           <div
             className="fixed inset-0 bg-black/30 z-40"
-            onClick={handleCloseEditor}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              handleCloseEditor();
+            }}
           />
           
           {/* Floating editor window */}
-          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white border-2 border-purple-500 rounded-lg shadow-2xl p-6 space-y-4 z-50 max-w-xl w-full max-h-[80vh] overflow-y-auto">
+          <div 
+            className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white border-2 border-purple-500 rounded-lg shadow-2xl p-6 space-y-4 z-50 max-w-xl w-full max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between pb-3 border-b">
               <div className="flex items-center gap-2">
                 {child.type === 'text' && <Type size={16} className="text-blue-600" />}
@@ -166,7 +177,11 @@ export default function GroupChild({
               </div>
               <button
                 type="button"
-                onClick={handleCloseEditor}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  handleCloseEditor();
+                }}
                 className="flex items-center gap-1 px-2 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-xs font-medium"
               >
                 <Check size={12} />

@@ -175,11 +175,18 @@ export default function InlineBlock({
           {/* Backdrop overlay */}
           <div
             className="fixed inset-0 bg-black/30 z-40"
-            onClick={onCloseEditor}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onCloseEditor();
+            }}
           />
           
           {/* Floating editor window */}
-          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white border-2 border-blue-500 rounded-lg shadow-2xl p-6 space-y-4 z-50 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+          <div 
+            className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white border-2 border-blue-500 rounded-lg shadow-2xl p-6 space-y-4 z-50 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between pb-3 border-b">
               <div className="flex items-center gap-2">
                 {block.type === 'text' && <Type size={18} className="text-blue-600" />}
