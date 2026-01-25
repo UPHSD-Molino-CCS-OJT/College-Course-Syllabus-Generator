@@ -1,11 +1,28 @@
 const Joi = require("joi");
 
+// Content block schema for header/footer
+const contentBlockSchema = Joi.object({
+  type: Joi.string().valid("text", "image").required(),
+  content: Joi.string().required(),
+  alignment: Joi.string().valid("left", "center", "right").default("center"),
+  styles: Joi.object({
+    fontWeight: Joi.string().default("normal"),
+    fontSize: Joi.string().default("medium"),
+    color: Joi.string().pattern(/^#[0-9A-Fa-f]{6}$/).default("#000000"),
+    width: Joi.number().optional(),
+    height: Joi.number().optional(),
+  }).optional(),
+  order: Joi.number().default(0),
+});
+
 const brandingSettingsJoiSchema = {
   create: Joi.object({
     institutionName: Joi.string().max(200).required(),
     institutionLogo: Joi.string().uri().allow("").optional(),
     headerText: Joi.string().max(500).allow("").optional(),
     footerText: Joi.string().max(500).allow("").optional(),
+    headerContent: Joi.array().items(contentBlockSchema).optional(),
+    footerContent: Joi.array().items(contentBlockSchema).optional(),
     primaryColor: Joi.string().pattern(/^#[0-9A-Fa-f]{6}$/).default("#1E40AF"),
     secondaryColor: Joi.string().pattern(/^#[0-9A-Fa-f]{6}$/).default("#3B82F6"),
     fontSize: Joi.string().valid("small", "medium", "large").default("medium"),
@@ -17,6 +34,8 @@ const brandingSettingsJoiSchema = {
     institutionLogo: Joi.string().uri().allow("").optional(),
     headerText: Joi.string().max(500).allow("").optional(),
     footerText: Joi.string().max(500).allow("").optional(),
+    headerContent: Joi.array().items(contentBlockSchema).optional(),
+    footerContent: Joi.array().items(contentBlockSchema).optional(),
     primaryColor: Joi.string().pattern(/^#[0-9A-Fa-f]{6}$/).optional(),
     secondaryColor: Joi.string().pattern(/^#[0-9A-Fa-f]{6}$/).optional(),
     fontSize: Joi.string().valid("small", "medium", "large").optional(),
