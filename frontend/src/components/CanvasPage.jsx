@@ -58,17 +58,22 @@ export default function CanvasPage({
       
       const newData = element.data.map((row, rIdx) =>
         row.map((cell, cIdx) => {
-          if (rIdx === rowIndex && cIdx === colIndex) {
-            const updates = { ...cell };
-            if (direction === 'width' || direction === 'both') {
-              updates.width = Math.max(50, startWidth + deltaX);
-            }
-            if (direction === 'height' || direction === 'both') {
-              updates.height = Math.max(20, startHeight + deltaY);
-            }
-            return updates;
+          const updates = { ...cell };
+          let shouldUpdate = false;
+          
+          // Width adjustment affects entire column
+          if ((direction === 'width' || direction === 'both') && cIdx === colIndex) {
+            updates.width = Math.max(50, startWidth + deltaX);
+            shouldUpdate = true;
           }
-          return cell;
+          
+          // Height adjustment affects only the specific cell
+          if ((direction === 'height' || direction === 'both') && rIdx === rowIndex && cIdx === colIndex) {
+            updates.height = Math.max(20, startHeight + deltaY);
+            shouldUpdate = true;
+          }
+          
+          return shouldUpdate ? updates : cell;
         })
       );
       
