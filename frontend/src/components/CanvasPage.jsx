@@ -206,7 +206,8 @@ export default function CanvasPage({
           style={{
             left: element.x,
             top: element.y,
-            minWidth: element.width || 100,
+            display: 'inline-block',
+            maxWidth: element.width || 'none',
             ...textStyle
           }}
           onClick={(e) => {
