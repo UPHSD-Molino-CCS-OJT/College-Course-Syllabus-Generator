@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, GripVertical, Settings, Type, Image, Folder } from 'lucide-react';
+import { Plus, Edit2, Trash2, GripVertical, Settings, Type, Image, Folder, Eye, Edit } from 'lucide-react';
 import BlockEditModal from './BlockEditModal';
 import LayoutToggle from './LayoutToggle';
 
@@ -9,6 +9,7 @@ export default function InlineEditablePreview({ settings, handlers }) {
   const [editingIndex, setEditingIndex] = useState(null);
   const [hoveredBlock, setHoveredBlock] = useState(null);
   const [hoveredSection, setHoveredSection] = useState(null);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   const handleEdit = (section, index) => {
     setEditingSection(section);
@@ -45,52 +46,58 @@ export default function InlineEditablePreview({ settings, handlers }) {
     return (
       <div
         key={block.id || index}
-        className="relative group/block pt-10"
+        className={`relative ${!isPreviewMode ? 'group/block pt-10' : ''}`}
         onMouseEnter={() => {
-          setHoveredBlock(index);
-          setHoveredSection(section);
+          if (!isPreviewMode) {
+            setHoveredBlock(index);
+            setHoveredSection(section);
+          }
         }}
         onMouseLeave={() => {
-          setHoveredBlock(null);
-          setHoveredSection(null);
+          if (!isPreviewMode) {
+            setHoveredBlock(null);
+            setHoveredSection(null);
+          }
         }}
       >
-        {/* Hover toolbar */}
-        <div className={`absolute top-0 left-0 flex items-center gap-1 bg-gray-900 text-white px-2 py-1 rounded shadow-lg z-10 transition-opacity ${
-          isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}>
-          <button
-            type="button"
-            className="p-1 hover:bg-gray-700 rounded"
-            title="Drag to reorder"
-          >
-            <GripVertical size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => handleEdit(section, index)}
-            className="p-1 hover:bg-gray-700 rounded"
-            title="Edit"
-          >
-            <Edit2 size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => handlers.removeContentBlock(section, index)}
-            className="p-1 hover:bg-red-600 rounded"
-            title="Delete"
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
+        {/* Hover toolbar - Only show in edit mode */}
+        {!isPreviewMode && (
+          <div className={`absolute top-0 left-0 flex items-center gap-1 bg-gray-900 text-white px-2 py-1 rounded shadow-lg z-10 transition-opacity ${
+            isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}>
+            <button
+              type="button"
+              className="p-1 hover:bg-gray-700 rounded"
+              title="Drag to reorder"
+            >
+              <GripVertical size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleEdit(section, index)}
+              className="p-1 hover:bg-gray-700 rounded"
+              title="Edit"
+            >
+              <Edit2 size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => handlers.removeContentBlock(section, index)}
+              className="p-1 hover:bg-red-600 rounded"
+              title="Delete"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+        )}
 
         {/* Block content */}
         <div
           className={`transition-all ${
-            isHovered ? 'ring-2 ring-blue-400 ring-offset-2 rounded' : ''
+            !isPreviewMode && isHovered ? 'ring-2 ring-blue-400 ring-offset-2 rounded' : ''
           }`}
-          onClick={() => handleEdit(section, index)}
-          style={{ cursor: 'pointer' }}
+          onClick={() => !isPreviewMode && handleEdit(section, index)}
+          style={{ cursor: isPreviewMode ? 'default' : 'pointer' }}
         >
           {renderBlockContent(block)}
         </div>
@@ -187,6 +194,9 @@ export default function InlineEditablePreview({ settings, handlers }) {
   };
 
   const renderInsertButton = (section, position) => {
+    // Don't show insert buttons in preview mode
+    if (isPreviewMode) return null;
+
     return (
       <div className="relative group/insert my-1">
         <div className="absolute inset-0 flex items-center">
@@ -254,14 +264,16 @@ export default function InlineEditablePreview({ settings, handlers }) {
 
     return (
       <div className="bg-gray-100 p-6 border-b-2 border-gray-300">
-        {/* Section header with layout toggle */}
+        {/* Section header with layout toggle (only in edit mode) */}
         <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-300">
           <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">{title}</h3>
-          <LayoutToggle
-            layoutField={layoutField}
-            currentLayout={settings[layoutField]}
-            onLayoutChange={handlers.handleLayoutChange}
-          />
+          {!isPreviewMode && (
+            <LayoutToggle
+              layoutField={layoutField}
+              currentLayout={settings[layoutField]}
+              onLayoutChange={handlers.handleLayoutChange}
+            />
+          )}
         </div>
 
         {/* Content */}
@@ -277,17 +289,23 @@ export default function InlineEditablePreview({ settings, handlers }) {
           }}
         >
           {blocks.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500 text-sm mb-4">No {title.toLowerCase()} content yet</p>
-              <button
-                type="button"
-                onClick={() => handlers.insertContentBlockAt(section, 0, 'text')}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                <Plus size={16} />
-                Add First Element
-              </button>
-            </div>
+            isPreviewMode ? (
+              <div className="text-center py-8">
+                <p className="text-gray-400 text-sm italic">No {title.toLowerCase()} content</p>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500 text-sm mb-4">No {title.toLowerCase()} content yet</p>
+                <button
+                  type="button"
+                  onClick={() => handlers.insertContentBlockAt(section, 0, 'text')}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  <Plus size={16} />
+                  Add First Element
+                </button>
+              </div>
+            )
           ) : (
             <>
               {renderInsertButton(section, 0)}
@@ -308,6 +326,30 @@ export default function InlineEditablePreview({ settings, handlers }) {
 
   return (
     <>
+      {/* Mode Toggle */}
+      <div className="flex justify-end items-center gap-4 pb-4 border-b mb-6">
+        <button
+          onClick={() => setIsPreviewMode(!isPreviewMode)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            isPreviewMode 
+              ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          {isPreviewMode ? (
+            <>
+              <Edit className="w-4 h-4" />
+              Switch to Edit Mode
+            </>
+          ) : (
+            <>
+              <Eye className="w-4 h-4" />
+              Switch to Preview Mode
+            </>
+          )}
+        </button>
+      </div>
+
       <div className="border border-gray-300 rounded-md overflow-hidden" style={{ fontFamily: settings.fontFamily }}>
         {/* Header */}
         {renderSection('headerContent', 'Header')}
