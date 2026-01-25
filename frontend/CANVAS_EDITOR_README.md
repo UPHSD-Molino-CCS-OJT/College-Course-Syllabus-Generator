@@ -34,7 +34,7 @@ The canvas is divided into three editable zones:
    - Main body area between header and footer
    - Ideal for primary syllabus content
 
-3. **Footer Zone** (default height: 80px)
+3. **Footer Zone** (default height: 120px)
    - Bottom section of the document
    - Great for page numbers, dates, and disclaimers
 
