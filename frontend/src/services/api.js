@@ -9,27 +9,6 @@ const api = axios.create({
   },
 });
 
-// User API
-export const userAPI = {
-  // Get all users with optional pagination and filtering
-  getUsers: async (params = {}) => {
-    const response = await api.get('/users', { params });
-    return response.data;
-  },
-
-  // Create a new user
-  createUser: async (userData) => {
-    const response = await api.post('/users/add-new-user', userData);
-    return response.data;
-  },
-
-  // Update a user by ID
-  updateUser: async (id, userData) => {
-    const response = await api.patch(`/users/${id}`, userData);
-    return response.data;
-  },
-};
-
 // Syllabus API
 export const syllabusAPI = {
   // Get all syllabi with optional pagination and filtering

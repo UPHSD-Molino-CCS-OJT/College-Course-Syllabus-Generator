@@ -3,9 +3,6 @@ import Header from './components/Header';
 import Navigation from './components/Navigation';
 import Footer from './components/Footer';
 import Pagination from './components/Pagination';
-import UserForm from './components/UserForm';
-import UserList from './components/UserList';
-import UserFilters from './components/UserFilters';
 import SyllabusForm from './components/SyllabusForm';
 import SyllabusList from './components/SyllabusList';
 import SyllabusView from './components/SyllabusView';
@@ -13,18 +10,11 @@ import SyllabusFilters from './components/SyllabusFilters';
 import SyllabusTemplateView from './components/SyllabusTemplateView';
 import SyllabusPrintView from './components/SyllabusPrintView';
 import BrandingSettings from './components/BrandingSettings';
-import { userAPI, syllabusAPI } from './services/api';
+import { syllabusAPI } from './services/api';
 
 function App() {
   const [activeSection, setActiveSection] = useState('syllabi');
   
-  // User state
-  const [users, setUsers] = useState([]);
-  const [editingUser, setEditingUser] = useState(null);
-  const [usersLoading, setUsersLoading] = useState(false);
-  const [userPage, setUserPage] = useState(1);
-  const [filterGender, setFilterGender] = useState('');
-
   // Syllabus state
   const [syllabi, setSyllabi] = useState([]);
   const [editingSyllabus, setEditingSyllabus] = useState(null);
@@ -37,27 +27,10 @@ function App() {
   const [filterSemester, setFilterSemester] = useState('');
 
   useEffect(() => {
-    if (activeSection === 'users') {
-      fetchUsers();
-    } else if (activeSection === 'syllabi') {
+    if (activeSection === 'syllabi') {
       fetchSyllabi();
     }
-  }, [activeSection, userPage, filterGender, syllabusPage, filterStatus, filterSemester]);
-
-  const fetchUsers = async () => {
-    setUsersLoading(true);
-    try {
-      const params = { page: userPage, limit: 10 };
-      if (filterGender) params.gender = filterGender;
-      
-      const response = await userAPI.getUsers(params);
-      setUsers(response.data.users);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    } finally {
-      setUsersLoading(false);
-    }
-  };
+  }, [activeSection, syllabusPage, filterStatus, filterSemester]);
 
   const fetchSyllabi = async () => {
     setSyllabiLoading(true);
@@ -73,27 +46,6 @@ function App() {
     } finally {
       setSyllabiLoading(false);
     }
-  };
-
-  // User handlers
-  const handleUserCreated = (newUser) => {
-    setUsers([newUser, ...users]);
-  };
-
-  const handleUserUpdated = (updatedUser) => {
-    setUsers(users.map(user => 
-      user._id === updatedUser._id ? updatedUser : user
-    ));
-    setEditingUser(null);
-  };
-
-  const handleEditUser = (user) => {
-    setEditingUser(user);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleCancelEditUser = () => {
-    setEditingUser(null);
   };
 
   // Syllabus handlers
@@ -191,44 +143,6 @@ function App() {
                 itemsPerPage={12}
               />
             )}
-          </>
-        )}
-
-        {/* Users Section */}
-        {activeSection === 'users' && (
-          <>
-            {/* User Form */}
-            <UserForm
-              onUserCreated={handleUserCreated}
-              editUser={editingUser}
-              onUserUpdated={handleUserUpdated}
-              onCancel={handleCancelEditUser}
-            />
-
-            {/* Filters */}
-            <UserFilters
-              filterGender={filterGender}
-              onGenderChange={(value) => {
-                setFilterGender(value);
-                setUserPage(1);
-              }}
-              onRefresh={fetchUsers}
-            />
-
-            {/* User List */}
-            <UserList
-              users={users}
-              onEditUser={handleEditUser}
-              loading={usersLoading}
-            />
-
-            {/* User Pagination */}
-            <Pagination
-              currentPage={userPage}
-              onPageChange={setUserPage}
-              itemsCount={users.length}
-              itemsPerPage={10}
-            />
           </>
         )}
 
