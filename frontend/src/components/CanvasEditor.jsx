@@ -260,6 +260,12 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   };
 
   const handleUpdateElement = (zone, elementId, updates) => {
+    // Update selectedElement first for immediate visual feedback
+    if (selectedElement?.id === elementId) {
+      setSelectedElement(prev => ({ ...prev, ...updates }));
+    }
+    
+    // Then update the document
     setCanvasDocument(prev => ({
       ...prev,
       [zone]: {
@@ -269,10 +275,6 @@ export default function CanvasEditor({ template, onClose, onSave }) {
         )
       }
     }));
-
-    if (selectedElement?.id === elementId) {
-      setSelectedElement(prev => ({ ...prev, ...updates }));
-    }
   };
 
   const handleDeleteElement = (zone, elementId) => {
