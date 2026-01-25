@@ -269,7 +269,7 @@ export default function CanvasPage({
               </svg>
             </div>
           )}
-          <table className="border-collapse">
+          <table style={{ borderCollapse: 'collapse' }}>
             <tbody>
               {element.data.map((row, rowIndex) => (
                 <tr key={rowIndex}>
