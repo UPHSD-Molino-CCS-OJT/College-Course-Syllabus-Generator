@@ -69,4 +69,25 @@ export const syllabusAPI = {
   },
 };
 
+// Settings API
+export const settingsAPI = {
+  // Get branding settings
+  getSettings: async () => {
+    const response = await api.get('/settings');
+    return response.data;
+  },
+
+  // Create branding settings
+  createSettings: async (settingsData) => {
+    const response = await api.post('/settings', settingsData);
+    return response.data;
+  },
+
+  // Update branding settings
+  updateSettings: async (settingsData) => {
+    const response = await api.put('/settings', settingsData);
+    return response.data;
+  },
+};
+
 export default api;
