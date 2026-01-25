@@ -39,7 +39,6 @@ export default function PreviewSection({ settings, renderContentBlock, onEditBlo
                           : settings.headerLayout === 'horizontal'
                           ? 'initial'
                           : block.alignment,
-                      width: block.type === 'group' ? '100%' : 'auto',
                     }}
                   >
                     {renderContentBlock(
@@ -94,7 +93,6 @@ export default function PreviewSection({ settings, renderContentBlock, onEditBlo
                           : settings.footerLayout === 'horizontal'
                           ? 'initial'
                           : block.alignment,
-                      width: block.type === 'group' ? '100%' : 'auto',
                     }}
                   >
                     {renderContentBlock(
