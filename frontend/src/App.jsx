@@ -9,7 +9,6 @@ import SyllabusView from './components/SyllabusView';
 import SyllabusFilters from './components/SyllabusFilters';
 import SyllabusTemplateView from './components/SyllabusTemplateView';
 import SyllabusPrintView from './components/SyllabusPrintView';
-import BrandingSettings from './components/BrandingSettings';
 import { syllabusAPI } from './services/api';
 
 function App() {
@@ -144,11 +143,6 @@ function App() {
               />
             )}
           </>
-        )}
-
-        {/* Settings Section */}
-        {activeSection === 'settings' && (
-          <BrandingSettings />
         )}
       </main>
 
