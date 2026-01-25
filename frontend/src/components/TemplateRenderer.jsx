@@ -149,6 +149,9 @@ export default function TemplateRenderer({ template, syllabus }) {
                       fontWeight: cell.fontWeight || 'normal',
                       color: cell.color || '#000',
                       textAlign: cell.align || 'left',
+                      whiteSpace: 'pre-wrap',
+                      wordWrap: 'break-word',
+                      verticalAlign: 'top',
                     }}
                   >
                     {cell.content}
