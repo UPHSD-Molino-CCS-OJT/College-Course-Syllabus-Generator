@@ -436,8 +436,8 @@ export default function CanvasPage({
     >
       {/* Header Zone */}
       <div
-        className={`absolute left-0 right-0 top-0 border-b-2 ${
-          editingZone === 'header' ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200'
+        className={`absolute left-0 right-0 top-0 ${
+          editingZone === 'header' ? 'bg-blue-50/50' : ''
         } hover:bg-gray-50/30 transition-colors cursor-pointer`}
         style={{
           height: document.header.height
@@ -473,8 +473,8 @@ export default function CanvasPage({
 
       {/* Footer Zone */}
       <div
-        className={`absolute left-0 right-0 bottom-0 border-t-2 ${
-          editingZone === 'footer' ? 'border-blue-500 bg-blue-50/50' : 'border-gray-200'
+        className={`absolute left-0 right-0 bottom-0 ${
+          editingZone === 'footer' ? 'bg-blue-50/50' : ''
         } hover:bg-gray-50/30 transition-colors cursor-pointer`}
         style={{
           height: document.footer.height
