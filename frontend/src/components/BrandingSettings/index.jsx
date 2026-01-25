@@ -134,6 +134,35 @@ export default function BrandingSettings() {
     }));
   };
 
+  const insertContentBlockAt = (section, position, type) => {
+    const newBlock = {
+      id: Date.now() + Math.random(),
+      type,
+      content: type === 'text' ? 'Enter text here' : '',
+      alignment: 'center',
+      styles: {
+        fontWeight: 'normal',
+        fontSize: 'medium',
+        color: '#000000',
+        width: type === 'image' ? 100 : undefined,
+        height: type === 'image' ? 100 : undefined,
+      },
+      order: position,
+      children: type === 'group' ? [] : undefined,
+    };
+    
+    setSettings((prev) => {
+      const newContent = [...prev[section]];
+      newContent.splice(position, 0, newBlock);
+      // Update order for all blocks
+      newContent.forEach((block, i) => (block.order = i));
+      return {
+        ...prev,
+        [section]: newContent,
+      };
+    });
+  };
+
   const removeContentBlock = (section, index) => {
     setSettings((prev) => ({
       ...prev,
@@ -251,11 +280,32 @@ export default function BrandingSettings() {
     }
   };
 
+  // Handle clicking on a preview element to edit it
+  const handleEditBlock = (section, index) => {
+    // Scroll to the element in the editor list
+    const element = document.getElementById(`block-${section}-${index}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Trigger the edit action
+      setTimeout(() => {
+        const editButton = element.querySelector('[data-edit-button]');
+        if (editButton) {
+          editButton.click();
+        }
+      }, 300);
+    }
+  };
+
   // Render content block helper
-  const renderContentBlock = (block) => {
+  const renderContentBlock = (block, isHorizontal = false, section = null, index = null) => {
+    const isClickable = section !== null && index !== null;
+    
     if (block.type === 'group') {
       return (
         <div
+          className={isClickable ? 'group/preview cursor-pointer transition-all hover:bg-purple-50 hover:shadow-sm rounded p-1' : ''}
+          onClick={isClickable ? () => handleEditBlock(section, index) : undefined}
+          title={isClickable ? 'Click to edit this group' : undefined}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -305,6 +355,9 @@ export default function BrandingSettings() {
     } else if (block.type === 'text') {
       return (
         <p
+          className={isClickable ? 'cursor-pointer transition-all hover:bg-blue-50 hover:shadow-sm rounded px-2 py-1 inline-block' : ''}
+          onClick={isClickable ? () => handleEditBlock(section, index) : undefined}
+          title={isClickable ? 'Click to edit this text' : undefined}
           style={{
             fontWeight: block.styles.fontWeight,
             fontSize:
@@ -323,6 +376,9 @@ export default function BrandingSettings() {
     } else {
       return (
         <img
+          className={isClickable ? 'cursor-pointer transition-all hover:ring-2 hover:ring-green-400 hover:shadow-md rounded' : ''}
+          onClick={isClickable ? () => handleEditBlock(section, index) : undefined}
+          title={isClickable ? 'Click to edit this image' : undefined}
           src={block.content}
           alt="Header"
           style={{
@@ -338,6 +394,7 @@ export default function BrandingSettings() {
   // Group all handlers for advanced tab
   const handlers = {
     addContentBlock,
+    insertContentBlockAt,
     removeContentBlock,
     updateContentBlock,
     moveContentBlock,
@@ -346,6 +403,7 @@ export default function BrandingSettings() {
     addChildToGroup,
     removeChildFromGroup,
     updateGroupChild,
+    handleEditBlock,
   };
 
   return (

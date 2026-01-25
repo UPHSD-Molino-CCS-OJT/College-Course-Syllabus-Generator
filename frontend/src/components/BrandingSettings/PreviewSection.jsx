@@ -1,7 +1,12 @@
-export default function PreviewSection({ settings, renderContentBlock }) {
+export default function PreviewSection({ settings, renderContentBlock, onEditBlock }) {
   return (
     <div className="border-t border-gray-200 pt-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Preview</h3>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        Preview
+        <span className="ml-2 text-sm font-normal text-gray-500">
+          (Click any element to edit)
+        </span>
+      </h3>
       <div
         className="border border-gray-300 rounded-md overflow-hidden"
         style={{
@@ -39,7 +44,9 @@ export default function PreviewSection({ settings, renderContentBlock }) {
                   >
                     {renderContentBlock(
                       block,
-                      settings.headerLayout === 'horizontal'
+                      settings.headerLayout === 'horizontal',
+                      'headerContent',
+                      index
                     )}
                   </div>
                 ))}
@@ -92,7 +99,9 @@ export default function PreviewSection({ settings, renderContentBlock }) {
                   >
                     {renderContentBlock(
                       block,
-                      settings.footerLayout === 'horizontal'
+                      settings.footerLayout === 'horizontal',
+                      'footerContent',
+                      index
                     )}
                   </div>
                 ))}

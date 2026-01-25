@@ -32,6 +32,7 @@ export default function AdvancedSettingsTab({
           addChildToGroup={handlers.addChildToGroup}
           removeChildFromGroup={handlers.removeChildFromGroup}
           updateGroupChild={handlers.updateGroupChild}
+          insertContentBlockAt={handlers.insertContentBlockAt}
         />
 
         {/* Footer Content Editor */}
@@ -48,12 +49,14 @@ export default function AdvancedSettingsTab({
           addChildToGroup={handlers.addChildToGroup}
           removeChildFromGroup={handlers.removeChildFromGroup}
           updateGroupChild={handlers.updateGroupChild}
+          insertContentBlockAt={handlers.insertContentBlockAt}
         />
 
         {/* Preview */}
         <PreviewSection
           settings={settings}
           renderContentBlock={renderContentBlock}
+          onEditBlock={handlers.handleEditBlock}
         />
       </div>
     </>
