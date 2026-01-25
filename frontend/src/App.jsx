@@ -92,7 +92,7 @@ function App() {
       <Navigation activeSection={activeSection} onSectionChange={setActiveSection} />
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Syllabi Section */}
         {activeSection === 'syllabi' && (
           <>
