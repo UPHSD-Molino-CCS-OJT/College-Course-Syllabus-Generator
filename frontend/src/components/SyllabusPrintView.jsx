@@ -80,58 +80,108 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
       // Prepare header elements
       const headerElements = [];
 
-      // Add logo to header if available
-      if (settings?.institutionLogo) {
-        try {
-          // Convert base64 to buffer
-          const base64Data = settings.institutionLogo.split(',')[1];
-          const binaryString = atob(base64Data);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
+      // Use new flexible headerContent if available, otherwise fall back to legacy fields
+      if (settings?.headerContent && settings.headerContent.length > 0) {
+        // Sort by order and process each block
+        const sortedBlocks = [...settings.headerContent].sort((a, b) => a.order - b.order);
+        
+        for (const block of sortedBlocks) {
+          if (block.type === 'image' && block.content) {
+            try {
+              const base64Data = block.content.split(',')[1];
+              const binaryString = atob(base64Data);
+              const bytes = new Uint8Array(binaryString.length);
+              for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+              }
 
+              headerElements.push(
+                new Paragraph({
+                  children: [
+                    new ImageRun({
+                      data: bytes,
+                      transformation: {
+                        width: block.styles?.width || 100,
+                        height: block.styles?.height || 100,
+                      },
+                    }),
+                  ],
+                  alignment: block.alignment === 'left' ? AlignmentType.LEFT : 
+                            block.alignment === 'right' ? AlignmentType.RIGHT : 
+                            AlignmentType.CENTER,
+                  spacing: { after: 100 },
+                })
+              );
+            } catch (error) {
+              console.error('Error adding image to header:', error);
+            }
+          } else if (block.type === 'text' && block.content) {
+            headerElements.push(
+              new Paragraph({
+                text: block.content,
+                bold: block.styles?.fontWeight === 'bold',
+                alignment: block.alignment === 'left' ? AlignmentType.LEFT : 
+                          block.alignment === 'right' ? AlignmentType.RIGHT : 
+                          AlignmentType.CENTER,
+                spacing: { after: 50 },
+              })
+            );
+          }
+        }
+      } else {
+        // Legacy fallback - Add logo to header if available
+        if (settings?.institutionLogo) {
+          try {
+            // Convert base64 to buffer
+            const base64Data = settings.institutionLogo.split(',')[1];
+            const binaryString = atob(base64Data);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            headerElements.push(
+              new Paragraph({
+                children: [
+                  new ImageRun({
+                    data: bytes,
+                    transformation: {
+                      width: 100,
+                      height: 100,
+                    },
+                  }),
+                ],
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 100 },
+              })
+            );
+          } catch (error) {
+            console.error('Error adding logo to header:', error);
+          }
+        }
+
+        // Add institution name to header
+        if (settings?.institutionName) {
           headerElements.push(
             new Paragraph({
-              children: [
-                new ImageRun({
-                  data: bytes,
-                  transformation: {
-                    width: 100,
-                    height: 100,
-                  },
-                }),
-              ],
+              text: settings.institutionName,
+              bold: true,
+              alignment: AlignmentType.CENTER,
+              spacing: { after: 50 },
+            })
+          );
+        }
+
+        // Add header text if available
+        if (settings?.headerText) {
+          headerElements.push(
+            new Paragraph({
+              text: settings.headerText,
               alignment: AlignmentType.CENTER,
               spacing: { after: 100 },
             })
           );
-        } catch (error) {
-          console.error('Error adding logo to header:', error);
         }
-      }
-
-      // Add institution name to header
-      if (settings?.institutionName) {
-        headerElements.push(
-          new Paragraph({
-            text: settings.institutionName,
-            bold: true,
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 50 },
-          })
-        );
-      }
-
-      // Add header text if available
-      if (settings?.headerText) {
-        headerElements.push(
-          new Paragraph({
-            text: settings.headerText,
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 100 },
-          })
-        );
       }
 
       const doc = new Document({
@@ -325,18 +375,72 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
               }),
             ] : []),
 
-            // Footer
-            ...(settings?.footerText ? [
-              new Paragraph({
-                text: '',
-                spacing: { before: 400 },
-              }),
-              new Paragraph({
-                text: settings.footerText,
-                alignment: AlignmentType.CENTER,
-                italics: true,
-              }),
-            ] : []),
+            // Footer - Use flexible footerContent if available
+            ...(settings?.footerContent && settings.footerContent.length > 0 ? 
+              [
+                new Paragraph({
+                  text: '',
+                  spacing: { before: 400 },
+                }),
+                ...settings.footerContent
+                  .sort((a, b) => a.order - b.order)
+                  .flatMap(block => {
+                    if (block.type === 'text' && block.content) {
+                      return [
+                        new Paragraph({
+                          text: block.content,
+                          bold: block.styles?.fontWeight === 'bold',
+                          alignment: block.alignment === 'left' ? AlignmentType.LEFT : 
+                                    block.alignment === 'right' ? AlignmentType.RIGHT : 
+                                    AlignmentType.CENTER,
+                          spacing: { after: 100 },
+                        })
+                      ];
+                    } else if (block.type === 'image' && block.content) {
+                      try {
+                        const base64Data = block.content.split(',')[1];
+                        const binaryString = atob(base64Data);
+                        const bytes = new Uint8Array(binaryString.length);
+                        for (let i = 0; i < binaryString.length; i++) {
+                          bytes[i] = binaryString.charCodeAt(i);
+                        }
+                        return [
+                          new Paragraph({
+                            children: [
+                              new ImageRun({
+                                data: bytes,
+                                transformation: {
+                                  width: block.styles?.width || 50,
+                                  height: block.styles?.height || 50,
+                                },
+                              }),
+                            ],
+                            alignment: block.alignment === 'left' ? AlignmentType.LEFT : 
+                                      block.alignment === 'right' ? AlignmentType.RIGHT : 
+                                      AlignmentType.CENTER,
+                            spacing: { after: 100 },
+                          })
+                        ];
+                      } catch (error) {
+                        console.error('Error adding image to footer:', error);
+                        return [];
+                      }
+                    }
+                    return [];
+                  }),
+              ] 
+              : settings?.footerText ? [
+                new Paragraph({
+                  text: '',
+                  spacing: { before: 400 },
+                }),
+                new Paragraph({
+                  text: settings.footerText,
+                  alignment: AlignmentType.CENTER,
+                  italics: true,
+                }),
+              ] : []
+            ),
           ],
         }],
       });
@@ -454,25 +558,72 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
               }}
             >
               {/* Header */}
-              <div className="flex items-start justify-between mb-6 pb-4 border-b-4" style={{ borderColor: settings.primaryColor }}>
-                {settings.institutionLogo && (
-                  <div className="w-24 h-24 flex-shrink-0">
-                    <img
-                      src={settings.institutionLogo}
-                      alt="Institution Logo"
-                      className="w-full h-full object-contain"
-                    />
+              <div className="mb-6 pb-4 border-b-4" style={{ borderColor: settings.primaryColor }}>
+                {settings?.headerContent && settings.headerContent.length > 0 ? (
+                  // Use flexible header content
+                  <div className="space-y-2">
+                    {settings.headerContent
+                      .sort((a, b) => a.order - b.order)
+                      .map((block, index) => (
+                        <div
+                          key={index}
+                          style={{ textAlign: block.alignment }}
+                        >
+                          {block.type === 'text' ? (
+                            <p
+                              style={{
+                                fontWeight: block.styles?.fontWeight || 'normal',
+                                fontSize:
+                                  block.styles?.fontSize === 'small'
+                                    ? '12px'
+                                    : block.styles?.fontSize === 'large'
+                                    ? '18px'
+                                    : '14px',
+                                color: block.styles?.color || '#000000',
+                                margin: 0,
+                                padding: '4px 0',
+                              }}
+                            >
+                              {block.content}
+                            </p>
+                          ) : (
+                            <img
+                              src={block.content}
+                              alt="Header"
+                              style={{
+                                width: `${block.styles?.width || 100}px`,
+                                height: `${block.styles?.height || 100}px`,
+                                display: 'inline-block',
+                                margin: block.alignment === 'center' ? '0 auto' : block.alignment === 'right' ? '0 0 0 auto' : '0',
+                              }}
+                            />
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  // Legacy header display
+                  <div className="flex items-start justify-between">
+                    {settings.institutionLogo && (
+                      <div className="w-24 h-24 flex-shrink-0">
+                        <img
+                          src={settings.institutionLogo}
+                          alt="Institution Logo"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 text-center">
+                      <h1 className="text-3xl font-bold mb-1" style={{ color: settings.primaryColor }}>
+                        {settings.institutionName}
+                      </h1>
+                      {settings.headerText && (
+                        <p className="text-sm text-gray-600">{settings.headerText}</p>
+                      )}
+                    </div>
+                    {settings.institutionLogo && <div className="w-24" />} {/* Spacer for balance */}
                   </div>
                 )}
-                <div className="flex-1 text-center">
-                  <h1 className="text-3xl font-bold mb-1" style={{ color: settings.primaryColor }}>
-                    {settings.institutionName}
-                  </h1>
-                  {settings.headerText && (
-                    <p className="text-sm text-gray-600">{settings.headerText}</p>
-                  )}
-                </div>
-                {settings.institutionLogo && <div className="w-24" />} {/* Spacer for balance */}
               </div>
 
               {/* Course Information */}
@@ -601,11 +752,58 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
               </div>
 
               {/* Footer */}
-              {settings.footerText && (
-                <div className="mt-6 pt-4 border-t-2 text-center text-sm text-gray-600" style={{ borderColor: settings.primaryColor }}>
-                  {settings.footerText}
+              {(settings?.footerContent && settings.footerContent.length > 0) || settings?.footerText ? (
+                <div className="mt-6 pt-4 border-t-2" style={{ borderColor: settings.primaryColor }}>
+                  {settings?.footerContent && settings.footerContent.length > 0 ? (
+                    // Use flexible footer content
+                    <div className="space-y-2">
+                      {settings.footerContent
+                        .sort((a, b) => a.order - b.order)
+                        .map((block, index) => (
+                          <div
+                            key={index}
+                            style={{ textAlign: block.alignment }}
+                          >
+                            {block.type === 'text' ? (
+                              <p
+                                style={{
+                                  fontWeight: block.styles?.fontWeight || 'normal',
+                                  fontSize:
+                                    block.styles?.fontSize === 'small'
+                                      ? '12px'
+                                      : block.styles?.fontSize === 'large'
+                                      ? '18px'
+                                      : '14px',
+                                  color: block.styles?.color || '#000000',
+                                  margin: 0,
+                                  padding: '4px 0',
+                                }}
+                              >
+                                {block.content}
+                              </p>
+                            ) : (
+                              <img
+                                src={block.content}
+                                alt="Footer"
+                                style={{
+                                  width: `${block.styles?.width || 50}px`,
+                                  height: `${block.styles?.height || 50}px`,
+                                  display: 'inline-block',
+                                  margin: block.alignment === 'center' ? '0 auto' : block.alignment === 'right' ? '0 0 0 auto' : '0',
+                                }}
+                              />
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    // Legacy footer display
+                    <div className="text-center text-sm text-gray-600">
+                      {settings.footerText}
+                    </div>
+                  )}
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
