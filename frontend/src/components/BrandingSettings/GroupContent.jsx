@@ -13,6 +13,7 @@ export default function GroupContent({
   onRemoveChild,
   onUpdateChild,
   onImageUploadForChild,
+  onParentMouseLeave,
 }) {
   const groupLayout = block.layout || 'horizontal';
 
@@ -39,6 +40,7 @@ export default function GroupContent({
         onRemoveChild={onRemoveChild}
         onUpdateChild={onUpdateChild}
         onImageUploadForChild={onImageUploadForChild}
+        onParentMouseLeave={onParentMouseLeave}
       />
     );
   };
@@ -76,6 +78,7 @@ export default function GroupContent({
           onUpdate={handleUpdateChild}
           onImageUpload={onImageUploadForChild}
           renderNestedGroup={renderNestedGroup}
+          onParentMouseLeave={onParentMouseLeave}
         />
       ))}
     </div>

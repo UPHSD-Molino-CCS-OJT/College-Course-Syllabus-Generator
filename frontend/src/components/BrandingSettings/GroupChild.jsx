@@ -19,6 +19,7 @@ export default function GroupChild({
   onUpdate,
   onImageUpload,
   renderNestedGroup,
+  onParentMouseLeave,
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -63,7 +64,13 @@ export default function GroupChild({
         }}
         onMouseEnter={(e) => {
           e.stopPropagation();
-          if (!isPreviewMode) setIsHovered(true);
+          if (!isPreviewMode) {
+            setIsHovered(true);
+            // Clear parent group's hover state when child is hovered
+            if (onParentMouseLeave) {
+              onParentMouseLeave();
+            }
+          }
         }}
         onMouseLeave={(e) => {
           e.stopPropagation();

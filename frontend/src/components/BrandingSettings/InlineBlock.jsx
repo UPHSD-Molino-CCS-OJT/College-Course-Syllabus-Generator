@@ -54,6 +54,7 @@ export default function InlineBlock({
           onRemoveChild={onRemoveChild}
           onUpdateChild={onUpdateChild}
           onImageUploadForChild={onImageUploadForChild}
+          onParentMouseLeave={onMouseLeave}
         />
       );
     } else if (block.type === 'text') {
@@ -110,8 +111,10 @@ export default function InlineBlock({
           }
         }}
         onMouseLeave={(e) => {
-          // Don't trigger leave if we're leaving to a child element
-          if (!e.relatedTarget?.hasAttribute('data-child-element') && !e.relatedTarget?.closest('[data-child-element]')) {
+          // Only keep hover if we're moving to a child element within this group
+          const isMovingToChild = e.relatedTarget?.closest('[data-child-element]') && 
+                                  e.currentTarget.contains(e.relatedTarget);
+          if (!isMovingToChild) {
             onMouseLeave();
           }
         }}
