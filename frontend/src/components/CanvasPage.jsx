@@ -180,16 +180,26 @@ export default function CanvasPage({
       return (
         <div
           key={element.id}
-          className={`absolute cursor-move select-none ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+          className={`absolute select-none ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
           style={{
             left: element.x,
             top: element.y,
             minWidth: element.width || 100,
             ...textStyle
           }}
-          onMouseDown={(e) => handleMouseDown(e, element, zone)}
           onDoubleClick={() => handleDoubleClick(element, zone)}
         >
+          {isSelected && (
+            <div
+              className="absolute -top-6 -left-6 w-6 h-6 bg-blue-500 rounded-full cursor-move flex items-center justify-center shadow-lg hover:bg-blue-600"
+              onMouseDown={(e) => handleMouseDown(e, element, zone)}
+              title="Drag to move"
+            >
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+              </svg>
+            </div>
+          )}
           {isEditing ? (
             <textarea
               autoFocus
@@ -216,6 +226,17 @@ export default function CanvasPage({
             top: element.y
           }}
         >
+          {isSelected && (
+            <div
+              className="absolute -top-6 -left-6 w-6 h-6 bg-blue-500 rounded-full cursor-move flex items-center justify-center shadow-lg hover:bg-blue-600 z-10"
+              onMouseDown={(e) => handleMouseDown(e, element, zone)}
+              title="Drag to move"
+            >
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+              </svg>
+            </div>
+          )}
           <table className="border-collapse">
             <tbody>
               {element.data.map((row, rowIndex) => (
@@ -282,15 +303,25 @@ export default function CanvasPage({
       return (
         <div
           key={element.id}
-          className={`absolute cursor-move ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+          className={`absolute ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
           style={{
             left: element.x,
             top: element.y,
             width: element.width,
             height: element.height
           }}
-          onMouseDown={(e) => handleMouseDown(e, element, zone)}
         >
+          {isSelected && (
+            <div
+              className="absolute -top-6 -left-6 w-6 h-6 bg-blue-500 rounded-full cursor-move flex items-center justify-center shadow-lg hover:bg-blue-600 z-10"
+              onMouseDown={(e) => handleMouseDown(e, element, zone)}
+              title="Drag to move"
+            >
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+              </svg>
+            </div>
+          )}
           {element.src ? (
             <img
               src={element.src}
@@ -310,13 +341,23 @@ export default function CanvasPage({
       return (
         <div
           key={element.id}
-          className={`absolute cursor-move ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+          className={`absolute ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
           style={{
             left: element.x,
             top: element.y
           }}
-          onMouseDown={(e) => handleMouseDown(e, element, zone)}
         >
+          {isSelected && (
+            <div
+              className="absolute -top-6 -left-6 w-6 h-6 bg-blue-500 rounded-full cursor-move flex items-center justify-center shadow-lg hover:bg-blue-600 z-10"
+              onMouseDown={(e) => handleMouseDown(e, element, zone)}
+              title="Drag to move"
+            >
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+              </svg>
+            </div>
+          )}
           <svg width={element.width || 300} height={Math.max(element.strokeWidth || 2, 10)}>
             <line
               x1="0"
