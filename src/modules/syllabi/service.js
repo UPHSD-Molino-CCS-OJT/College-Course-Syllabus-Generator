@@ -16,12 +16,14 @@ exports.getSyllabi = async (query) => {
     .skip(parseInt(skip))
     .sort({ year: -1, semester: 1, courseCode: 1 })
     .populate('createdBy', 'name email')
+    .populate('template', 'name description pageSize orientation category')
     .exec();
 };
 
 exports.getSyllabusById = async (id) => {
   return Syllabus.findById(id)
     .populate('createdBy', 'name email')
+    .populate('template')
     .exec();
 };
 

@@ -49,6 +49,7 @@ module.exports = {
     disabilities: Joi.string().max(1000).allow(""),
     
     status: Joi.string().valid("draft", "published", "archived"),
+    template: Joi.string().allow(null),
     createdBy: Joi.string().allow(null),
     createdAt: Joi.date(),
     updatedAt: Joi.date(),
@@ -85,6 +86,7 @@ module.exports = {
     disabilities: Joi.string().max(1000).allow(""),
     
     status: Joi.string().valid("draft", "published", "archived"),
+    template: Joi.string().allow(null),
     createdBy: Joi.string().allow(null),
     createdAt: Joi.date(),
     updatedAt: Joi.date(),

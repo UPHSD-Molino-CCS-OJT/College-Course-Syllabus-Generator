@@ -165,6 +165,12 @@ const syllabusSchema = new mongoose.Schema(
       default: "draft",
     },
 
+    // Template Reference
+    template: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Template",
+    },
+
     // Metadata
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
