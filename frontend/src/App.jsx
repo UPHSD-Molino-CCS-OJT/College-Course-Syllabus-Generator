@@ -11,6 +11,8 @@ import SyllabusList from './components/SyllabusList';
 import SyllabusView from './components/SyllabusView';
 import SyllabusFilters from './components/SyllabusFilters';
 import SyllabusTemplateView from './components/SyllabusTemplateView';
+import SyllabusPrintView from './components/SyllabusPrintView';
+import BrandingSettings from './components/BrandingSettings';
 import { userAPI, syllabusAPI } from './services/api';
 
 function App() {
@@ -28,6 +30,7 @@ function App() {
   const [editingSyllabus, setEditingSyllabus] = useState(null);
   const [viewingSyllabus, setViewingSyllabus] = useState(null);
   const [viewingTemplate, setViewingTemplate] = useState(null);
+  const [viewingPrint, setViewingPrint] = useState(null);
   const [syllabiLoading, setSyllabiLoading] = useState(false);
   const [syllabusPage, setSyllabusPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState('');
@@ -119,6 +122,10 @@ function App() {
     setViewingTemplate(syllabus);
   };
 
+  const handleViewPrint = (syllabus) => {
+    setViewingPrint(syllabus);
+  };
+
   const handleDeleteSyllabus = (id) => {
     setSyllabi(syllabi.filter(syllabus => syllabus._id !== id));
   };
@@ -171,6 +178,7 @@ function App() {
               onEditSyllabus={handleEditSyllabus}
               onDeleteSyllabus={handleDeleteSyllabus}
               onViewSyllabus={handleViewSyllabus}
+              onViewPrint={handleViewPrint}
               loading={syllabiLoading}
             />
 
@@ -181,21 +189,6 @@ function App() {
                 onPageChange={setSyllabusPage}
                 itemsCount={syllabi.length}
                 itemsPerPage={12}
-              />
-            )}
-
-            {/* Syllabus View Modal */}
-            {viewingSyllabus && (
-              <SyllabusView
-                syllabus={viewingSyllabus}
-                onClose={() => setViewingSyllabus(null)}
-                onEdit={handleEditSyllabus}
-              />            )}
-            {/* Syllabus Template View Modal */}
-            {viewingTemplate && (
-              <SyllabusTemplateView
-                syllabus={viewingTemplate}
-                onClose={() => setViewingTemplate(null)}
               />
             )}
           </>
@@ -238,7 +231,35 @@ function App() {
             />
           </>
         )}
+
+        {/* Settings Section */}
+        {activeSection === 'settings' && (
+          <BrandingSettings />
+        )}
       </main>
+
+      {/* Modals */}
+      {viewingSyllabus && (
+        <SyllabusView
+          syllabus={viewingSyllabus}
+          onClose={() => setViewingSyllabus(null)}
+          onEdit={handleEditSyllabus}
+        />
+      )}
+
+      {viewingTemplate && (
+        <SyllabusTemplateView
+          syllabus={viewingTemplate}
+          onClose={() => setViewingTemplate(null)}
+        />
+      )}
+
+      {viewingPrint && (
+        <SyllabusPrintView
+          syllabus={viewingPrint}
+          onClose={() => setViewingPrint(null)}
+        />
+      )}
 
       <Footer />
     </div>
