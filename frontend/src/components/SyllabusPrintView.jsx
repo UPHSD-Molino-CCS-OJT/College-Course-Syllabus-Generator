@@ -546,43 +546,14 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
         <div className="bg-white rounded-lg shadow-xl w-full max-h-[90vh] overflow-hidden flex flex-col" style={{ maxWidth: 'calc(356mm + 48px)' }}>
           {/* Modal Header */}
           <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-            <h2 className="text-xl font-bold text-gray-900">Print/Export Syllabus</h2>
+            <h2 className="text-xl font-bold text-gray-900">Print Syllabus</h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={handlePrint}
-                disabled={exporting}
-                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50 transition-colors text-sm font-medium flex items-center gap-2"
+                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-medium flex items-center gap-2"
               >
                 <Printer className="w-4 h-4" />
                 Print
-              </button>
-              <button
-                onClick={handleExportPDF}
-                disabled={exporting}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 transition-colors text-sm font-medium flex items-center gap-2"
-              >
-                {exporting ? (
-                  'Exporting...'
-                ) : (
-                  <>
-                    <File className="w-4 h-4" />
-                    Export PDF
-                  </>
-                )}
-              </button>
-              <button
-                onClick={handleExportWord}
-                disabled={exporting}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors text-sm font-medium flex items-center gap-2"
-              >
-                {exporting ? (
-                  'Exporting...'
-                ) : (
-                  <>
-                    <FileText className="w-4 h-4" />
-                    Export Word
-                  </>
-                )}
               </button>
               <button
                 onClick={onClose}
