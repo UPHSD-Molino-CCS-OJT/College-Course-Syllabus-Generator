@@ -96,10 +96,10 @@ export default function TextStylePanel({ element, onUpdate }) {
         </select>
       </div>
 
-      {/* Text Decorations */}
+      {/* Text Style */}
       <div className="mb-4">
         <label className="block text-sm font-medium mb-2">Text Style</label>
-        <div className="flex gap-2">
+        <div className="flex gap-2 mb-2">
           <button
             onClick={() => onUpdate({ bold: !element.bold })}
             className={`flex-1 px-3 py-2 rounded font-bold transition-colors ${
@@ -133,6 +133,119 @@ export default function TextStylePanel({ element, onUpdate }) {
           >
             U
           </button>
+          <button
+            onClick={() => onUpdate({ strikethrough: !element.strikethrough })}
+            className={`flex-1 px-3 py-2 rounded line-through transition-colors ${
+              element.strikethrough
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+            title="Strikethrough"
+          >
+            S
+          </button>
+        </div>
+      </div>
+
+      {/* Text Transform */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-2">Text Transform</label>
+        <div className="grid grid-cols-4 gap-2">
+          <button
+            onClick={() => onUpdate({ textTransform: 'none' })}
+            className={`px-2 py-2 rounded text-xs transition-colors ${
+              (element.textTransform || 'none') === 'none'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+            title="None"
+          >
+            Abc
+          </button>
+          <button
+            onClick={() => onUpdate({ textTransform: 'uppercase' })}
+            className={`px-2 py-2 rounded text-xs transition-colors ${
+              element.textTransform === 'uppercase'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+            title="Uppercase"
+          >
+            ABC
+          </button>
+          <button
+            onClick={() => onUpdate({ textTransform: 'lowercase' })}
+            className={`px-2 py-2 rounded text-xs transition-colors ${
+              element.textTransform === 'lowercase'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+            title="Lowercase"
+          >
+            abc
+          </button>
+          <button
+            onClick={() => onUpdate({ textTransform: 'capitalize' })}
+            className={`px-2 py-2 rounded text-xs transition-colors ${
+              element.textTransform === 'capitalize'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+            title="Capitalize"
+          >
+            Abc
+          </button>
+        </div>
+      </div>
+
+      {/* Letter Spacing */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-2">Letter Spacing</label>
+        <div className="flex items-center gap-2">
+          <input
+            type="range"
+            min="-2"
+            max="10"
+            step="0.5"
+            value={element.letterSpacing || 0}
+            onChange={(e) => onUpdate({ letterSpacing: parseFloat(e.target.value) })}
+            className="flex-1"
+          />
+          <input
+            type="number"
+            min="-2"
+            max="10"
+            step="0.5"
+            value={element.letterSpacing || 0}
+            onChange={(e) => onUpdate({ letterSpacing: parseFloat(e.target.value) })}
+            className="w-16 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <span className="text-xs text-gray-400">px</span>
+        </div>
+      </div>
+
+      {/* Line Height */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-2">Line Height</label>
+        <div className="flex items-center gap-2">
+          <input
+            type="range"
+            min="0.8"
+            max="3"
+            step="0.1"
+            value={element.lineHeight || 1.5}
+            onChange={(e) => onUpdate({ lineHeight: parseFloat(e.target.value) })}
+            className="flex-1"
+          />
+          <input
+            type="number"
+            min="0.8"
+            max="3"
+            step="0.1"
+            value={element.lineHeight || 1.5}
+            onChange={(e) => onUpdate({ lineHeight: parseFloat(e.target.value) })}
+            className="w-16 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
         </div>
       </div>
 

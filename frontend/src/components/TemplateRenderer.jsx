@@ -49,6 +49,17 @@ export default function TemplateRenderer({ template, syllabus }) {
     };
 
     if (element.type === 'text') {
+      let textDecoration = '';
+      if (element.underline && element.strikethrough) {
+        textDecoration = 'underline line-through';
+      } else if (element.underline) {
+        textDecoration = 'underline';
+      } else if (element.strikethrough) {
+        textDecoration = 'line-through';
+      } else {
+        textDecoration = 'none';
+      }
+
       const textStyle = {
         fontSize: `${element.fontSize}px`,
         fontFamily: element.fontFamily,
@@ -59,7 +70,10 @@ export default function TemplateRenderer({ template, syllabus }) {
         whiteSpace: 'pre-wrap',
         wordWrap: 'break-word',
         fontStyle: element.italic ? 'italic' : 'normal',
-        textDecoration: element.underline ? 'underline' : 'none',
+        textDecoration: textDecoration,
+        textTransform: element.textTransform || 'none',
+        letterSpacing: element.letterSpacing ? `${element.letterSpacing}px` : 'normal',
+        lineHeight: element.lineHeight || 1.5,
         display: 'flex',
         alignItems: element.verticalAlign === 'middle' ? 'center' : element.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start',
       };

@@ -171,6 +171,17 @@ export default function CanvasPage({
     const isEditing = editingTextId === element.id;
 
     if (element.type === 'text') {
+      let textDecoration = '';
+      if (element.underline && element.strikethrough) {
+        textDecoration = 'underline line-through';
+      } else if (element.underline) {
+        textDecoration = 'underline';
+      } else if (element.strikethrough) {
+        textDecoration = 'line-through';
+      } else {
+        textDecoration = 'none';
+      }
+
       const textStyle = {
         fontSize: element.fontSize,
         fontFamily: element.fontFamily,
@@ -178,7 +189,10 @@ export default function CanvasPage({
         color: element.color,
         textAlign: element.align,
         fontStyle: element.italic ? 'italic' : 'normal',
-        textDecoration: element.underline ? 'underline' : 'none',
+        textDecoration: textDecoration,
+        textTransform: element.textTransform || 'none',
+        letterSpacing: element.letterSpacing ? `${element.letterSpacing}px` : 'normal',
+        lineHeight: element.lineHeight || 1.5,
       };
 
       if (element.bold) {
