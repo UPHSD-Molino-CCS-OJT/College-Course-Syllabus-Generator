@@ -4,24 +4,45 @@ import jsPDF from 'jspdf';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle, Header, ImageRun } from 'docx';
 import { saveAs } from 'file-saver';
 import { X, Printer, FileText, File } from 'lucide-react';
-import { settingsAPI } from '../services/api';
+import { settingsAPI, templateAPI } from '../services/api';
 import TemplateRenderer from './TemplateRenderer';
 
 export default function SyllabusPrintView({ syllabus, onClose }) {
   const printRef = useRef();
   const [settings, setSettings] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [template, setTemplate] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchSettings();
+    fetchData();
   }, []);
 
-  const fetchSettings = async () => {
+  const fetchData = async () => {
     try {
-      const response = await settingsAPI.getSettings();
-      setSettings(response.data.settings);
+      setLoading(true);
+      
+      // Fetch settings
+      const settingsResponse = await settingsAPI.getSettings();
+      setSettings(settingsResponse.data.settings);
+      
+      // Determine which template to use
+      if (syllabus.template && typeof syllabus.template === 'object' && syllabus.template.canvasDocument) {
+        // Use the linked template
+        setTemplate(syllabus.template);
+      } else {
+        // Fetch and use the default template
+        try {
+          const templateResponse = await templateAPI.getDefaultTemplate();
+          if (templateResponse.data.template) {
+            setTemplate(templateResponse.data.template);
+          }
+        } catch (error) {
+          console.log('No default template found:', error);
+        }
+      }
     } catch (error) {
-      console.error('Error fetching settings:', error);
+      console.error('Error fetching data:', error);
       // Use default settings if fetch fails
       setSettings({
         institutionName: 'College Name',
@@ -33,6 +54,8 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
         fontSize: 'medium',
         fontFamily: 'Arial, sans-serif',
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -56,11 +79,11 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
       let orientation = 'landscape';
       let format = 'legal';
       
-      if (syllabus.template && typeof syllabus.template === 'object') {
-        orientation = syllabus.template.orientation || 'landscape';
-        format = syllabus.template.pageSize === 'longBond' ? [355.6, 215.9] : 
-                syllabus.template.pageSize === 'a4' ? 'a4' :
-                syllabus.template.pageSize === 'letter' ? 'letter' : 'legal';
+      if (template) {
+        orientation = template.orientation || 'landscape';
+        format = template.pageSize === 'longBond' ? [355.6, 215.9] : 
+                template.pageSize === 'a4' ? 'a4' :
+                template.pageSize === 'letter' ? 'letter' : 'legal';
       }
       
       const pdf = new jsPDF({
@@ -472,7 +495,7 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
     }
   };
 
-  if (!syllabus || !settings) {
+  if (!syllabus || !settings || loading) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6">
@@ -484,14 +507,14 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
 
   const fontSize = settings.fontSize === 'small' ? '12px' : settings.fontSize === 'large' ? '16px' : '14px';
   
-  // Check if syllabus uses a template
-  const usesTemplate = syllabus.template && typeof syllabus.template === 'object' && syllabus.template.canvasDocument;
+  // Check if a template is available
+  const usesTemplate = template && template.canvasDocument;
   
   // Get page dimensions
   const getPageStyle = () => {
     if (usesTemplate) {
-      const pageSize = syllabus.template.pageSize || 'longBond';
-      const orientation = syllabus.template.orientation || 'landscape';
+      const pageSize = template.pageSize || 'longBond';
+      const orientation = template.orientation || 'landscape';
       
       // Map to CSS page size
       const pageMap = {
@@ -570,275 +593,25 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
               /* Template-based view */
               <div id="printable-syllabus" ref={printRef} className="mx-auto">
                 <TemplateRenderer 
-                  template={syllabus.template} 
+                  template={template} 
                   syllabus={syllabus}
                 />
               </div>
             ) : (
-              /* Default view */
-            <div
-              id="printable-syllabus"
-              ref={printRef}
-              className="bg-white mx-auto shadow-lg"
-              style={{
-                width: pageStyle.width,
-                minHeight: '216mm',
-                padding: '20mm',
-                fontFamily: settings.fontFamily,
-                fontSize: fontSize,
-              }}
-            >
-              {/* Header */}
-              <div className="mb-6 pb-4 border-b-4" style={{ borderColor: settings.primaryColor }}>
-                {settings?.headerContent && settings.headerContent.length > 0 ? (
-                  // Use flexible header content
-                  <div 
-                    className={settings.headerLayout === 'horizontal' ? 'flex items-center gap-4 flex-wrap justify-center' : 'space-y-2'}
-                  >
-                    {settings.headerContent
-                      .sort((a, b) => a.order - b.order)
-                      .map((block, index) => (
-                        <div
-                          key={index}
-                          style={{ textAlign: settings.headerLayout === 'horizontal' ? 'initial' : block.alignment }}
-                        >
-                          {block.type === 'text' ? (
-                            <p
-                              style={{
-                                fontWeight: block.styles?.fontWeight || 'normal',
-                                fontSize:
-                                  block.styles?.fontSize === 'small'
-                                    ? '12px'
-                                    : block.styles?.fontSize === 'large'
-                                    ? '18px'
-                                    : '14px',
-                                color: block.styles?.color || '#000000',
-                                margin: 0,
-                                padding: settings.headerLayout === 'horizontal' ? '0' : '4px 0',
-                              }}
-                            >
-                              {block.content}
-                            </p>
-                          ) : (
-                            <img
-                              src={block.content}
-                              alt="Header"
-                              style={{
-                                width: `${block.styles?.width || 100}px`,
-                                height: `${block.styles?.height || 100}px`,
-                                display: 'inline-block',
-                                margin: block.alignment === 'center' ? '0 auto' : block.alignment === 'right' ? '0 0 0 auto' : '0',
-                              }}
-                            />
-                          )}
-                        </div>
-                      ))}
+              /* No template available - show message */
+              <div id="printable-syllabus" ref={printRef} className="mx-auto bg-white rounded-lg p-8 shadow-lg" style={{ width: pageStyle.width }}>
+                <div className="text-center py-12">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">No Template Available</h2>
+                  <p className="text-gray-600 mb-6">Please create and set a default template, or assign a template to this syllabus to view the formatted version.</p>
+                  <div className="mt-8 p-6 bg-gray-50 rounded-lg text-left">
+                    <h3 className="font-bold text-lg mb-3">Syllabus Information:</h3>
+                    <p className="mb-2"><strong>Course:</strong> {syllabus.courseCode} - {syllabus.courseTitle}</p>
+                    <p className="mb-2"><strong>Instructor:</strong> {syllabus.instructorName}</p>
+                    <p className="mb-2"><strong>Semester:</strong> {syllabus.semester} {syllabus.year}</p>
+                    <p className="mb-2"><strong>Credits:</strong> {syllabus.credits}</p>
                   </div>
-                ) : (
-                  // Legacy header display
-                  <div className="flex items-start justify-between">
-                    {settings.institutionLogo && (
-                      <div className="w-24 h-24 flex-shrink-0">
-                        <img
-                          src={settings.institutionLogo}
-                          alt="Institution Logo"
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                    )}
-                    <div className="flex-1 text-center">
-                      <h1 className="text-3xl font-bold mb-1" style={{ color: settings.primaryColor }}>
-                        {settings.institutionName}
-                      </h1>
-                      {settings.headerText && (
-                        <p className="text-sm text-gray-600">{settings.headerText}</p>
-                      )}
-                    </div>
-                    {settings.institutionLogo && <div className="w-24" />} {/* Spacer for balance */}
-                  </div>
-                )}
-              </div>
-
-              {/* Course Information */}
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold mb-2">
-                  {syllabus.courseCode}: {syllabus.courseTitle}
-                </h2>
-                <p className="text-lg text-gray-700">
-                  {syllabus.department} • {syllabus.credits} Credits
-                </p>
-                <p className="text-md text-gray-600 mt-1">
-                  {syllabus.semester} {syllabus.year}
-                </p>
-              </div>
-
-              {/* Two Column Layout */}
-              <div className="grid grid-cols-2 gap-6">
-                {/* Left Column */}
-                <div className="space-y-4">
-                  {/* Instructor Information */}
-                  <section>
-                    <h3 className="text-lg font-bold mb-2 pb-1 border-b-2" style={{ color: settings.secondaryColor, borderColor: settings.secondaryColor }}>
-                      Instructor Information
-                    </h3>
-                    <div className="space-y-1 text-sm">
-                      <p><span className="font-semibold">Name:</span> {syllabus.instructorName}</p>
-                      <p><span className="font-semibold">Email:</span> {syllabus.instructorEmail}</p>
-                      <p><span className="font-semibold">Office Hours:</span> {syllabus.officeHours}</p>
-                      <p><span className="font-semibold">Office:</span> {syllabus.officeLocation}</p>
-                    </div>
-                  </section>
-
-                  {/* Course Description */}
-                  <section>
-                    <h3 className="text-lg font-bold mb-2 pb-1 border-b-2" style={{ color: settings.secondaryColor, borderColor: settings.secondaryColor }}>
-                      Course Description
-                    </h3>
-                    <p className="text-sm text-gray-700">{syllabus.description}</p>
-                  </section>
-
-                  {/* Prerequisites */}
-                  {syllabus.prerequisites && (
-                    <section>
-                      <h3 className="text-lg font-bold mb-2 pb-1 border-b-2" style={{ color: settings.secondaryColor, borderColor: settings.secondaryColor }}>
-                        Prerequisites
-                      </h3>
-                      <p className="text-sm text-gray-700">{syllabus.prerequisites}</p>
-                    </section>
-                  )}
-
-                  {/* Learning Outcomes */}
-                  {syllabus.learningOutcomes && syllabus.learningOutcomes.length > 0 && (
-                    <section>
-                      <h3 className="text-lg font-bold mb-2 pb-1 border-b-2" style={{ color: settings.secondaryColor, borderColor: settings.secondaryColor }}>
-                        Learning Outcomes
-                      </h3>
-                      <ul className="list-disc list-inside space-y-1 text-sm">
-                        {syllabus.learningOutcomes.map((outcome, index) => (
-                          <li key={index}>{outcome.outcome}</li>
-                        ))}
-                      </ul>
-                    </section>
-                  )}
-                </div>
-
-                {/* Right Column */}
-                <div className="space-y-4">
-                  {/* Textbooks */}
-                  {syllabus.textbooks && (
-                    <section>
-                      <h3 className="text-lg font-bold mb-2 pb-1 border-b-2" style={{ color: settings.secondaryColor, borderColor: settings.secondaryColor }}>
-                        Required Textbooks
-                      </h3>
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{syllabus.textbooks}</p>
-                    </section>
-                  )}
-
-                  {/* Grading Components */}
-                  {syllabus.gradingComponents && syllabus.gradingComponents.length > 0 && (
-                    <section>
-                      <h3 className="text-lg font-bold mb-2 pb-1 border-b-2" style={{ color: settings.secondaryColor, borderColor: settings.secondaryColor }}>
-                        Grading Components
-                      </h3>
-                      <div className="text-sm space-y-1">
-                        {syllabus.gradingComponents.map((component, index) => (
-                          <div key={index} className="flex justify-between">
-                            <span>{component.component}:</span>
-                            <span className="font-semibold">{component.percentage}%</span>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-
-                  {/* Grading Scale */}
-                  {syllabus.gradingScale && (
-                    <section>
-                      <h3 className="text-lg font-bold mb-2 pb-1 border-b-2" style={{ color: settings.secondaryColor, borderColor: settings.secondaryColor }}>
-                        Grading Scale
-                      </h3>
-                      <p className="text-sm text-gray-700">{syllabus.gradingScale}</p>
-                    </section>
-                  )}
-
-                  {/* Policies */}
-                  <section>
-                    <h3 className="text-lg font-bold mb-2 pb-1 border-b-2" style={{ color: settings.secondaryColor, borderColor: settings.secondaryColor }}>
-                      Policies
-                    </h3>
-                    <div className="space-y-2 text-sm">
-                      {syllabus.attendancePolicy && (
-                        <div>
-                          <p className="font-semibold">Attendance:</p>
-                          <p className="text-gray-700">{syllabus.attendancePolicy}</p>
-                        </div>
-                      )}
-                      {syllabus.lateSubmissionPolicy && (
-                        <div>
-                          <p className="font-semibold">Late Submissions:</p>
-                          <p className="text-gray-700">{syllabus.lateSubmissionPolicy}</p>
-                        </div>
-                      )}
-                    </div>
-                  </section>
                 </div>
               </div>
-
-              {/* Footer */}
-              {(settings?.footerContent && settings.footerContent.length > 0) || settings?.footerText ? (
-                <div className="mt-6 pt-4 border-t-2" style={{ borderColor: settings.primaryColor }}>
-                  {settings?.footerContent && settings.footerContent.length > 0 ? (
-                    // Use flexible footer content
-                    <div 
-                      className={settings.footerLayout === 'horizontal' ? 'flex items-center gap-4 flex-wrap justify-center' : 'space-y-2'}
-                    >
-                      {settings.footerContent
-                        .sort((a, b) => a.order - b.order)
-                        .map((block, index) => (
-                          <div
-                            key={index}
-                            style={{ textAlign: settings.footerLayout === 'horizontal' ? 'initial' : block.alignment }}
-                          >
-                            {block.type === 'text' ? (
-                              <p
-                                style={{
-                                  fontWeight: block.styles?.fontWeight || 'normal',
-                                  fontSize:
-                                    block.styles?.fontSize === 'small'
-                                      ? '12px'
-                                      : block.styles?.fontSize === 'large'
-                                      ? '18px'
-                                      : '14px',
-                                  color: block.styles?.color || '#000000',
-                                  margin: 0,
-                                  padding: settings.footerLayout === 'horizontal' ? '0' : '4px 0',
-                                }}
-                              >
-                                {block.content}
-                              </p>
-                            ) : (
-                              <img
-                                src={block.content}
-                                alt="Footer"
-                                style={{
-                                  width: `${block.styles?.width || 50}px`,
-                                  height: `${block.styles?.height || 50}px`,
-                                  display: 'block',
-                                }}
-                              />
-                            )}
-                          </div>
-                        ))}
-                    </div>
-                  ) : (
-                    // Legacy footer display
-                    <div className="text-center text-sm text-gray-600">
-                      {settings.footerText}
-                    </div>
-                  )}
-                </div>
-              ) : null}
-            </div>
             )}
           </div>
         </div>
