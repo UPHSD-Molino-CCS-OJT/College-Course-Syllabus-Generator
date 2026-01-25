@@ -14,6 +14,9 @@ export default function InlineEditablePreview({ settings, handlers }) {
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [draggedItem, setDraggedItem] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [draggedChild, setDraggedChild] = useState(null);
+  const [dragOverChild, setDragOverChild] = useState(null);
+  const [hoveredChild, setHoveredChild] = useState(null);
 
   const handleEdit = (section, index) => {
     // Toggle editing - if clicking the same block, close it
@@ -95,6 +98,85 @@ export default function InlineEditablePreview({ settings, handlers }) {
     setDragOverIndex(null);
   };
 
+  // Handlers for dragging children within groups
+  const handleChildDragStart = (e, section, groupIndex, childIndex, childPath = []) => {
+    e.stopPropagation();
+    setDraggedChild({ section, groupIndex, childIndex, childPath });
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleChildDragOver = (e, section, groupIndex, childIndex, childPath = []) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverChild({ section, groupIndex, childIndex, childPath });
+  };
+
+  const handleChildDrop = (e, section, groupIndex, targetChildIndex, childPath = []) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedChild) return;
+    
+    const { section: sourceSection, groupIndex: sourceGroupIndex, childIndex: sourceChildIndex, childPath: sourcePath } = draggedChild;
+    
+    // Only allow reordering within the same group
+    if (sourceSection !== section || sourceGroupIndex !== groupIndex || JSON.stringify(sourcePath) !== JSON.stringify(childPath)) {
+      setDraggedChild(null);
+      setDragOverChild(null);
+      return;
+    }
+    
+    if (sourceChildIndex === targetChildIndex) {
+      setDraggedChild(null);
+      setDragOverChild(null);
+      return;
+    }
+    
+    // Get the parent group
+    const block = settings[section][groupIndex];
+    let children = [...(block.children || [])];
+    
+    // Navigate to nested group if childPath is provided
+    let currentChildren = children;
+    for (const pathIndex of childPath) {
+      currentChildren = currentChildren[pathIndex].children || [];
+    }
+    
+    // Reorder children
+    const childrenCopy = [...currentChildren];
+    const [removed] = childrenCopy.splice(sourceChildIndex, 1);
+    childrenCopy.splice(targetChildIndex, 0, removed);
+    
+    // Update the children in the block
+    if (childPath.length === 0) {
+      // Direct children of the group
+      handlers.updateContentBlock(section, groupIndex, 'children', childrenCopy);
+    } else {
+      // Nested children - need to update recursively
+      const updateNestedChildren = (items, path, newChildren) => {
+        if (path.length === 0) return newChildren;
+        const [currentIndex, ...restPath] = path;
+        return items.map((item, idx) => 
+          idx === currentIndex
+            ? { ...item, children: updateNestedChildren(item.children || [], restPath, newChildren) }
+            : item
+        );
+      };
+      
+      const updatedChildren = updateNestedChildren(children, childPath, childrenCopy);
+      handlers.updateContentBlock(section, groupIndex, 'children', updatedChildren);
+    }
+    
+    setDraggedChild(null);
+    setDragOverChild(null);
+  };
+
+  const handleChildDragEnd = () => {
+    setDraggedChild(null);
+    setDragOverChild(null);
+  };
+
   const renderInlineBlock = (block, section, index) => {
     const isHovered = hoveredBlock === index && hoveredSection === section;
     const isEditing = editingSection === section && editingIndex === index && editingBlock;
@@ -173,7 +255,7 @@ export default function InlineEditablePreview({ settings, handlers }) {
             onClick={() => !isPreviewMode && !isDragging && handleEdit(section, index)}
             style={{ cursor: isPreviewMode ? 'default' : isDragging ? 'grabbing' : 'pointer' }}
           >
-            {renderBlockContent(block)}
+            {renderBlockContent(block, section, index)}
           </div>
         </div>
 
@@ -270,7 +352,7 @@ export default function InlineEditablePreview({ settings, handlers }) {
     );
   };
 
-  const renderBlockContent = (block) => {
+  const renderBlockContent = (block, section = null, groupIndex = null, childPath = []) => {
     if (block.type === 'group') {
       const groupLayout = block.layout || 'horizontal';
       return (
@@ -288,39 +370,142 @@ export default function InlineEditablePreview({ settings, handlers }) {
                 : 'center',
           }}
         >
-          {(block.children || []).map((child, childIndex) => (
-            <div key={child.id || childIndex}>
-              {child.type === 'text' ? (
-                <p
-                  style={{
-                    fontWeight: child.styles?.fontWeight || 'normal',
-                    fontSize:
-                      child.styles?.fontSize === 'small'
-                        ? '12px'
-                        : child.styles?.fontSize === 'large'
-                        ? '18px'
-                        : '14px',
-                    color: child.styles?.color || '#000000',
-                    margin: 0,
-                  }}
-                >
-                  {child.content}
-                </p>
-              ) : child.type === 'image' ? (
-                <img
-                  src={child.content}
-                  alt="Group element"
-                  style={{
-                    width: `${child.styles?.width || 50}px`,
-                    height: `${child.styles?.height || 50}px`,
-                    display: 'block',
-                  }}
-                />
-              ) : (
-                renderBlockContent(child)
-              )}
-            </div>
-          ))}
+          {(block.children || []).map((child, childIndex) => {
+            const childKey = `${section}-${groupIndex}-${childPath.join('-')}-${childIndex}`;
+            const isChildDragging = draggedChild?.section === section && 
+                                   draggedChild?.groupIndex === groupIndex && 
+                                   draggedChild?.childIndex === childIndex &&
+                                   JSON.stringify(draggedChild?.childPath) === JSON.stringify(childPath);
+            const isChildDragOver = dragOverChild?.section === section && 
+                                   dragOverChild?.groupIndex === groupIndex && 
+                                   dragOverChild?.childIndex === childIndex &&
+                                   JSON.stringify(dragOverChild?.childPath) === JSON.stringify(childPath);
+            const isChildHovered = hoveredChild?.key === childKey;
+            
+            return (
+              <div 
+                key={child.id || childIndex}
+                className={`relative group/child ${
+                  !isPreviewMode && section !== null ? 'pt-8' : ''
+                } ${
+                  isChildDragging ? 'opacity-40' : ''
+                } ${
+                  isChildDragOver ? 'border-t-2 border-purple-500' : ''
+                }`}
+                draggable={!isPreviewMode && section !== null}
+                onDragStart={(e) => section !== null && handleChildDragStart(e, section, groupIndex, childIndex, childPath)}
+                onDragOver={(e) => section !== null && handleChildDragOver(e, section, groupIndex, childIndex, childPath)}
+                onDrop={(e) => section !== null && handleChildDrop(e, section, groupIndex, childIndex, childPath)}
+                onDragEnd={handleChildDragEnd}
+                onMouseEnter={(e) => {
+                  e.stopPropagation();
+                  if (!isPreviewMode && section !== null) {
+                    setHoveredChild({ key: childKey, section, groupIndex, childIndex, childPath });
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.stopPropagation();
+                  if (!isPreviewMode && section !== null) {
+                    setHoveredChild(null);
+                  }
+                }}
+              >
+                {/* Hover toolbar for child elements */}
+                {!isPreviewMode && section !== null && (
+                  <div className={`absolute -top-8 left-0 flex items-center gap-1 bg-purple-900 text-white px-2 py-1 rounded shadow-lg z-20 text-xs transition-opacity ${
+                    isChildHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                  }`}>
+                    <button
+                      type="button"
+                      className="p-0.5 hover:bg-purple-700 rounded cursor-grab active:cursor-grabbing"
+                      title="Drag to reorder"
+                      onMouseDown={(e) => e.stopPropagation()}
+                    >
+                      <GripVertical size={12} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Open group editor to edit this child
+                        handleEdit(section, groupIndex);
+                      }}
+                      className="p-0.5 hover:bg-purple-700 rounded"
+                      title="Edit"
+                    >
+                      <Edit2 size={12} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (childPath.length === 0) {
+                          handlers.removeChildFromGroup(section, groupIndex, childIndex);
+                        } else {
+                          // Remove from nested group
+                          const block = settings[section][groupIndex];
+                          let children = [...(block.children || [])];
+                          
+                          const removeFromNested = (items, path, indexToRemove) => {
+                            if (path.length === 0) {
+                              return items.filter((_, idx) => idx !== indexToRemove);
+                            }
+                            const [currentIndex, ...restPath] = path;
+                            return items.map((item, idx) => 
+                              idx === currentIndex
+                                ? { ...item, children: removeFromNested(item.children || [], restPath, indexToRemove) }
+                                : item
+                            );
+                          };
+                          
+                          const updatedChildren = removeFromNested(children, childPath, childIndex);
+                          handlers.updateContentBlock(section, groupIndex, 'children', updatedChildren);
+                        }
+                      }}
+                      className="p-0.5 hover:bg-red-600 rounded"
+                      title="Delete"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                )}
+                
+                <div className={`${
+                  !isPreviewMode && section !== null && isChildHovered ? 'ring-2 ring-purple-400 ring-offset-1 rounded' : ''
+                }`}>
+                  {child.type === 'text' ? (
+                    <p
+                      style={{
+                        fontWeight: child.styles?.fontWeight || 'normal',
+                        fontSize:
+                          child.styles?.fontSize === 'small'
+                            ? '12px'
+                            : child.styles?.fontSize === 'large'
+                            ? '18px'
+                            : '14px',
+                        color: child.styles?.color || '#000000',
+                        margin: 0,
+                      }}
+                    >
+                      {child.content}
+                    </p>
+                  ) : child.type === 'image' ? (
+                    <img
+                      src={child.content}
+                      alt="Group element"
+                      style={{
+                        width: `${child.styles?.width || 50}px`,
+                        height: `${child.styles?.height || 50}px`,
+                        display: 'block',
+                      }}
+                    />
+                  ) : (
+                    renderBlockContent(child, section, groupIndex, [...childPath, childIndex])
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       );
     } else if (block.type === 'text') {
