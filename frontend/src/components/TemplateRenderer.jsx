@@ -165,7 +165,12 @@ export default function TemplateRenderer({ template, syllabus }) {
                     style={{
                       width: cell.width ? `${cell.width}px` : (element.cellWidth ? `${element.cellWidth}px` : 'auto'),
                       height: cell.height ? `${cell.height}px` : (element.cellHeight ? `${element.cellHeight}px` : 'auto'),
-                      border: `${element.borderWidth || 1}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000'}`,
+                      borderTopWidth: element.showBorderTop !== false ? `${element.borderWidth || 1}px` : '0',
+                      borderRightWidth: element.showBorderRight !== false ? `${element.borderWidth || 1}px` : '0',
+                      borderBottomWidth: element.showBorderBottom !== false ? `${element.borderWidth || 1}px` : '0',
+                      borderLeftWidth: element.showBorderLeft !== false ? `${element.borderWidth || 1}px` : '0',
+                      borderStyle: element.borderStyle || 'solid',
+                      borderColor: element.borderColor || '#000',
                       padding: '8px',
                       backgroundColor: cell.bg || '#fff',
                       fontSize: `${cell.fontSize || 12}px`,

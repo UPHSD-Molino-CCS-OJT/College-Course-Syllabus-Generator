@@ -274,13 +274,16 @@ export default function CanvasPage({
                   {row.map((cell, colIndex) => (
                     <td
                       key={colIndex}
-                      className="border relative group"
+                      className="relative group"
                       style={{
                         width: cell.width || element.cellWidth,
                         height: cell.height || element.cellHeight,
-                        borderColor: element.borderColor,
-                        borderWidth: element.borderWidth,
+                        borderTopWidth: element.showBorderTop !== false ? element.borderWidth : 0,
+                        borderRightWidth: element.showBorderRight !== false ? element.borderWidth : 0,
+                        borderBottomWidth: element.showBorderBottom !== false ? element.borderWidth : 0,
+                        borderLeftWidth: element.showBorderLeft !== false ? element.borderWidth : 0,
                         borderStyle: element.borderStyle || 'solid',
+                        borderColor: element.borderColor,
                         backgroundColor: cell.bg,
                         fontSize: cell.fontSize,
                         fontFamily: cell.fontFamily,

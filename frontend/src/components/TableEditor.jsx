@@ -187,6 +187,47 @@ export default function TableEditor({ table, onUpdate }) {
               />
             </div>
           </div>
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">Show Borders</label>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={table.showBorderTop !== false}
+                  onChange={(e) => onUpdate({ showBorderTop: e.target.checked })}
+                  className="w-4 h-4 rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-blue-500"
+                />
+                Top
+              </label>
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={table.showBorderRight !== false}
+                  onChange={(e) => onUpdate({ showBorderRight: e.target.checked })}
+                  className="w-4 h-4 rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-blue-500"
+                />
+                Right
+              </label>
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={table.showBorderBottom !== false}
+                  onChange={(e) => onUpdate({ showBorderBottom: e.target.checked })}
+                  className="w-4 h-4 rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-blue-500"
+                />
+                Bottom
+              </label>
+              <label className="flex items-center gap-2 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={table.showBorderLeft !== false}
+                  onChange={(e) => onUpdate({ showBorderLeft: e.target.checked })}
+                  className="w-4 h-4 rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-blue-500"
+                />
+                Left
+              </label>
+            </div>
+          </div>
         </div>
       </div>
 

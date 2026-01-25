@@ -175,6 +175,10 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       borderColor: '#000000',
       borderWidth: 1,
       borderStyle: 'solid',
+      showBorderTop: true,
+      showBorderRight: true,
+      showBorderBottom: true,
+      showBorderLeft: true,
       headerBg: '#f3f4f6',
       data: Array(3).fill(null).map((_, i) => 
         Array(3).fill(null).map((_, j) => ({
