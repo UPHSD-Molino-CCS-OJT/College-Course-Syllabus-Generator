@@ -1,4 +1,4 @@
-import { Trash2, Type, Image } from 'lucide-react';
+import { Trash2, Type, Image, Folder } from 'lucide-react';
 
 export default function GroupChildEditor({ child, childIndex, onUpdate, onRemove }) {
   const handleImageUpload = (file) => {
@@ -17,11 +17,13 @@ export default function GroupChildEditor({ child, childIndex, onUpdate, onRemove
         <div className="flex items-center gap-1">
           {child.type === 'text' ? (
             <Type size={12} className="text-blue-600" />
-          ) : (
+          ) : child.type === 'image' ? (
             <Image size={12} className="text-green-600" />
+          ) : (
+            <Folder size={12} className="text-purple-600" />
           )}
           <span className="text-xs text-gray-600">
-            {child.type === 'text' ? 'Text' : 'Image'}
+            {child.type === 'text' ? 'Text' : child.type === 'image' ? 'Image' : 'Group'}
           </span>
         </div>
         <button
@@ -78,7 +80,7 @@ export default function GroupChildEditor({ child, childIndex, onUpdate, onRemove
             </div>
           </div>
         </>
-      ) : (
+      ) : child.type === 'image' ? (
         <>
           <div>
             <input
@@ -120,6 +122,60 @@ export default function GroupChildEditor({ child, childIndex, onUpdate, onRemove
             </div>
           )}
         </>
+      ) : (
+        <div className="bg-purple-50 border border-purple-200 rounded p-2">
+          <p className="text-xs text-purple-700">
+            Nested Group: {(child.children || []).length} element{(child.children || []).length !== 1 ? 's' : ''}
+          </p>
+          <div className="mt-1 space-y-1">
+            <div>
+              <label className="block text-[10px] text-gray-600 mb-0.5">Layout</label>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => onUpdate(childIndex, 'layout', 'horizontal')}
+                  className={`flex-1 px-2 py-0.5 text-[10px] rounded border ${
+                    (child.layout || 'horizontal') === 'horizontal'
+                      ? 'bg-purple-100 border-purple-400 text-purple-700'
+                      : 'bg-white border-gray-300 text-gray-600'
+                  }`}
+                >
+                  Horizontal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onUpdate(childIndex, 'layout', 'vertical')}
+                  className={`flex-1 px-2 py-0.5 text-[10px] rounded border ${
+                    (child.layout || 'horizontal') === 'vertical'
+                      ? 'bg-purple-100 border-purple-400 text-purple-700'
+                      : 'bg-white border-gray-300 text-gray-600'
+                  }`}
+                >
+                  Vertical
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] text-gray-600 mb-0.5">Alignment</label>
+              <div className="flex gap-1">
+                {['left', 'center', 'right'].map((align) => (
+                  <button
+                    key={align}
+                    type="button"
+                    onClick={() => onUpdate(childIndex, 'alignment', align)}
+                    className={`flex-1 px-2 py-0.5 text-[10px] rounded border ${
+                      (child.alignment || 'center') === align
+                        ? 'bg-purple-100 border-purple-400 text-purple-700'
+                        : 'bg-white border-gray-300 text-gray-600'
+                    }`}
+                  >
+                    {align.charAt(0).toUpperCase() + align.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

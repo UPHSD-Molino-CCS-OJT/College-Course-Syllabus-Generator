@@ -1,4 +1,4 @@
-import { Type, Image } from 'lucide-react';
+import { Type, Image, Folder } from 'lucide-react';
 import GroupChildEditor from './GroupChildEditor';
 
 export default function GroupBlockEditor({ 
@@ -75,13 +75,21 @@ export default function GroupBlockEditor({
               <Image size={12} />
               Image
             </button>
+            <button
+              type="button"
+              onClick={() => onAddChild('group')}
+              className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 text-purple-700 rounded text-xs hover:bg-purple-100"
+            >
+              <Folder size={12} />
+              Group
+            </button>
           </div>
         </div>
 
         {(!block.children || block.children.length === 0) ? (
           <div className="border-2 border-dashed border-purple-200 rounded p-4 text-center">
             <p className="text-purple-500 text-xs">
-              No elements in this group. Add text or image elements.
+              No elements in this group. Add text, image, or group elements.
             </p>
           </div>
         ) : (

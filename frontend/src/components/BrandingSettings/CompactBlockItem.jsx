@@ -13,9 +13,11 @@ export default function CompactBlockItem({
   onDragStart,
   onDragOver,
   onDrop,
+  onDropIntoGroup,
 }) {
   const [isDragging, setIsDragging] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isDropTarget, setIsDropTarget] = useState(false);
 
   const blockTypeInfo = {
     text: { icon: Type, label: 'Text', color: 'blue', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
@@ -42,16 +44,35 @@ export default function CompactBlockItem({
       id={section && index !== undefined ? `block-${section}-${index}` : undefined}
       className={`group border-2 rounded-lg transition-all ${
         isDragging ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
-      } ${info.borderColor} ${info.bgColor} hover:shadow-md`}
+      } ${info.borderColor} ${info.bgColor} hover:shadow-md ${
+        isDropTarget ? 'ring-2 ring-purple-400 ring-offset-2' : ''
+      }`}
       draggable
       onDragStart={(e) => {
+        e.dataTransfer.setData('blockIndex', index);
+        e.dataTransfer.setData('section', section);
         setIsDragging(true);
         onDragStart(e);
       }}
       onDragEnd={() => setIsDragging(false)}
-      onDragOver={onDragOver}
+      onDragOver={(e) => {
+        onDragOver(e);
+        if (block.type === 'group') {
+          e.stopPropagation();
+          setIsDropTarget(true);
+        }
+      }}
+      onDragLeave={() => setIsDropTarget(false)}
       onDrop={(e) => {
-        onDrop(e);
+        if (block.type === 'group') {
+          e.stopPropagation();
+          setIsDropTarget(false);
+          if (onDropIntoGroup) {
+            onDropIntoGroup(e, index);
+          }
+        } else {
+          onDrop(e);
+        }
         setIsDragging(false);
       }}
     >
@@ -110,18 +131,35 @@ export default function CompactBlockItem({
       {/* Expanded group children preview */}
       {isExpanded && block.type === 'group' && (block.children?.length > 0) && (
         <div className="border-t border-gray-200 px-3 py-2 bg-white/50">
+          <p className="text-[10px] text-purple-600 mb-1 italic">Drag elements here to add to this group</p>
           <div className="space-y-1">
             {block.children.map((child, idx) => (
               <div key={child.id || idx} className="flex items-center gap-2 text-xs text-gray-600">
-                {child.type === 'text' ? <Type size={12} /> : <Image size={12} />}
+                {child.type === 'text' ? (
+                  <Type size={12} />
+                ) : child.type === 'image' ? (
+                  <Image size={12} />
+                ) : (
+                  <Folder size={12} />
+                )}
                 <span className="truncate">
                   {child.type === 'text' 
                     ? (child.content?.substring(0, 40) + (child.content?.length > 40 ? '...' : ''))
-                    : 'Image'}
+                    : child.type === 'image'
+                    ? 'Image'
+                    : `Group (${(child.children || []).length})`}
                 </span>
               </div>
             ))}
           </div>
+        </div>
+      )}
+      {/* Drop zone for empty groups */}
+      {block.type === 'group' && (block.children?.length === 0) && (
+        <div className="border-t border-gray-200 px-3 py-2 bg-purple-50/50">
+          <p className="text-[10px] text-purple-600 text-center italic">
+            Drag elements here or use Edit to add content
+          </p>
         </div>
       )}
     </div>

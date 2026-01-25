@@ -208,6 +208,9 @@ export default function BrandingSettings() {
       id: Date.now() + Math.random(),
       type,
       content: type === 'text' ? 'Enter text here' : '',
+      alignment: type === 'group' ? 'center' : undefined,
+      layout: type === 'group' ? 'horizontal' : undefined,
+      children: type === 'group' ? [] : undefined,
       styles: {
         fontWeight: 'normal',
         fontSize: 'medium',

@@ -73,6 +73,42 @@ export default function ContentBlockEditor({
     setDraggedIndex(null);
   };
 
+  const handleDropIntoGroup = (e, groupIndex) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === groupIndex) return;
+    
+    // Get the dragged block
+    const draggedBlock = settings[section][draggedIndex];
+    
+    // Remove from current position
+    const newContent = settings[section].filter((_, i) => i !== draggedIndex);
+    
+    // Find the target group (adjust index if necessary)
+    const adjustedGroupIndex = draggedIndex < groupIndex ? groupIndex - 1 : groupIndex;
+    
+    // Add to target group's children
+    newContent[adjustedGroupIndex] = {
+      ...newContent[adjustedGroupIndex],
+      children: [...(newContent[adjustedGroupIndex].children || []), draggedBlock]
+    };
+    
+    // Update settings through parent component
+    if (removeContentBlock && addChildToGroup) {
+      removeContentBlock(section, draggedIndex);
+      setTimeout(() => {
+        const finalGroupIndex = draggedIndex < groupIndex ? groupIndex - 1 : groupIndex;
+        // Create child version of the block (without order property)
+        const childBlock = {
+          ...draggedBlock,
+          order: undefined
+        };
+        addChildToGroup(section, finalGroupIndex, draggedBlock.type, childBlock);
+      }, 0);
+    }
+    
+    setDraggedIndex(null);
+  };
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -119,6 +155,7 @@ export default function ContentBlockEditor({
                   onDragStart={(e) => handleDragStart(index)}
                   onDragOver={handleDragOver}
                   onDrop={() => handleDrop(index)}
+                  onDropIntoGroup={handleDropIntoGroup}
                 />
                 
                 {/* Insert between blocks */}
