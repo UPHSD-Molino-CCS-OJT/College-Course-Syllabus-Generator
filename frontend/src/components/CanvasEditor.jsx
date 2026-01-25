@@ -36,8 +36,9 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   const [zoom, setZoom] = useState(1);
   const [selectedElement, setSelectedElement] = useState(null);
   const [editingZone, setEditingZone] = useState(null); // 'header', 'footer', or 'content'
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
   
-  // Document structure
+  // Document structure with multi-page support
   const [canvasDocument, setCanvasDocument] = useState(template?.canvasDocument || {
     header: {
       height: 120,
@@ -47,9 +48,10 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       height: 120,
       elements: []
     },
-    content: {
+    pages: [{
+      id: 'page-1',
       elements: []
-    },
+    }],
     styles: {
       defaultFont: 'Arial',
       defaultSize: 14,
@@ -62,13 +64,37 @@ export default function CanvasEditor({ template, onClose, onSave }) {
 
   // Get current page dimensions
   const currentPageSize = PAGE_SIZES[pageSize][orientation];
+  
+  // Get current page
+  const currentPage = canvasDocument.pages?.[currentPageIndex] || { elements: [] };
 
   // Initialize document with template data
   useEffect(() => {
     if (template && !template.canvasDocument) {
       initializeDocument();
     } else if (template?.canvasDocument) {
-      setCanvasDocument(template.canvasDocument);
+      // Migrate old content structure to pages structure
+      let doc = template.canvasDocument;
+      if (doc.content && !doc.pages) {
+        doc = {
+          ...doc,
+          pages: [{
+            id: 'page-1',
+            elements: doc.content.elements || []
+          }]
+        };
+        delete doc.content;
+      } else if (!doc.pages) {
+        // Ensure pages array exists
+        doc = {
+          ...doc,
+          pages: [{
+            id: 'page-1',
+            elements: []
+          }]
+        };
+      }
+      setCanvasDocument(doc);
     }
   }, [template]);
 
@@ -136,6 +162,71 @@ export default function CanvasEditor({ template, onClose, onSave }) {
     }));
   };
 
+  // Page management functions
+  const handleAddPage = () => {
+    const newPage = {
+      id: `page-${Date.now()}`,
+      elements: []
+    };
+    
+    setCanvasDocument(prev => ({
+      ...prev,
+      pages: [...(prev.pages || []), newPage]
+    }));
+    
+    setCurrentPageIndex((canvasDocument.pages?.length || 0));
+  };
+
+  const handleDeletePage = (pageIndex) => {
+    if ((canvasDocument.pages?.length || 0) <= 1) {
+      alert('Cannot delete the last page');
+      return;
+    }
+    
+    setCanvasDocument(prev => ({
+      ...prev,
+      pages: (prev.pages || []).filter((_, i) => i !== pageIndex)
+    }));
+    
+    if (currentPageIndex >= (canvasDocument.pages?.length || 1) - 1) {
+      setCurrentPageIndex(Math.max(0, currentPageIndex - 1));
+    }
+  };
+
+  const handleDuplicatePage = (pageIndex) => {
+    const pageToDuplicate = canvasDocument.pages?.[pageIndex];
+    if (!pageToDuplicate) return;
+    const newPage = {
+      id: `page-${Date.now()}`,
+      elements: pageToDuplicate.elements.map(el => ({
+        ...el,
+        id: `${el.type}-${Date.now()}-${Math.random()}`
+      }))
+    };
+    
+    setCanvasDocument(prev => ({
+      ...prev,
+      pages: [
+        ...prev.pages.slice(0, pageIndex + 1),
+        newPage,
+        ...prev.pages.slice(pageIndex + 1)
+      ]
+    }));
+    
+    setCurrentPageIndex(pageIndex + 1);
+  };
+
+  // Helper function to find which zone an element is in
+  const findElementZone = (elementId) => {
+    if (canvasDocument.header.elements.find(e => e.id === elementId)) {
+      return 'header';
+    }
+    if (canvasDocument.footer.elements.find(e => e.id === elementId)) {
+      return 'footer';
+    }
+    return 'content';
+  };
+
   const handleAddText = (zone) => {
     const newElement = {
       id: `text-${Date.now()}`,
@@ -151,13 +242,25 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       width: 200
     };
 
-    setCanvasDocument(prev => ({
-      ...prev,
-      [zone]: {
-        ...prev[zone],
-        elements: [...prev[zone].elements, newElement]
-      }
-    }));
+    if (zone === 'header' || zone === 'footer') {
+      setCanvasDocument(prev => ({
+        ...prev,
+        [zone]: {
+          ...prev[zone],
+          elements: [...prev[zone].elements, newElement]
+        }
+      }));
+    } else {
+      // Add to current page
+      setCanvasDocument(prev => ({
+        ...prev,
+        pages: prev.pages.map((page, idx) =>
+          idx === currentPageIndex
+            ? { ...page, elements: [...page.elements, newElement] }
+            : page
+        )
+      }));
+    }
 
     setSelectedElement(newElement);
   };
@@ -193,13 +296,24 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       )
     };
 
-    setCanvasDocument(prev => ({
-      ...prev,
-      [zone]: {
-        ...prev[zone],
-        elements: [...prev[zone].elements, newTable]
-      }
-    }));
+    if (zone === 'header' || zone === 'footer') {
+      setCanvasDocument(prev => ({
+        ...prev,
+        [zone]: {
+          ...prev[zone],
+          elements: [...prev[zone].elements, newTable]
+        }
+      }));
+    } else {
+      setCanvasDocument(prev => ({
+        ...prev,
+        pages: (prev.pages || []).map((page, idx) =>
+          idx === currentPageIndex
+            ? { ...page, elements: [...(page.elements || []), newTable] }
+            : page
+        )
+      }));
+    }
 
     setSelectedElement(newTable);
   };
@@ -224,13 +338,24 @@ export default function CanvasEditor({ template, onClose, onSave }) {
             alt: file.name
           };
 
-          setCanvasDocument(prev => ({
-            ...prev,
-            [zone]: {
-              ...prev[zone],
-              elements: [...prev[zone].elements, newImage]
-            }
-          }));
+          if (zone === 'header' || zone === 'footer') {
+            setCanvasDocument(prev => ({
+              ...prev,
+              [zone]: {
+                ...prev[zone],
+                elements: [...prev[zone].elements, newImage]
+              }
+            }));
+          } else {
+            setCanvasDocument(prev => ({
+              ...prev,
+              pages: (prev.pages || []).map((page, idx) =>
+                idx === currentPageIndex
+                  ? { ...page, elements: [...(page.elements || []), newImage] }
+                  : page
+              )
+            }));
+          }
 
           setSelectedElement(newImage);
         };
@@ -253,13 +378,24 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       strokeStyle: 'solid' // solid, dashed, dotted
     };
 
-    setCanvasDocument(prev => ({
-      ...prev,
-      [zone]: {
-        ...prev[zone],
-        elements: [...prev[zone].elements, newLine]
-      }
-    }));
+    if (zone === 'header' || zone === 'footer') {
+      setCanvasDocument(prev => ({
+        ...prev,
+        [zone]: {
+          ...prev[zone],
+          elements: [...prev[zone].elements, newLine]
+        }
+      }));
+    } else {
+      setCanvasDocument(prev => ({
+        ...prev,
+        pages: (prev.pages || []).map((page, idx) =>
+          idx === currentPageIndex
+            ? { ...page, elements: [...(page.elements || []), newLine] }
+            : page
+        )
+      }));
+    }
 
     setSelectedElement(newLine);
   };
@@ -271,25 +407,55 @@ export default function CanvasEditor({ template, onClose, onSave }) {
     }
     
     // Then update the document
-    setCanvasDocument(prev => ({
-      ...prev,
-      [zone]: {
-        ...prev[zone],
-        elements: prev[zone].elements.map(el =>
-          el.id === elementId ? { ...el, ...updates } : el
+    if (zone === 'header' || zone === 'footer') {
+      setCanvasDocument(prev => ({
+        ...prev,
+        [zone]: {
+          ...prev[zone],
+          elements: prev[zone].elements.map(el =>
+            el.id === elementId ? { ...el, ...updates } : el
+          )
+        }
+      }));
+    } else {
+      setCanvasDocument(prev => ({
+        ...prev,
+        pages: (prev.pages || []).map((page, idx) =>
+          idx === currentPageIndex
+            ? {
+                ...page,
+                elements: (page.elements || []).map(el =>
+                  el.id === elementId ? { ...el, ...updates } : el
+                )
+              }
+            : page
         )
-      }
-    }));
+      }));
+    }
   };
 
   const handleDeleteElement = (zone, elementId) => {
-    setCanvasDocument(prev => ({
-      ...prev,
-      [zone]: {
-        ...prev[zone],
-        elements: prev[zone].elements.filter(el => el.id !== elementId)
-      }
-    }));
+    if (zone === 'header' || zone === 'footer') {
+      setCanvasDocument(prev => ({
+        ...prev,
+        [zone]: {
+          ...prev[zone],
+          elements: prev[zone].elements.filter(el => el.id !== elementId)
+        }
+      }));
+    } else {
+      setCanvasDocument(prev => ({
+        ...prev,
+        pages: (prev.pages || []).map((page, idx) =>
+          idx === currentPageIndex
+            ? {
+                ...page,
+                elements: (page.elements || []).filter(el => el.id !== elementId)
+              }
+            : page
+        )
+      }));
+    }
 
     if (selectedElement?.id === elementId) {
       setSelectedElement(null);
@@ -402,6 +568,56 @@ export default function CanvasEditor({ template, onClose, onSave }) {
               +
             </button>
           </div>
+
+          <div className="h-6 w-px bg-gray-600"></div>
+
+          {/* Page Navigation */}
+          <div className="flex items-center gap-2">
+            <span className="text-white text-xs">Page:</span>
+            <button
+              onClick={() => setCurrentPageIndex(Math.max(0, currentPageIndex - 1))}
+              disabled={currentPageIndex === 0}
+              className="bg-gray-700 text-white px-2 py-1 rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              ‹
+            </button>
+            <span className="text-white text-sm min-w-[60px] text-center">
+              {currentPageIndex + 1} / {canvasDocument.pages?.length || 1}
+            </span>
+            <button
+              onClick={() => setCurrentPageIndex(Math.min((canvasDocument.pages?.length || 1) - 1, currentPageIndex + 1))}
+              disabled={currentPageIndex === (canvasDocument.pages?.length || 1) - 1}
+              className="bg-gray-700 text-white px-2 py-1 rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              ›
+            </button>
+          </div>
+
+          {/* Page Actions */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleAddPage()}
+              className="bg-green-700 text-white px-3 py-1 rounded hover:bg-green-600 text-sm"
+              title="Add new page"
+            >
+              + Page
+            </button>
+            <button
+              onClick={() => handleDuplicatePage(currentPageIndex)}
+              className="bg-blue-700 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm"
+              title="Duplicate current page"
+            >
+              Duplicate
+            </button>
+            <button
+              onClick={() => handleDeletePage(currentPageIndex)}
+              disabled={(canvasDocument.pages?.length || 1) === 1}
+              className="bg-red-700 text-white px-3 py-1 rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              title="Delete current page"
+            >
+              Delete
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
@@ -437,6 +653,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
           <div className="mx-auto" style={{ width: 'fit-content' }}>
             <CanvasPage
               document={canvasDocument}
+              currentPage={canvasDocument.pages?.[currentPageIndex] || { elements: [] }}
               pageSize={currentPageSize}
               zoom={zoom}
               selectedElement={selectedElement}
@@ -456,9 +673,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
               <TextStylePanel
                 element={selectedElement}
                 onUpdate={(updates) => {
-                  const zone = editingZone || 
-                    (canvasDocument.header.elements.find(e => e.id === selectedElement.id) ? 'header' :
-                     canvasDocument.footer.elements.find(e => e.id === selectedElement.id) ? 'footer' : 'content');
+                  const zone = editingZone || findElementZone(selectedElement.id);
                   handleUpdateElement(zone, selectedElement.id, updates);
                 }}
               />
@@ -467,9 +682,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
               <TableEditor
                 table={selectedElement}
                 onUpdate={(updates) => {
-                  const zone = editingZone || 
-                    (canvasDocument.header.elements.find(e => e.id === selectedElement.id) ? 'header' :
-                     canvasDocument.footer.elements.find(e => e.id === selectedElement.id) ? 'footer' : 'content');
+                  const zone = editingZone || findElementZone(selectedElement.id);
                   handleUpdateElement(zone, selectedElement.id, updates);
                 }}
               />
@@ -478,9 +691,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
               <ImageStylePanel
                 element={selectedElement}
                 onUpdate={(updates) => {
-                  const zone = editingZone || 
-                    (canvasDocument.header.elements.find(e => e.id === selectedElement.id) ? 'header' :
-                     canvasDocument.footer.elements.find(e => e.id === selectedElement.id) ? 'footer' : 'content');
+                  const zone = editingZone || findElementZone(selectedElement.id);
                   handleUpdateElement(zone, selectedElement.id, updates);
                 }}
               />
@@ -489,9 +700,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
               <LineStylePanel
                 element={selectedElement}
                 onUpdate={(updates) => {
-                  const zone = editingZone || 
-                    (canvasDocument.header.elements.find(e => e.id === selectedElement.id) ? 'header' :
-                     canvasDocument.footer.elements.find(e => e.id === selectedElement.id) ? 'footer' : 'content');
+                  const zone = editingZone || findElementZone(selectedElement.id);
                   handleUpdateElement(zone, selectedElement.id, updates);
                 }}
               />

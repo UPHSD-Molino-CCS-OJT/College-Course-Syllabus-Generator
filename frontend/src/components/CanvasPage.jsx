@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 
 export default function CanvasPage({
   document,
+  currentPage,
   pageSize,
   zoom,
   selectedElement,
@@ -465,7 +466,7 @@ export default function CanvasPage({
         }}
         onClick={() => onZoneClick('content')}
       >
-        {document.content.elements.map((el) => renderElement(el, 'content'))}
+        {currentPage?.elements.map((el) => renderElement(el, 'content'))}
         {editingZone === 'content' && (
           <div className="absolute top-2 right-2 text-xs text-blue-600 font-semibold bg-white px-2 py-1 rounded">
             CONTENT

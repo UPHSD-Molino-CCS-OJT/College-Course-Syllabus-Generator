@@ -196,47 +196,55 @@ export default function TemplateRenderer({ template, syllabus }) {
   const footerHeight = renderedDocument.footer?.height || 120;
   const contentHeight = dimensions.height - headerHeight - footerHeight;
 
+  // Handle both old (single content) and new (pages array) structure
+  const pages = renderedDocument.pages || [{ elements: renderedDocument.content?.elements || [] }];
+
   return (
-    <div
-      className="mx-auto bg-white rounded-lg shadow-lg"
-      style={{
-        width: `${dimensions.width}px`,
-        height: `${dimensions.height}px`,
-        position: 'relative',
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          position: 'relative',
-          height: `${headerHeight}px`,
-          overflow: 'visible',
-        }}
-      >
-        {renderedDocument.header?.elements?.map(renderElement)}
-      </div>
+    <div className="flex flex-col gap-4">
+      {pages.map((page, pageIndex) => (
+        <div
+          key={pageIndex}
+          className="mx-auto bg-white rounded-lg shadow-lg"
+          style={{
+            width: `${dimensions.width}px`,
+            height: `${dimensions.height}px`,
+            position: 'relative',
+          }}
+        >
+          {/* Header */}
+          <div
+            style={{
+              position: 'relative',
+              height: `${headerHeight}px`,
+              overflow: 'visible',
+            }}
+          >
+            {renderedDocument.header?.elements?.map(renderElement)}
+          </div>
 
-      {/* Content */}
-      <div
-        style={{
-          position: 'relative',
-          height: `${contentHeight}px`,
-          overflow: 'auto',
-        }}
-      >
-        {renderedDocument.content?.elements?.map(renderElement)}
-      </div>
+          {/* Content */}
+          <div
+            style={{
+              position: 'relative',
+              height: `${contentHeight}px`,
+              overflow: 'auto',
+            }}
+          >
+            {page.elements?.map(renderElement)}
+          </div>
 
-      {/* Footer */}
-      <div
-        style={{
-          position: 'relative',
-          height: `${footerHeight}px`,
-          overflow: 'visible',
-        }}
-      >
-        {renderedDocument.footer?.elements?.map(renderElement)}
-      </div>
+          {/* Footer */}
+          <div
+            style={{
+              position: 'relative',
+              height: `${footerHeight}px`,
+              overflow: 'visible',
+            }}
+          >
+            {renderedDocument.footer?.elements?.map(renderElement)}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
