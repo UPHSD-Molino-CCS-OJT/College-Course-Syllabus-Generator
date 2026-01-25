@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { settingsAPI } from '../../services/api';
-import BasicSettingsTab from './BasicSettingsTab';
 import AdvancedSettingsTab from './AdvancedSettingsTab';
 
 export default function BrandingSettings() {
@@ -21,7 +20,6 @@ export default function BrandingSettings() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [logoPreview, setLogoPreview] = useState('');
-  const [activeTab, setActiveTab] = useState('basic');
 
   useEffect(() => {
     fetchSettings();
@@ -408,7 +406,7 @@ export default function BrandingSettings() {
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Branding Settings</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">Header/Footer Settings</h2>
 
       {message.text && (
         <div
@@ -422,50 +420,12 @@ export default function BrandingSettings() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="mb-6 border-b border-gray-200">
-        <div className="flex gap-4">
-          <button
-            type="button"
-            onClick={() => setActiveTab('basic')}
-            className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
-              activeTab === 'basic'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Basic Settings
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('advanced')}
-            className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
-              activeTab === 'advanced'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Advanced Header/Footer
-          </button>
-        </div>
-      </div>
-
       <form onSubmit={handleSubmit} className="space-y-6">
-        {activeTab === 'basic' ? (
-          <BasicSettingsTab
-            settings={settings}
-            logoPreview={logoPreview}
-            handleChange={handleChange}
-            handleLogoUpload={handleLogoUpload}
-            onRemoveLogo={handleRemoveLogo}
-          />
-        ) : (
-          <AdvancedSettingsTab
-            settings={settings}
-            handlers={handlers}
-            renderContentBlock={renderContentBlock}
-          />
-        )}
+        <AdvancedSettingsTab
+          settings={settings}
+          handlers={handlers}
+          renderContentBlock={renderContentBlock}
+        />
 
         {/* Action Buttons */}
         <div className="flex gap-4">
