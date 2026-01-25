@@ -44,9 +44,11 @@ When adding new modules, follow the exact structure of [src/modules/users/](../s
 ## Database & Environment
 
 - Database config is environment-aware: [configs/db-config.js](../src/configs/db-config.js) reads `process.env.NODE_ENV`
-- Use `.env` file for local development (not committed)
+- Connection string prioritizes `MONGODB_URI` environment variable for simplicity
+- Use `.env` file for local development: `MONGODB_URI=mongodb://localhost:27017/college-syllabus-generator`
 - Docker Compose sets up MongoDB + Node app: `docker-compose up` starts both services
 - Connection auto-establishes on startup (no manual sync needed with MongoDB)
+- **Auto-creation:** Mongoose automatically creates the database and collections when you first insert documents
 
 ## Development Workflow
 
@@ -56,7 +58,10 @@ npm start           # Production start
 docker-compose up   # Full stack (MongoDB + Node)
 ```
 
-**Important:** Database credentials come from environment variables (`MONGODB_USER`, `MONGODB_PASSWORD`, `MONGODB_DATABASE`, `MONGODB_HOST`, `MONGODB_PORT`). Docker Compose injects these automatically.
+**Important:** 
+- Primary connection method: Set `MONGODB_URI=mongodb://localhost:27017/your-database-name` in `.env`
+- Alternative: Use individual variables (`MONGODB_USER`, `MONGODB_PASSWORD`, `MONGODB_DATABASE`, `MONGODB_HOST`, `MONGODB_PORT`)
+- Docker Compose injects MongoDB credentials automatically
 
 ## Conventions & Patterns
 
