@@ -17,8 +17,6 @@
     "express": "^4.21.0",
     "express-rate-limit": "^7.4.1",
     "joi": "^17.13.3",
-    "mysql": "^2.18.1",
-    "mysql2": "^3.11.3",
-    "sequelize": "^6.37.3"
+    "mongoose": "^8.0.0"
   }
 }
