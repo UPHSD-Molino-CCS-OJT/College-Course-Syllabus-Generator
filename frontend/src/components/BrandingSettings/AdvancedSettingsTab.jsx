@@ -3,14 +3,13 @@ import CanvasEditor from './CanvasEditor';
 export default function AdvancedSettingsTab({
   settings,
   handlers,
-  renderContentBlock,
 }) {
   const handleHeaderChange = (newElements) => {
-    handlers.updateContentBlock('headerContent', 0, null, null, newElements);
+    handlers.updateCanvasElements('headerContent', newElements);
   };
 
   const handleFooterChange = (newElements) => {
-    handlers.updateContentBlock('footerContent', 0, null, null, newElements);
+    handlers.updateCanvasElements('footerContent', newElements);
   };
 
   return (
