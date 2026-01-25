@@ -10,6 +10,27 @@ export default function GroupBlockEditor({
 }) {
   return (
     <>
+      {/* Group Layout */}
+      <div>
+        <label className="block text-xs text-gray-600 mb-1">Group Layout</label>
+        <div className="flex gap-2">
+          {['horizontal', 'vertical'].map((layout) => (
+            <button
+              key={layout}
+              type="button"
+              onClick={() => onUpdate('layout', layout)}
+              className={`flex-1 px-3 py-1 text-xs rounded border ${
+                (block.layout || 'horizontal') === layout
+                  ? 'bg-purple-100 border-purple-500 text-purple-700'
+                  : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {layout.charAt(0).toUpperCase() + layout.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Group Alignment */}
       <div>
         <label className="block text-xs text-gray-600 mb-1">Group Alignment</label>
