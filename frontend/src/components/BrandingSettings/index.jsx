@@ -205,228 +205,17 @@ export default function BrandingSettings() {
     }));
   };
 
-  const moveContentBlock = (section, index, direction) => {
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= settings[section].length) return;
-
-    const newContent = [...settings[section]];
-    [newContent[index], newContent[newIndex]] = [
-      newContent[newIndex],
-      newContent[index],
-    ];
-    newContent.forEach((block, i) => (block.order = i));
-
-    setSettings((prev) => ({ ...prev, [section]: newContent }));
-  };
-
-  const addChildToGroup = (section, groupIndex, type) => {
-    const newChild = {
-      id: Date.now() + Math.random(),
-      type,
-      content: type === 'text' ? 'Enter text here' : '',
-      alignment: type === 'group' ? 'center' : undefined,
-      layout: type === 'group' ? 'horizontal' : undefined,
-      children: type === 'group' ? [] : undefined,
-      styles: {
-        fontWeight: 'normal',
-        fontSize: 'medium',
-        color: '#000000',
-        width: type === 'image' ? 50 : undefined,
-        height: type === 'image' ? 50 : undefined,
-      },
-    };
-
+  // Canvas-specific update handler
+  const updateCanvasElements = (section, newElements) => {
     setSettings((prev) => ({
       ...prev,
-      [section]: prev[section].map((block, i) =>
-        i === groupIndex
-          ? {
-              ...block,
-              children: [...(block.children || []), newChild],
-            }
-          : block
-      ),
+      [section]: newElements,
     }));
-  };
-
-  const removeChildFromGroup = (section, groupIndex, childIndex) => {
-    setSettings((prev) => ({
-      ...prev,
-      [section]: prev[section].map((block, i) =>
-        i === groupIndex
-          ? {
-              ...block,
-              children: (block.children || []).filter((_, ci) => ci !== childIndex),
-            }
-          : block
-      ),
-    }));
-  };
-
-  const updateGroupChild = (section, groupIndex, childIndex, field, value) => {
-    setSettings((prev) => ({
-      ...prev,
-      [section]: prev[section].map((block, i) =>
-        i === groupIndex
-          ? {
-              ...block,
-              children: (block.children || []).map((child, ci) =>
-                ci === childIndex
-                  ? field.includes('.')
-                    ? {
-                        ...child,
-                        styles: {
-                          ...child.styles,
-                          [field.split('.')[1]]: value,
-                        },
-                      }
-                    : { ...child, [field]: value }
-                  : child
-              ),
-            }
-          : block
-      ),
-    }));
-  };
-
-  const handleImageUploadForBlock = (section, index, file) => {
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        updateContentBlock(section, index, 'content', reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // Handle clicking on a preview element to edit it
-  const handleEditBlock = (section, index) => {
-    // Scroll to the element in the editor list
-    const element = document.getElementById(`block-${section}-${index}`);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      // Trigger the edit action
-      setTimeout(() => {
-        const editButton = element.querySelector('[data-edit-button]');
-        if (editButton) {
-          editButton.click();
-        }
-      }, 300);
-    }
-  };
-
-  // Render content block helper
-  const renderContentBlock = (block, isHorizontal = false, section = null, index = null) => {
-    const isClickable = section !== null && index !== null;
-    
-    if (block.type === 'group') {
-      const groupLayout = block.layout || 'horizontal';
-      return (
-        <div
-          className={isClickable ? 'group/preview cursor-pointer transition-all hover:bg-purple-50 hover:shadow-sm rounded p-1' : ''}
-          onClick={isClickable ? () => handleEditBlock(section, index) : undefined}
-          title={isClickable ? 'Click to edit this group' : undefined}
-          style={{
-            display: 'inline-flex',
-            flexDirection: groupLayout === 'horizontal' ? 'row' : 'column',
-            alignItems: 'center',
-            gap: '8px',
-            justifyContent:
-              block.alignment === 'left'
-                ? 'flex-start'
-                : block.alignment === 'right'
-                ? 'flex-end'
-                : 'center',
-          }}
-        >
-          {(block.children || []).map((child, childIndex) => (
-            <div key={child.id || childIndex}>
-              {child.type === 'text' ? (
-                <p
-                  style={{
-                    fontWeight: child.styles?.fontWeight || 'normal',
-                    fontSize:
-                      child.styles?.fontSize === 'small'
-                        ? '12px'
-                        : child.styles?.fontSize === 'large'
-                        ? '18px'
-                        : '14px',
-                    color: child.styles?.color || '#000000',
-                    margin: 0,
-                  }}
-                >
-                  {child.content}
-                </p>
-              ) : child.type === 'image' ? (
-                <img
-                  src={child.content}
-                  alt="Group element"
-                  style={{
-                    width: `${child.styles?.width || 50}px`,
-                    height: `${child.styles?.height || 50}px`,
-                    display: 'block',
-                  }}
-                />
-              ) : (
-                // Recursive rendering for nested groups
-                renderContentBlock(child, false, null, null)
-              )}
-            </div>
-          ))}
-        </div>
-      );
-    } else if (block.type === 'text') {
-      return (
-        <p
-          className={isClickable ? 'cursor-pointer transition-all hover:bg-blue-50 hover:shadow-sm rounded px-2 py-1 inline-block' : ''}
-          onClick={isClickable ? () => handleEditBlock(section, index) : undefined}
-          title={isClickable ? 'Click to edit this text' : undefined}
-          style={{
-            fontWeight: block.styles.fontWeight,
-            fontSize:
-              block.styles.fontSize === 'small'
-                ? '12px'
-                : block.styles.fontSize === 'large'
-                ? '18px'
-                : '14px',
-            color: block.styles.color,
-            margin: 0,
-          }}
-        >
-          {block.content}
-        </p>
-      );
-    } else {
-      return (
-        <img
-          className={isClickable ? 'cursor-pointer transition-all hover:ring-2 hover:ring-green-400 hover:shadow-md rounded' : ''}
-          onClick={isClickable ? () => handleEditBlock(section, index) : undefined}
-          title={isClickable ? 'Click to edit this image' : undefined}
-          src={block.content}
-          alt="Header"
-          style={{
-            width: `${block.styles.width}px`,
-            height: `${block.styles.height}px`,
-            display: 'block',
-          }}
-        />
-      );
-    }
   };
 
   // Group all handlers for advanced tab
   const handlers = {
-    addContentBlock,
-    insertContentBlockAt,
-    removeContentBlock,
-    updateContentBlock,
-    moveContentBlock,
-    handleImageUploadForBlock,
-    handleLayoutChange,
-    addChildToGroup,
-    removeChildFromGroup,
-    updateGroupChild,
-    handleEditBlock,
+    updateCanvasElements,
   };
 
   return (
@@ -449,7 +238,6 @@ export default function BrandingSettings() {
         <AdvancedSettingsTab
           settings={settings}
           handlers={handlers}
-          renderContentBlock={renderContentBlock}
         />
 
         {/* Action Buttons */}
