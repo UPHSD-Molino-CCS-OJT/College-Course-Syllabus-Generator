@@ -238,29 +238,72 @@ export default function TableEditor({ table, onUpdate }) {
                         className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                       />
                       <div className="grid grid-cols-2 gap-1">
-                        <input
-                          type="number"
-                          value={cell.fontSize}
-                          onChange={(e) => handleCellUpdate(rowIndex, colIndex, { fontSize: parseInt(e.target.value) })}
-                          placeholder="Size"
-                          className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-xs focus:outline-none"
-                        />
+                        <div>
+                          <label className="text-xs text-gray-400">Font Size</label>
+                          <input
+                            type="number"
+                            value={cell.fontSize}
+                            onChange={(e) => handleCellUpdate(rowIndex, colIndex, { fontSize: parseInt(e.target.value) })}
+                            placeholder="Size"
+                            className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-xs focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-400">H-Align</label>
+                          <select
+                            value={cell.align}
+                            onChange={(e) => handleCellUpdate(rowIndex, colIndex, { align: e.target.value })}
+                            className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-xs focus:outline-none"
+                          >
+                            <option value="left">Left</option>
+                            <option value="center">Center</option>
+                            <option value="right">Right</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-400">Vertical Align</label>
                         <select
-                          value={cell.align}
-                          onChange={(e) => handleCellUpdate(rowIndex, colIndex, { align: e.target.value })}
+                          value={cell.verticalAlign || 'top'}
+                          onChange={(e) => handleCellUpdate(rowIndex, colIndex, { verticalAlign: e.target.value })}
                           className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-xs focus:outline-none"
                         >
-                          <option value="left">Left</option>
-                          <option value="center">Center</option>
-                          <option value="right">Right</option>
+                          <option value="top">Top</option>
+                          <option value="middle">Middle</option>
+                          <option value="bottom">Bottom</option>
                         </select>
                       </div>
-                      <input
-                        type="color"
-                        value={cell.bg}
-                        onChange={(e) => handleCellUpdate(rowIndex, colIndex, { bg: e.target.value })}
-                        className="w-full h-8 bg-gray-700 border border-gray-600 rounded cursor-pointer"
-                      />
+                      <div className="grid grid-cols-2 gap-1">
+                        <div>
+                          <label className="text-xs text-gray-400">Cell Width</label>
+                          <input
+                            type="number"
+                            value={cell.width || ''}
+                            onChange={(e) => handleCellUpdate(rowIndex, colIndex, { width: e.target.value ? parseInt(e.target.value) : null })}
+                            placeholder="Auto"
+                            className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-xs focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-400">Cell Height</label>
+                          <input
+                            type="number"
+                            value={cell.height || ''}
+                            onChange={(e) => handleCellUpdate(rowIndex, colIndex, { height: e.target.value ? parseInt(e.target.value) : null })}
+                            placeholder="Auto"
+                            className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-xs focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-400">Background Color</label>
+                        <input
+                          type="color"
+                          value={cell.bg}
+                          onChange={(e) => handleCellUpdate(rowIndex, colIndex, { bg: e.target.value })}
+                          className="w-full h-8 bg-gray-700 border border-gray-600 rounded cursor-pointer"
+                        />
+                      </div>
                     </div>
                   )}
                 </div>

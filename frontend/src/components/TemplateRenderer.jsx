@@ -60,6 +60,8 @@ export default function TemplateRenderer({ template, syllabus }) {
         wordWrap: 'break-word',
         fontStyle: element.italic ? 'italic' : 'normal',
         textDecoration: element.underline ? 'underline' : 'none',
+        display: 'flex',
+        alignItems: element.verticalAlign === 'middle' ? 'center' : element.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start',
       };
 
       if (element.bold) {
@@ -142,8 +144,8 @@ export default function TemplateRenderer({ template, syllabus }) {
                   <td
                     key={colIndex}
                     style={{
-                      width: element.cellWidth ? `${element.cellWidth}px` : 'auto',
-                      height: element.cellHeight ? `${element.cellHeight}px` : 'auto',
+                      width: cell.width ? `${cell.width}px` : (element.cellWidth ? `${element.cellWidth}px` : 'auto'),
+                      height: cell.height ? `${cell.height}px` : (element.cellHeight ? `${element.cellHeight}px` : 'auto'),
                       border: `${element.borderWidth || 1}px solid ${element.borderColor || '#000'}`,
                       padding: '8px',
                       backgroundColor: cell.bg || '#fff',
@@ -154,7 +156,7 @@ export default function TemplateRenderer({ template, syllabus }) {
                       textAlign: cell.align || 'left',
                       whiteSpace: 'pre-wrap',
                       wordWrap: 'break-word',
-                      verticalAlign: 'top',
+                      verticalAlign: cell.verticalAlign || 'top',
                     }}
                   >
                     {cell.content}

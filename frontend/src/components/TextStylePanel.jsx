@@ -158,7 +158,7 @@ export default function TextStylePanel({ element, onUpdate }) {
 
       {/* Text Alignment */}
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-2">Alignment</label>
+        <label className="block text-sm font-medium mb-2">Horizontal Alignment</label>
         <div className="grid grid-cols-4 gap-2">
           {alignments.map((align) => (
             <button
@@ -174,6 +174,46 @@ export default function TextStylePanel({ element, onUpdate }) {
               {align.icon}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Vertical Alignment */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-2">Vertical Alignment</label>
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            onClick={() => onUpdate({ verticalAlign: 'top' })}
+            className={`px-3 py-2 rounded transition-colors ${
+              (element.verticalAlign || 'top') === 'top'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+            title="Top"
+          >
+            ⬆
+          </button>
+          <button
+            onClick={() => onUpdate({ verticalAlign: 'middle' })}
+            className={`px-3 py-2 rounded transition-colors ${
+              element.verticalAlign === 'middle'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+            title="Middle"
+          >
+            ↕
+          </button>
+          <button
+            onClick={() => onUpdate({ verticalAlign: 'bottom' })}
+            className={`px-3 py-2 rounded transition-colors ${
+              element.verticalAlign === 'bottom'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+            title="Bottom"
+          >
+            ⬇
+          </button>
         </div>
       </div>
 
