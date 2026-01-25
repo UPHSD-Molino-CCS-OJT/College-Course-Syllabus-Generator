@@ -23,7 +23,7 @@ module.exports = {
     courseTitle: Joi.string().max(200).required(),
     department: Joi.string().max(200).required(),
     credits: Joi.number().min(1).max(10).required(),
-    semester: Joi.string().valid("1st Semester", "2nd Semester", "Summer").required(),
+    semester: Joi.string().valid("First Semester", "Second Semester", "Summer").required(),
     year: Joi.number().min(2000).max(2100).required(),
     
     instructorName: Joi.string().max(200).required(),
@@ -66,7 +66,7 @@ module.exports = {
     courseTitle: Joi.string().max(200),
     department: Joi.string().max(200),
     credits: Joi.number().min(1).max(10),
-    semester: Joi.string().valid("1st Semester", "2nd Semester", "Summer"),
+    semester: Joi.string().valid("First Semester", "Second Semester", "Summer"),
     year: Joi.number().min(2000).max(2100),
     
     instructorName: Joi.string().max(200),

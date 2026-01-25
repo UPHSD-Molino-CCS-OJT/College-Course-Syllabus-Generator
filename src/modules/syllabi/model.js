@@ -77,7 +77,7 @@ const syllabusSchema = new mongoose.Schema(
     semester: {
       type: String,
       required: true,
-      enum: ["1st Semester", "2nd Semester", "Summer"],
+      enum: ["First Semester", "Second Semester", "Summer"],
     },
     year: {
       type: Number,
