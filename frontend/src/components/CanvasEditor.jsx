@@ -174,6 +174,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       cellHeight: 40,
       borderColor: '#000000',
       borderWidth: 1,
+      borderStyle: 'solid',
       headerBg: '#f3f4f6',
       data: Array(3).fill(null).map((_, i) => 
         Array(3).fill(null).map((_, j) => ({

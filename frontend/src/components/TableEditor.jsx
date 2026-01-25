@@ -158,6 +158,19 @@ export default function TableEditor({ table, onUpdate }) {
             />
           </div>
           <div>
+            <label className="text-xs text-gray-400">Style</label>
+            <select
+              value={table.borderStyle || 'solid'}
+              onChange={(e) => onUpdate({ borderStyle: e.target.value })}
+              className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="solid">Solid</option>
+              <option value="dashed">Dashed</option>
+              <option value="dotted">Dotted</option>
+              <option value="double">Double</option>
+            </select>
+          </div>
+          <div>
             <label className="text-xs text-gray-400">Color</label>
             <div className="flex gap-2">
               <input

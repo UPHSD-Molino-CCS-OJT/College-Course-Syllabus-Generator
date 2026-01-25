@@ -165,7 +165,7 @@ export default function TemplateRenderer({ template, syllabus }) {
                     style={{
                       width: cell.width ? `${cell.width}px` : (element.cellWidth ? `${element.cellWidth}px` : 'auto'),
                       height: cell.height ? `${cell.height}px` : (element.cellHeight ? `${element.cellHeight}px` : 'auto'),
-                      border: `${element.borderWidth || 1}px solid ${element.borderColor || '#000'}`,
+                      border: `${element.borderWidth || 1}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000'}`,
                       padding: '8px',
                       backgroundColor: cell.bg || '#fff',
                       fontSize: `${cell.fontSize || 12}px`,

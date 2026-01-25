@@ -280,6 +280,7 @@ export default function CanvasPage({
                         height: cell.height || element.cellHeight,
                         borderColor: element.borderColor,
                         borderWidth: element.borderWidth,
+                        borderStyle: element.borderStyle || 'solid',
                         backgroundColor: cell.bg,
                         fontSize: cell.fontSize,
                         fontFamily: cell.fontFamily,
