@@ -305,7 +305,8 @@ export default function BrandingSettings() {
           onClick={isClickable ? () => handleEditBlock(section, index) : undefined}
           title={isClickable ? 'Click to edit this group' : undefined}
           style={{
-            display: 'flex',
+            display: 'inline-flex',
+            flexDirection: isHorizontal ? 'row' : 'column',
             alignItems: 'center',
             gap: '8px',
             justifyContent:
@@ -314,7 +315,6 @@ export default function BrandingSettings() {
                 : block.alignment === 'right'
                 ? 'flex-end'
                 : 'center',
-            width: '100%',
           }}
         >
           {(block.children || []).map((child, childIndex) => (
