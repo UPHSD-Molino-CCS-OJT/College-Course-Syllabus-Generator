@@ -92,9 +92,10 @@ const templateSchema = new mongoose.Schema(
 );
 
 // Validation middleware
-templateSchema.pre("save", async function (next) {
+templateSchema.pre("save", function (next) {
   try {
-    await validatePayload(templateJoiSchema.create, this.toObject());
+    const schema = this.isNew ? templateJoiSchema.create : templateJoiSchema.update;
+    validatePayload(this.toObject(), schema);
     next();
   } catch (error) {
     console.error("Validation error:", error);
@@ -102,9 +103,11 @@ templateSchema.pre("save", async function (next) {
   }
 });
 
-templateSchema.pre("findOneAndUpdate", async function (next) {
+templateSchema.pre("findOneAndUpdate", function (next) {
   try {
-    await validatePayload(templateJoiSchema.update, this.getUpdate());
+    const update = this.getUpdate();
+    const updateData = update.$set || update;
+    validatePayload(updateData, templateJoiSchema.update);
     next();
   } catch (error) {
     console.error("Validation error:", error);
