@@ -67,10 +67,19 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
     setExporting(true);
     try {
       const element = printRef.current;
+      
+      // Get actual element dimensions
+      const elementWidth = element.scrollWidth;
+      const elementHeight = element.scrollHeight;
+      
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
         logging: false,
+        width: elementWidth,
+        height: elementHeight,
+        windowWidth: elementWidth,
+        windowHeight: elementHeight,
       });
 
       const imgData = canvas.toDataURL('image/png');
@@ -81,9 +90,17 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
       
       if (template) {
         orientation = template.orientation || 'landscape';
-        format = template.pageSize === 'longBond' ? [355.6, 215.9] : 
-                template.pageSize === 'a4' ? 'a4' :
-                template.pageSize === 'letter' ? 'letter' : 'legal';
+        // Map page sizes to jsPDF formats or custom dimensions
+        if (template.pageSize === 'longBond') {
+          // Long bond in mm: 215.9 x 355.6
+          format = orientation === 'landscape' ? [355.6, 215.9] : [215.9, 355.6];
+        } else if (template.pageSize === 'a4') {
+          format = 'a4';
+        } else if (template.pageSize === 'letter') {
+          format = 'letter';
+        } else {
+          format = 'legal';
+        }
       }
       
       const pdf = new jsPDF({
@@ -94,13 +111,21 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      const imgY = 10;
+      
+      // Convert pixels to mm (assuming 96 DPI: 1 inch = 25.4mm, 96px = 25.4mm)
+      const imgWidthMM = (canvas.width * 25.4) / (96 * 2); // Divide by 2 because of scale:2
+      const imgHeightMM = (canvas.height * 25.4) / (96 * 2);
+      
+      // Scale to fit page while maintaining aspect ratio
+      const ratio = Math.min(pdfWidth / imgWidthMM, pdfHeight / imgHeightMM);
+      const finalWidth = imgWidthMM * ratio;
+      const finalHeight = imgHeightMM * ratio;
+      
+      // Center the image
+      const x = (pdfWidth - finalWidth) / 2;
+      const y = (pdfHeight - finalHeight) / 2;
 
-      pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+      pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
       pdf.save(`${syllabus.courseCode}_${syllabus.courseTitle}_Syllabus.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -571,6 +596,23 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
           <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 flex justify-between items-center">
             <h2 className="text-xl font-bold text-gray-900">Print Syllabus</h2>
             <div className="flex items-center gap-2">
+              <button
+                onClick={handleExportPDF}
+                disabled={exporting || !usesTemplate}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={!usesTemplate ? "Template required for PDF export" : "Export as PDF"}
+              >
+                <FileText className="w-4 h-4" />
+                {exporting ? 'Exporting...' : 'Export PDF'}
+              </button>
+              <button
+                onClick={handleExportWord}
+                disabled={exporting}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <File className="w-4 h-4" />
+                {exporting ? 'Exporting...' : 'Export Word'}
+              </button>
               <button
                 onClick={handlePrint}
                 className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-medium flex items-center gap-2"
