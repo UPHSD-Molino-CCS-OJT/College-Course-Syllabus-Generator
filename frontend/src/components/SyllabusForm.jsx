@@ -6,7 +6,7 @@ const INITIAL_FORM_DATA = {
   courseTitle: '',
   department: '',
   credits: 3,
-  semester: 'Fall',
+  semester: '1st Semester',
   year: new Date().getFullYear(),
   instructorName: '',
   instructorEmail: '',
@@ -225,10 +225,9 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="Fall">Fall</option>
-                  <option value="Spring">Spring</option>
+                  <option value="1st Semester">1st Semester</option>
+                  <option value="2nd Semester">2nd Semester</option>
                   <option value="Summer">Summer</option>
-                  <option value="Winter">Winter</option>
                 </select>
               </div>
               <div>

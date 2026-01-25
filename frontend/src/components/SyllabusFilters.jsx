@@ -29,10 +29,9 @@ export default function SyllabusFilters({
           className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">All Semesters</option>
-          <option value="Fall">Fall</option>
-          <option value="Spring">Spring</option>
+          <option value="1st Semester">1st Semester</option>
+          <option value="2nd Semester">2nd Semester</option>
           <option value="Summer">Summer</option>
-          <option value="Winter">Winter</option>
         </select>
         {showCreateButton && (
           <button
