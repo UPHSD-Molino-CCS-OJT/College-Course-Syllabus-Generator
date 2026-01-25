@@ -155,7 +155,8 @@ export default function TemplateRenderer({ template, syllabus }) {
           key={element.id}
           style={{
             ...baseStyle,
-            borderCollapse: 'collapse',
+            borderCollapse: 'separate',
+            borderSpacing: '0',
           }}
         >
           <tbody>
@@ -167,12 +168,10 @@ export default function TemplateRenderer({ template, syllabus }) {
                     style={{
                       width: cell.width ? `${cell.width}px` : (element.cellWidth ? `${element.cellWidth}px` : 'auto'),
                       height: cell.height ? `${cell.height}px` : (element.cellHeight ? `${element.cellHeight}px` : 'auto'),
-                      borderTopWidth: (cell.showBorderTop !== undefined ? cell.showBorderTop : element.showBorderTop !== false) ? `${element.borderWidth || 1}px` : '0',
-                      borderRightWidth: (cell.showBorderRight !== undefined ? cell.showBorderRight : element.showBorderRight !== false) ? `${element.borderWidth || 1}px` : '0',
-                      borderBottomWidth: (cell.showBorderBottom !== undefined ? cell.showBorderBottom : element.showBorderBottom !== false) ? `${element.borderWidth || 1}px` : '0',
-                      borderLeftWidth: (cell.showBorderLeft !== undefined ? cell.showBorderLeft : element.showBorderLeft !== false) ? `${element.borderWidth || 1}px` : '0',
-                      borderStyle: element.borderStyle || 'solid',
-                      borderColor: element.borderColor || '#000',
+                      borderTop: (cell.showBorderTop !== undefined ? cell.showBorderTop : element.showBorderTop !== false) ? `${element.borderWidth || 1}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000'}` : 'none',
+                      borderRight: (cell.showBorderRight !== undefined ? cell.showBorderRight : element.showBorderRight !== false) ? `${element.borderWidth || 1}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000'}` : 'none',
+                      borderBottom: (cell.showBorderBottom !== undefined ? cell.showBorderBottom : element.showBorderBottom !== false) ? `${element.borderWidth || 1}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000'}` : 'none',
+                      borderLeft: (cell.showBorderLeft !== undefined ? cell.showBorderLeft : element.showBorderLeft !== false) ? `${element.borderWidth || 1}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000'}` : 'none',
                       padding: '8px',
                       backgroundColor: cell.bg || '#fff',
                       fontSize: `${cell.fontSize || 12}px`,

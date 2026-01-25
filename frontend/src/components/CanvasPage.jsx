@@ -269,7 +269,7 @@ export default function CanvasPage({
               </svg>
             </div>
           )}
-          <table style={{ borderCollapse: 'collapse' }}>
+          <table style={{ borderCollapse: 'separate', borderSpacing: '0' }}>
             <tbody>
               {element.data.map((row, rowIndex) => (
                 <tr key={rowIndex}>
@@ -280,12 +280,10 @@ export default function CanvasPage({
                       style={{
                         width: cell.width || element.cellWidth,
                         height: cell.height || element.cellHeight,
-                        borderTopWidth: (cell.showBorderTop !== undefined ? cell.showBorderTop : element.showBorderTop !== false) ? element.borderWidth : 0,
-                        borderRightWidth: (cell.showBorderRight !== undefined ? cell.showBorderRight : element.showBorderRight !== false) ? element.borderWidth : 0,
-                        borderBottomWidth: (cell.showBorderBottom !== undefined ? cell.showBorderBottom : element.showBorderBottom !== false) ? element.borderWidth : 0,
-                        borderLeftWidth: (cell.showBorderLeft !== undefined ? cell.showBorderLeft : element.showBorderLeft !== false) ? element.borderWidth : 0,
-                        borderStyle: element.borderStyle || 'solid',
-                        borderColor: element.borderColor,
+                        borderTop: (cell.showBorderTop !== undefined ? cell.showBorderTop : element.showBorderTop !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
+                        borderRight: (cell.showBorderRight !== undefined ? cell.showBorderRight : element.showBorderRight !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
+                        borderBottom: (cell.showBorderBottom !== undefined ? cell.showBorderBottom : element.showBorderBottom !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
+                        borderLeft: (cell.showBorderLeft !== undefined ? cell.showBorderLeft : element.showBorderLeft !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
                         backgroundColor: cell.bg,
                         fontSize: cell.fontSize,
                         fontFamily: cell.fontFamily,
