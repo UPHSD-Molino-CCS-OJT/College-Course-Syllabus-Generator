@@ -341,7 +341,7 @@ export default function BrandingSettings() {
                 >
                   {child.content}
                 </p>
-              ) : (
+              ) : child.type === 'image' ? (
                 <img
                   src={child.content}
                   alt="Group element"
@@ -351,6 +351,9 @@ export default function BrandingSettings() {
                     display: 'block',
                   }}
                 />
+              ) : (
+                // Recursive rendering for nested groups
+                renderContentBlock(child, false, null, null)
               )}
             </div>
           ))}

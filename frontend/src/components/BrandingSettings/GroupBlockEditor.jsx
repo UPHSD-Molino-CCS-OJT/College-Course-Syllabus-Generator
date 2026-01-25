@@ -101,6 +101,49 @@ export default function GroupBlockEditor({
                 childIndex={childIndex}
                 onUpdate={onUpdateChild}
                 onRemove={onRemoveChild}
+                onAddNestedChild={(parentIdx, type) => {
+                  // Add to nested group
+                  const newChild = {
+                    id: Date.now() + Math.random(),
+                    type,
+                    content: type === 'text' ? 'Enter text here' : '',
+                    alignment: type === 'group' ? 'center' : undefined,
+                    layout: type === 'group' ? 'horizontal' : undefined,
+                    children: type === 'group' ? [] : undefined,
+                    styles: {
+                      fontWeight: 'normal',
+                      fontSize: 'medium',
+                      color: '#000000',
+                      width: type === 'image' ? 50 : undefined,
+                      height: type === 'image' ? 50 : undefined,
+                    },
+                  };
+                  const updatedChild = {
+                    ...block.children[parentIdx],
+                    children: [...(block.children[parentIdx].children || []), newChild]
+                  };
+                  onUpdateChild(parentIdx, 'children', updatedChild.children);
+                }}
+                onRemoveNestedChild={(parentIdx, nestedIdx) => {
+                  const updatedChildren = (block.children[parentIdx].children || []).filter((_, i) => i !== nestedIdx);
+                  onUpdateChild(parentIdx, 'children', updatedChildren);
+                }}
+                onUpdateNestedChild={(parentIdx, nestedIdx, field, value) => {
+                  const updatedChildren = (block.children[parentIdx].children || []).map((child, i) =>
+                    i === nestedIdx
+                      ? field.includes('.')
+                        ? {
+                            ...child,
+                            styles: {
+                              ...child.styles,
+                              [field.split('.')[1]]: value,
+                            },
+                          }
+                        : { ...child, [field]: value }
+                      : child
+                  );
+                  onUpdateChild(parentIdx, 'children', updatedChildren);
+                }}
               />
             ))}
           </div>

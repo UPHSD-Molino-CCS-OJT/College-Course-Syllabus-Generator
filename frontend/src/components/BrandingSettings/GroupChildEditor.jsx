@@ -1,6 +1,17 @@
 import { Trash2, Type, Image, Folder } from 'lucide-react';
+import { useState } from 'react';
 
-export default function GroupChildEditor({ child, childIndex, onUpdate, onRemove }) {
+export default function GroupChildEditor({ 
+  child, 
+  childIndex, 
+  onUpdate, 
+  onRemove,
+  onAddNestedChild,
+  onRemoveNestedChild,
+  onUpdateNestedChild
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
   const handleImageUpload = (file) => {
     if (file) {
       const reader = new FileReader();
@@ -123,11 +134,21 @@ export default function GroupChildEditor({ child, childIndex, onUpdate, onRemove
           )}
         </>
       ) : (
-        <div className="bg-purple-50 border border-purple-200 rounded p-2">
-          <p className="text-xs text-purple-700">
-            Nested Group: {(child.children || []).length} element{(child.children || []).length !== 1 ? 's' : ''}
-          </p>
-          <div className="mt-1 space-y-1">
+        <div className="bg-purple-50 border border-purple-200 rounded p-2 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-purple-700 font-medium">
+              Nested Group: {(child.children || []).length} element{(child.children || []).length !== 1 ? 's' : ''}
+            </p>
+            <button
+              type="button"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-[10px] text-purple-600 hover:text-purple-800"
+            >
+              {isExpanded ? 'Collapse' : 'Expand'}
+            </button>
+          </div>
+          
+          <div className="space-y-1">
             <div>
               <label className="block text-[10px] text-gray-600 mb-0.5">Layout</label>
               <div className="flex gap-1">
@@ -175,6 +196,73 @@ export default function GroupChildEditor({ child, childIndex, onUpdate, onRemove
               </div>
             </div>
           </div>
+
+          {isExpanded && (
+            <div className="border-t border-purple-200 pt-2 space-y-2">
+              <div className="flex justify-between items-center">
+                <label className="text-[10px] font-medium text-gray-700">Elements</label>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onAddNestedChild && onAddNestedChild(childIndex, 'text')}
+                    className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-[10px] hover:bg-blue-100"
+                  >
+                    <Type size={10} />
+                    Text
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onAddNestedChild && onAddNestedChild(childIndex, 'image')}
+                    className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-green-50 text-green-700 rounded text-[10px] hover:bg-green-100"
+                  >
+                    <Image size={10} />
+                    Image
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onAddNestedChild && onAddNestedChild(childIndex, 'group')}
+                    className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded text-[10px] hover:bg-purple-100"
+                  >
+                    <Folder size={10} />
+                    Group
+                  </button>
+                </div>
+              </div>
+
+              {(!child.children || child.children.length === 0) ? (
+                <div className="border-2 border-dashed border-purple-200 rounded p-2 text-center">
+                  <p className="text-purple-500 text-[10px]">
+                    No elements. Add text, image, or group elements.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {child.children.map((nestedChild, nestedIndex) => (
+                    <GroupChildEditor
+                      key={nestedChild.id || nestedIndex}
+                      child={nestedChild}
+                      childIndex={nestedIndex}
+                      onUpdate={(idx, field, value) => 
+                        onUpdateNestedChild && onUpdateNestedChild(childIndex, idx, field, value)
+                      }
+                      onRemove={(idx) => 
+                        onRemoveNestedChild && onRemoveNestedChild(childIndex, idx)
+                      }
+                      onAddNestedChild={(nestedIdx, type) => 
+                        onAddNestedChild && onAddNestedChild(childIndex, type, nestedIdx)
+                      }
+                      onRemoveNestedChild={(nestedIdx, deepIdx) =>
+                        onRemoveNestedChild && onRemoveNestedChild(childIndex, nestedIdx, deepIdx)
+                      }
+                      onUpdateNestedChild={(nestedIdx, deepIdx, field, value) =>
+                        onUpdateNestedChild && onUpdateNestedChild(childIndex, nestedIdx, deepIdx, field, value)
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
