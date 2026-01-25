@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { syllabusAPI } from '../services/api';
+import { useState, useEffect } from 'react';
+import { syllabusAPI, templateAPI } from '../services/api';
 
 const INITIAL_FORM_DATA = {
   courseCode: '',
@@ -25,6 +25,7 @@ const INITIAL_FORM_DATA = {
   academicIntegrity: '',
   disabilities: '',
   status: 'draft',
+  template: null,
 };
 
 export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllabusUpdated, onCancel }) {
@@ -32,6 +33,20 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('basic');
+  const [templates, setTemplates] = useState([]);
+
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  const fetchTemplates = async () => {
+    try {
+      const response = await templateAPI.getTemplates();
+      setTemplates(response.data.templates || []);
+    } catch (err) {
+      console.error('Error fetching templates:', err);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -243,6 +258,26 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Template (Optional)</label>
+              <select
+                name="template"
+                value={formData.template || ''}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">No Template</option>
+                {templates.map((template) => (
+                  <option key={template._id} value={template._id}>
+                    {template.name} - {template.pageSize} {template.orientation}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Select a template to apply formatting when printing the syllabus
+              </p>
             </div>
 
             <div>

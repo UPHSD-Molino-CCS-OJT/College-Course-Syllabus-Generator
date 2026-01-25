@@ -27,6 +27,9 @@ export default function SyllabusView({ syllabus, onClose, onEdit }) {
               <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                 <p><span className="font-semibold">Credits:</span> {syllabus.credits}</p>
                 <p><span className="font-semibold">Status:</span> <span className="capitalize">{syllabus.status}</span></p>
+                {syllabus.template && (
+                  <p><span className="font-semibold">Template:</span> {typeof syllabus.template === 'object' ? syllabus.template.name : 'Applied'}</p>
+                )}
               </div>
             </section>
 
