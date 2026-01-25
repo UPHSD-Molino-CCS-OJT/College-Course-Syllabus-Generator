@@ -1,9 +1,22 @@
 const Joi = require("joi");
 
-// Content block schema for header/footer
-const contentBlockSchema = Joi.object({
+// Child element schema (for group children)
+const childElementSchema = Joi.object({
   type: Joi.string().valid("text", "image").required(),
   content: Joi.string().required(),
+  styles: Joi.object({
+    fontWeight: Joi.string().default("normal"),
+    fontSize: Joi.string().default("medium"),
+    color: Joi.string().pattern(/^#[0-9A-Fa-f]{6}$/).default("#000000"),
+    width: Joi.number().optional(),
+    height: Joi.number().optional(),
+  }).optional(),
+});
+
+// Content block schema for header/footer
+const contentBlockSchema = Joi.object({
+  type: Joi.string().valid("text", "image", "group").required(),
+  content: Joi.string().optional(),
   alignment: Joi.string().valid("left", "center", "right").default("center"),
   styles: Joi.object({
     fontWeight: Joi.string().default("normal"),
@@ -12,6 +25,7 @@ const contentBlockSchema = Joi.object({
     width: Joi.number().optional(),
     height: Joi.number().optional(),
   }).optional(),
+  children: Joi.array().items(childElementSchema).optional(),
   order: Joi.number().default(0),
 });
 
