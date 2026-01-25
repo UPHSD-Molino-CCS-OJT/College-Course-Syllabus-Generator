@@ -58,14 +58,14 @@ export function renderElement(element, syllabus) {
 
   if (element.type === 'text') {
     rendered.content = replacePlaceholders(element.content, syllabus);
-  } else if (element.type === 'table' && element.rows && Array.isArray(element.rows)) {
-    rendered.rows = element.rows.map((row) => ({
-      ...row,
-      cells: Array.isArray(row.cells) ? row.cells.map((cell) => ({
+  } else if (element.type === 'table' && element.data && Array.isArray(element.data)) {
+    // Table structure uses element.data as a 2D array
+    rendered.data = element.data.map((row) =>
+      Array.isArray(row) ? row.map((cell) => ({
         ...cell,
         content: replacePlaceholders(cell.content, syllabus),
-      })) : row.cells,
-    }));
+      })) : row
+    );
   }
 
   return rendered;
