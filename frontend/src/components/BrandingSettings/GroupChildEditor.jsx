@@ -299,20 +299,20 @@ export default function GroupChildEditor({
                         <GroupChildEditor
                           child={nestedChild}
                           childIndex={nestedIndex}
-                          onUpdate={(idx, field, value) => 
-                            onUpdateNestedChild && onUpdateNestedChild(childIndex, idx, field, value)
+                          onUpdate={(idx, field, value, ...deepPath) => 
+                            onUpdateNestedChild && onUpdateNestedChild(childIndex, idx, field, value, nestedIndex, ...deepPath)
                           }
-                          onRemove={(idx) => 
-                            onRemoveNestedChild && onRemoveNestedChild(childIndex, idx)
+                          onRemove={(idx, ...deepPath) => 
+                            onRemoveNestedChild && onRemoveNestedChild(childIndex, idx, nestedIndex, ...deepPath)
                           }
-                          onAddNestedChild={(nestedIdx, type) => 
-                            onAddNestedChild && onAddNestedChild(childIndex, type, nestedIdx)
+                          onAddNestedChild={(nestedIdx, type, ...deepPath) => 
+                            onAddNestedChild && onAddNestedChild(childIndex, type, nestedIndex, nestedIdx, ...deepPath)
                           }
-                          onRemoveNestedChild={(nestedIdx, deepIdx) =>
-                            onRemoveNestedChild && onRemoveNestedChild(childIndex, nestedIdx, deepIdx)
+                          onRemoveNestedChild={(nestedParentIdx, nestedChildIdx, ...deepPath) => 
+                            onRemoveNestedChild && onRemoveNestedChild(childIndex, nestedChildIdx, nestedIndex, ...deepPath)
                           }
-                          onUpdateNestedChild={(nestedIdx, deepIdx, field, value) =>
-                            onUpdateNestedChild && onUpdateNestedChild(childIndex, nestedIdx, deepIdx, field, value)
+                          onUpdateNestedChild={(nestedParentIdx, nestedChildIdx, field, value, ...deepPath) => 
+                            onUpdateNestedChild && onUpdateNestedChild(childIndex, nestedChildIdx, field, value, nestedIndex, ...deepPath)
                           }
                         />
                       </div>

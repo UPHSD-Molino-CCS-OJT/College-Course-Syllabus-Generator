@@ -159,8 +159,8 @@ export default function GroupBlockEditor({
                     childIndex={childIndex}
                     onUpdate={onUpdateChild}
                     onRemove={onRemoveChild}
-                onAddNestedChild={(parentIdx, type) => {
-                  // Add to nested group
+                    onAddNestedChild={(parentIdx, type, ...nestedPath) => {
+                  // Add to nested group - handle deep nesting with path array
                   const newChild = {
                     id: Date.now() + Math.random(),
                     type,
@@ -176,31 +176,107 @@ export default function GroupBlockEditor({
                       height: type === 'image' ? 50 : undefined,
                     },
                   };
-                  const updatedChild = {
-                    ...block.children[parentIdx],
-                    children: [...(block.children[parentIdx].children || []), newChild]
-                  };
-                  onUpdateChild(parentIdx, 'children', updatedChild.children);
+                  
+                  // If no nested path, add to direct child
+                  if (nestedPath.length === 0) {
+                    const updatedChild = {
+                      ...block.children[parentIdx],
+                      children: [...(block.children[parentIdx].children || []), newChild]
+                    };
+                    onUpdateChild(parentIdx, 'children', updatedChild.children);
+                  } else {
+                    // Navigate to the deeply nested group and add child
+                    const updatedChildren = [...block.children];
+                    let target = updatedChildren[parentIdx];
+                    
+                    // Navigate to the target nested group
+                    for (let i = 0; i < nestedPath.length; i++) {
+                      if (!target.children) target.children = [];
+                      if (i === nestedPath.length - 1) {
+                        // Last index - this is where we add
+                        target = target.children[nestedPath[i]];
+                      } else {
+                        // Clone the path as we navigate
+                        target.children = [...target.children];
+                        target = target.children[nestedPath[i]];
+                      }
+                    }
+                    
+                    // Add the new child to the target
+                    if (!target.children) target.children = [];
+                    target.children = [...target.children, newChild];
+                    
+                    // Update the root
+                    onChange({ ...block, children: updatedChildren });
+                  }
                 }}
-                onRemoveNestedChild={(parentIdx, nestedIdx) => {
-                  const updatedChildren = (block.children[parentIdx].children || []).filter((_, i) => i !== nestedIdx);
-                  onUpdateChild(parentIdx, 'children', updatedChildren);
+                onRemoveNestedChild={(parentIdx, nestedIdx, ...nestedPath) => {
+                  if (nestedPath.length === 0) {
+                    // Direct nested child
+                    const updatedChildren = (block.children[parentIdx].children || []).filter((_, i) => i !== nestedIdx);
+                    onUpdateChild(parentIdx, 'children', updatedChildren);
+                  } else {
+                    // Deeply nested - navigate and remove
+                    const updatedChildren = [...block.children];
+                    let target = updatedChildren[parentIdx];
+                    
+                    for (let i = 0; i < nestedPath.length - 1; i++) {
+                      target.children = [...target.children];
+                      target = target.children[nestedPath[i]];
+                    }
+                    
+                    const lastIdx = nestedPath[nestedPath.length - 1];
+                    target.children = [...target.children];
+                    target.children[lastIdx].children = (target.children[lastIdx].children || []).filter((_, i) => i !== nestedIdx);
+                    
+                    onChange({ ...block, children: updatedChildren });
+                  }
                 }}
-                onUpdateNestedChild={(parentIdx, nestedIdx, field, value) => {
-                  const updatedChildren = (block.children[parentIdx].children || []).map((child, i) =>
-                    i === nestedIdx
-                      ? field.includes('.')
-                        ? {
-                            ...child,
-                            styles: {
-                              ...child.styles,
-                              [field.split('.')[1]]: value,
-                            },
-                          }
-                        : { ...child, [field]: value }
-                      : child
-                  );
-                  onUpdateChild(parentIdx, 'children', updatedChildren);
+                onUpdateNestedChild={(parentIdx, nestedIdx, field, value, ...nestedPath) => {
+                  if (nestedPath.length === 0) {
+                    // Direct nested child
+                    const updatedChildren = (block.children[parentIdx].children || []).map((child, i) =>
+                      i === nestedIdx
+                        ? field.includes('.')
+                          ? {
+                              ...child,
+                              styles: {
+                                ...child.styles,
+                                [field.split('.')[1]]: value,
+                              },
+                            }
+                          : { ...child, [field]: value }
+                        : child
+                    );
+                    onUpdateChild(parentIdx, 'children', updatedChildren);
+                  } else {
+                    // Deeply nested - navigate and update
+                    const updatedChildren = [...block.children];
+                    let target = updatedChildren[parentIdx];
+                    
+                    for (let i = 0; i < nestedPath.length - 1; i++) {
+                      target.children = [...target.children];
+                      target = target.children[nestedPath[i]];
+                    }
+                    
+                    const lastIdx = nestedPath[nestedPath.length - 1];
+                    target.children = [...target.children];
+                    target.children[lastIdx].children = (target.children[lastIdx].children || []).map((child, i) =>
+                      i === nestedIdx
+                        ? field.includes('.')
+                          ? {
+                              ...child,
+                              styles: {
+                                ...child.styles,
+                                [field.split('.')[1]]: value,
+                              },
+                            }
+                          : { ...child, [field]: value }
+                        : child
+                    );
+                    
+                    onChange({ ...block, children: updatedChildren });
+                  }
                 }}
                 />
                 </div>

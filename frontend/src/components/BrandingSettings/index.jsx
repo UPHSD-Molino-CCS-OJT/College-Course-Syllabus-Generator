@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { settingsAPI } from '../../services/api';
 import AdvancedSettingsTab from './AdvancedSettingsTab';
+import { migrateToCanvasStructure, needsMigration } from './utils/migration';
 
 export default function BrandingSettings() {
   const [settings, setSettings] = useState({
@@ -29,7 +30,13 @@ export default function BrandingSettings() {
     try {
       const response = await settingsAPI.getSettings();
       if (response.data.settings) {
-        const loadedSettings = response.data.settings;
+        let loadedSettings = response.data.settings;
+
+        // Check if migration is needed
+        if (needsMigration(loadedSettings)) {
+          console.log('Migrating old nested group structure to canvas structure...');
+          loadedSettings = migrateToCanvasStructure(loadedSettings);
+        }
 
         // Ensure all content blocks have stable IDs
         if (loadedSettings.headerContent) {
