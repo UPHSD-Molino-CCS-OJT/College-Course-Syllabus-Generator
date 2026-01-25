@@ -14,6 +14,7 @@ export default function CanvasPage({
   const [draggingElement, setDraggingElement] = useState(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [editingTextId, setEditingTextId] = useState(null);
+  const [resizingCell, setResizingCell] = useState(null);
   const canvasRef = useRef(null);
 
   const handleMouseDown = (e, element, zone) => {
@@ -28,7 +29,53 @@ export default function CanvasPage({
     setDraggingElement({ element, zone });
   };
 
+  const handleCellResizeStart = (e, element, zone, rowIndex, colIndex, direction) => {
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const cell = element.data[rowIndex][colIndex];
+    const startWidth = cell.width || element.cellWidth || 150;
+    const startHeight = cell.height || element.cellHeight || 40;
+    
+    setResizingCell({
+      element,
+      zone,
+      rowIndex,
+      colIndex,
+      direction,
+      startX,
+      startY,
+      startWidth,
+      startHeight
+    });
+  };
+
   const handleMouseMove = (e) => {
+    if (resizingCell) {
+      const { element, zone, rowIndex, colIndex, direction, startX, startY, startWidth, startHeight } = resizingCell;
+      const deltaX = (e.clientX - startX) / zoom;
+      const deltaY = (e.clientY - startY) / zoom;
+      
+      const newData = element.data.map((row, rIdx) =>
+        row.map((cell, cIdx) => {
+          if (rIdx === rowIndex && cIdx === colIndex) {
+            const updates = { ...cell };
+            if (direction === 'width' || direction === 'both') {
+              updates.width = Math.max(50, startWidth + deltaX);
+            }
+            if (direction === 'height' || direction === 'both') {
+              updates.height = Math.max(20, startHeight + deltaY);
+            }
+            return updates;
+          }
+          return cell;
+        })
+      );
+      
+      onUpdateElement(zone, element.id, { data: newData });
+      return;
+    }
+
     if (!draggingElement) return;
 
     const canvasRect = canvasRef.current.getBoundingClientRect();
@@ -89,6 +136,7 @@ export default function CanvasPage({
 
   const handleMouseUp = () => {
     setDraggingElement(null);
+    setResizingCell(null);
   };
 
   const handleDoubleClick = (element, zone) => {
@@ -157,12 +205,11 @@ export default function CanvasPage({
       return (
         <div
           key={element.id}
-          className={`absolute cursor-move ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+          className={`absolute ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
           style={{
             left: element.x,
             top: element.y
           }}
-          onMouseDown={(e) => handleMouseDown(e, element, zone)}
         >
           <table className="border-collapse">
             <tbody>
@@ -171,10 +218,10 @@ export default function CanvasPage({
                   {row.map((cell, colIndex) => (
                     <td
                       key={colIndex}
-                      className="border"
+                      className="border relative group"
                       style={{
-                        width: element.cellWidth,
-                        height: element.cellHeight,
+                        width: cell.width || element.cellWidth,
+                        height: cell.height || element.cellHeight,
                         borderColor: element.borderColor,
                         borderWidth: element.borderWidth,
                         backgroundColor: cell.bg,
@@ -183,10 +230,39 @@ export default function CanvasPage({
                         fontWeight: cell.fontWeight,
                         color: cell.color,
                         textAlign: cell.align,
-                        padding: '8px'
+                        verticalAlign: cell.verticalAlign || 'top',
+                        padding: '8px',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word',
+                      }}
+                      onMouseDown={(e) => {
+                        // Check if clicking on resize handle
+                        if (e.target.classList.contains('resize-handle')) {
+                          return;
+                        }
+                        handleMouseDown(e, element, zone);
                       }}
                     >
                       {cell.content}
+                      {isSelected && (
+                        <>
+                          {/* Right edge resize handle */}
+                          <div
+                            className="resize-handle absolute top-0 right-0 w-1 h-full bg-blue-500 opacity-0 group-hover:opacity-100 cursor-ew-resize"
+                            onMouseDown={(e) => handleCellResizeStart(e, element, zone, rowIndex, colIndex, 'width')}
+                          />
+                          {/* Bottom edge resize handle */}
+                          <div
+                            className="resize-handle absolute bottom-0 left-0 w-full h-1 bg-blue-500 opacity-0 group-hover:opacity-100 cursor-ns-resize"
+                            onMouseDown={(e) => handleCellResizeStart(e, element, zone, rowIndex, colIndex, 'height')}
+                          />
+                          {/* Corner resize handle */}
+                          <div
+                            className="resize-handle absolute bottom-0 right-0 w-3 h-3 bg-blue-500 opacity-0 group-hover:opacity-100 cursor-nwse-resize"
+                            onMouseDown={(e) => handleCellResizeStart(e, element, zone, rowIndex, colIndex, 'both')}
+                          />
+                        </>
+                      )}
                     </td>
                   ))}
                 </tr>
