@@ -8,15 +8,6 @@ export default function AdvancedSettingsTab({
 }) {
   return (
     <>
-      <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-800">
-          <strong>Advanced Mode:</strong> Create custom header and footer layouts
-          with multiple text and image blocks. You can add, reorder, and style each
-          element independently. These settings will override the basic header/footer
-          text fields.
-        </p>
-      </div>
-
       <div className="flex gap-6">
         {/* Left side: Preview (70% width) */}
         <div className="w-[70%]">
