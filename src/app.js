@@ -19,6 +19,7 @@ app.use(cors());
 app.use(limiter);
 
 app.use("/api/v1/users", require("./modules/users/index"));
+app.use("/api/v1/syllabi", require("./modules/syllabi/index"));
 
 // changes added from remote
 
