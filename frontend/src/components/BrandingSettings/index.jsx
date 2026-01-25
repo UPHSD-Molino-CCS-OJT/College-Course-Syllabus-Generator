@@ -125,6 +125,7 @@ export default function BrandingSettings() {
       },
       order: settings[section].length,
       children: type === 'group' ? [] : undefined,
+      layout: type === 'group' ? 'horizontal' : undefined,
     };
     setSettings((prev) => ({
       ...prev,
@@ -147,6 +148,7 @@ export default function BrandingSettings() {
       },
       order: position,
       children: type === 'group' ? [] : undefined,
+      layout: type === 'group' ? 'horizontal' : undefined,
     };
     
     setSettings((prev) => {
@@ -299,6 +301,7 @@ export default function BrandingSettings() {
     const isClickable = section !== null && index !== null;
     
     if (block.type === 'group') {
+      const groupLayout = block.layout || 'horizontal';
       return (
         <div
           className={isClickable ? 'group/preview cursor-pointer transition-all hover:bg-purple-50 hover:shadow-sm rounded p-1' : ''}
@@ -306,7 +309,7 @@ export default function BrandingSettings() {
           title={isClickable ? 'Click to edit this group' : undefined}
           style={{
             display: 'inline-flex',
-            flexDirection: isHorizontal ? 'row' : 'column',
+            flexDirection: groupLayout === 'horizontal' ? 'row' : 'column',
             alignItems: 'center',
             gap: '8px',
             justifyContent:
