@@ -37,8 +37,29 @@ export default function CanvasPage({
 
     // Constrain element to its zone
     const { zone, element } = draggingElement;
-    const elementHeight = element.height || 50; // Default element height
-    const elementWidth = element.width || 100; // Default element width
+    
+    // Calculate element dimensions more accurately
+    let elementHeight;
+    let elementWidth;
+    
+    if (element.type === 'text') {
+      // Estimate text height based on fontSize with some padding
+      elementHeight = (element.fontSize || 14) + 10;
+      elementWidth = element.width || 200;
+    } else if (element.type === 'image') {
+      elementHeight = element.height || 100;
+      elementWidth = element.width || 100;
+    } else if (element.type === 'table') {
+      elementHeight = (element.rows || 3) * (element.cellHeight || 40);
+      elementWidth = (element.cols || 3) * (element.cellWidth || 150);
+    } else if (element.type === 'line') {
+      elementHeight = element.strokeWidth || 2;
+      elementWidth = element.length || 100;
+    } else {
+      // Default fallback
+      elementHeight = element.height || 50;
+      elementWidth = element.width || 100;
+    }
     
     // Calculate zone boundaries
     let minY = 0;
