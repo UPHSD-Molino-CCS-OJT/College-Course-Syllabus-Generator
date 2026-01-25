@@ -43,7 +43,7 @@ export default function SyllabusView({ syllabus, onClose, onEdit }) {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 overflow-y-auto">
       <div className="min-h-screen px-4 py-8">
-        <div className="bg-white rounded-lg shadow-xl max-w-6xl mx-auto">
+        <div className="bg-white rounded-lg shadow-xl w-full mx-auto" style={{ maxWidth: 'calc(356mm + 48px)' }}>
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 text-white flex justify-between items-center">
             <div>
