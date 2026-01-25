@@ -26,6 +26,11 @@ const brandingSettingsSchema = new mongoose.Schema(
       default: "",
     },
     // New flexible header/footer content structure
+    headerLayout: {
+      type: String,
+      enum: ['vertical', 'horizontal'],
+      default: 'vertical',
+    },
     headerContent: {
       type: [{
         type: {
@@ -55,6 +60,11 @@ const brandingSettingsSchema = new mongoose.Schema(
         },
       }],
       default: [],
+    },
+    footerLayout: {
+      type: String,
+      enum: ['vertical', 'horizontal'],
+      default: 'vertical',
     },
     footerContent: {
       type: [{

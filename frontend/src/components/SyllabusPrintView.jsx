@@ -561,13 +561,15 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
               <div className="mb-6 pb-4 border-b-4" style={{ borderColor: settings.primaryColor }}>
                 {settings?.headerContent && settings.headerContent.length > 0 ? (
                   // Use flexible header content
-                  <div className="space-y-2">
+                  <div 
+                    className={settings.headerLayout === 'horizontal' ? 'flex items-center gap-4 flex-wrap justify-center' : 'space-y-2'}
+                  >
                     {settings.headerContent
                       .sort((a, b) => a.order - b.order)
                       .map((block, index) => (
                         <div
                           key={index}
-                          style={{ textAlign: block.alignment }}
+                          style={{ textAlign: settings.headerLayout === 'horizontal' ? 'initial' : block.alignment }}
                         >
                           {block.type === 'text' ? (
                             <p
@@ -581,7 +583,7 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
                                     : '14px',
                                 color: block.styles?.color || '#000000',
                                 margin: 0,
-                                padding: '4px 0',
+                                padding: settings.headerLayout === 'horizontal' ? '0' : '4px 0',
                               }}
                             >
                               {block.content}
@@ -756,13 +758,15 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
                 <div className="mt-6 pt-4 border-t-2" style={{ borderColor: settings.primaryColor }}>
                   {settings?.footerContent && settings.footerContent.length > 0 ? (
                     // Use flexible footer content
-                    <div className="space-y-2">
+                    <div 
+                      className={settings.footerLayout === 'horizontal' ? 'flex items-center gap-4 flex-wrap justify-center' : 'space-y-2'}
+                    >
                       {settings.footerContent
                         .sort((a, b) => a.order - b.order)
                         .map((block, index) => (
                           <div
                             key={index}
-                            style={{ textAlign: block.alignment }}
+                            style={{ textAlign: settings.footerLayout === 'horizontal' ? 'initial' : block.alignment }}
                           >
                             {block.type === 'text' ? (
                               <p
@@ -776,7 +780,7 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
                                       : '14px',
                                   color: block.styles?.color || '#000000',
                                   margin: 0,
-                                  padding: '4px 0',
+                                  padding: settings.footerLayout === 'horizontal' ? '0' : '4px 0',
                                 }}
                               >
                                 {block.content}
@@ -788,8 +792,7 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
                                 style={{
                                   width: `${block.styles?.width || 50}px`,
                                   height: `${block.styles?.height || 50}px`,
-                                  display: 'inline-block',
-                                  margin: block.alignment === 'center' ? '0 auto' : block.alignment === 'right' ? '0 0 0 auto' : '0',
+                                  display: 'block',
                                 }}
                               />
                             )}

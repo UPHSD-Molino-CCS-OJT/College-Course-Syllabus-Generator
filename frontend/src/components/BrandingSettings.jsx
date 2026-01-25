@@ -11,8 +11,11 @@ const ContentBlockEditor = ({
   removeContentBlock, 
   updateContentBlock, 
   moveContentBlock, 
-  handleImageUploadForBlock 
+  handleImageUploadForBlock,
+  onLayoutChange
 }) => {
+  const layoutField = section === 'headerContent' ? 'headerLayout' : 'footerLayout';
+  
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -35,6 +38,35 @@ const ContentBlockEditor = ({
           >
             <Image size={16} />
             Add Image
+          </button>
+        </div>
+      </div>
+
+      {/* Layout Control */}
+      <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-md border border-gray-200">
+        <span className="text-sm font-medium text-gray-700">Layout:</span>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => onLayoutChange(layoutField, 'vertical')}
+            className={`px-4 py-1.5 text-sm rounded-md border transition-colors ${
+              settings[layoutField] === 'vertical'
+                ? 'bg-blue-100 border-blue-500 text-blue-700 font-medium'
+                : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            Vertical (Stack)
+          </button>
+          <button
+            type="button"
+            onClick={() => onLayoutChange(layoutField, 'horizontal')}
+            className={`px-4 py-1.5 text-sm rounded-md border transition-colors ${
+              settings[layoutField] === 'horizontal'
+                ? 'bg-blue-100 border-blue-500 text-blue-700 font-medium'
+                : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            Horizontal (Same Line)
           </button>
         </div>
       </div>
@@ -238,7 +270,9 @@ export default function BrandingSettings() {
     institutionLogo: '',
     headerText: '',
     footerText: '',
+    headerLayout: 'vertical',
     headerContent: [],
+    footerLayout: 'vertical',
     footerContent: [],
     primaryColor: '#1E40AF',
     secondaryColor: '#3B82F6',
@@ -285,6 +319,10 @@ export default function BrandingSettings() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setSettings(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleLayoutChange = (fieldName, value) => {
+    setSettings(prev => ({ ...prev, [fieldName]: value }));
   };
 
   const handleLogoUpload = (e) => {
@@ -695,6 +733,7 @@ export default function BrandingSettings() {
                 updateContentBlock={updateContentBlock}
                 moveContentBlock={moveContentBlock}
                 handleImageUploadForBlock={handleImageUploadForBlock}
+                onLayoutChange={handleLayoutChange}
               />
 
               {/* Footer Content Editor */}
@@ -707,6 +746,7 @@ export default function BrandingSettings() {
                 updateContentBlock={updateContentBlock}
                 moveContentBlock={moveContentBlock}
                 handleImageUploadForBlock={handleImageUploadForBlock}
+                onLayoutChange={handleLayoutChange}
               />
 
               {/* Preview */}
@@ -721,45 +761,49 @@ export default function BrandingSettings() {
                   {/* Preview Header */}
                   {settings.headerContent.length > 0 && (
                     <div className="bg-gray-100 p-4 border-b-2 border-gray-300">
-                      {settings.headerContent
-                        .sort((a, b) => a.order - b.order)
-                        .map((block, index) => (
-                          <div
-                            key={block.id || index}
-                            className="my-2"
-                            style={{ textAlign: block.alignment }}
-                          >
-                            {block.type === 'text' ? (
-                              <p
-                                style={{
-                                  fontWeight: block.styles.fontWeight,
-                                  fontSize:
-                                    block.styles.fontSize === 'small'
-                                      ? '12px'
-                                      : block.styles.fontSize === 'large'
-                                      ? '18px'
-                                      : '14px',
-                                  color: block.styles.color,
-                                }}
-                              >
-                                {block.content}
-                              </p>
-                            ) : (
-                              <img
-                                src={block.content}
-                                alt="Header"
-                                style={{
-                                  width: `${block.styles.width}px`,
-                                  height: `${block.styles.height}px`,
-                                  display: block.alignment === 'center' ? 'inline-block' : 'block',
-                                  margin: block.alignment === 'center' ? '0 auto' : '0',
-                                  marginLeft: block.alignment === 'right' ? 'auto' : block.alignment === 'center' ? 'auto' : '0',
-                                  marginRight: block.alignment === 'left' ? 'auto' : block.alignment === 'center' ? 'auto' : '0',
-                                }}
-                              />
-                            )}
-                          </div>
-                        ))}
+                      <div 
+                        className={settings.headerLayout === 'horizontal' ? 'flex items-center gap-4 flex-wrap' : 'space-y-2'}
+                        style={{ 
+                          justifyContent: settings.headerLayout === 'horizontal' ? 'center' : 'initial'
+                        }}
+                      >
+                        {settings.headerContent
+                          .sort((a, b) => a.order - b.order)
+                          .map((block, index) => (
+                            <div
+                              key={block.id || index}
+                              style={{ textAlign: settings.headerLayout === 'horizontal' ? 'initial' : block.alignment }}
+                            >
+                              {block.type === 'text' ? (
+                                <p
+                                  style={{
+                                    fontWeight: block.styles.fontWeight,
+                                    fontSize:
+                                      block.styles.fontSize === 'small'
+                                        ? '12px'
+                                        : block.styles.fontSize === 'large'
+                                        ? '18px'
+                                        : '14px',
+                                    color: block.styles.color,
+                                    margin: 0,
+                                  }}
+                                >
+                                  {block.content}
+                                </p>
+                              ) : (
+                                <img
+                                  src={block.content}
+                                  alt="Header"
+                                  style={{
+                                    width: `${block.styles.width}px`,
+                                    height: `${block.styles.height}px`,
+                                    display: 'block',
+                                  }}
+                                />
+                              )}
+                            </div>
+                          ))}
+                      </div>
                     </div>
                   )}
 
@@ -776,45 +820,49 @@ export default function BrandingSettings() {
                   {/* Preview Footer */}
                   {settings.footerContent.length > 0 && (
                     <div className="bg-gray-100 p-4 border-t-2 border-gray-300">
-                      {settings.footerContent
-                        .sort((a, b) => a.order - b.order)
-                        .map((block, index) => (
-                          <div
-                            key={block.id || index}
-                            className="my-2"
-                            style={{ textAlign: block.alignment }}
-                          >
-                            {block.type === 'text' ? (
-                              <p
-                                style={{
-                                  fontWeight: block.styles.fontWeight,
-                                  fontSize:
-                                    block.styles.fontSize === 'small'
-                                      ? '12px'
-                                      : block.styles.fontSize === 'large'
-                                      ? '18px'
-                                      : '14px',
-                                  color: block.styles.color,
-                                }}
-                              >
-                                {block.content}
-                              </p>
-                            ) : (
-                              <img
-                                src={block.content}
-                                alt="Footer"
-                                style={{
-                                  width: `${block.styles.width}px`,
-                                  height: `${block.styles.height}px`,
-                                  display: block.alignment === 'center' ? 'inline-block' : 'block',
-                                  margin: block.alignment === 'center' ? '0 auto' : '0',
-                                  marginLeft: block.alignment === 'right' ? 'auto' : block.alignment === 'center' ? 'auto' : '0',
-                                  marginRight: block.alignment === 'left' ? 'auto' : block.alignment === 'center' ? 'auto' : '0',
-                                }}
-                              />
-                            )}
-                          </div>
-                        ))}
+                      <div 
+                        className={settings.footerLayout === 'horizontal' ? 'flex items-center gap-4 flex-wrap' : 'space-y-2'}
+                        style={{ 
+                          justifyContent: settings.footerLayout === 'horizontal' ? 'center' : 'initial'
+                        }}
+                      >
+                        {settings.footerContent
+                          .sort((a, b) => a.order - b.order)
+                          .map((block, index) => (
+                            <div
+                              key={block.id || index}
+                              style={{ textAlign: settings.footerLayout === 'horizontal' ? 'initial' : block.alignment }}
+                            >
+                              {block.type === 'text' ? (
+                                <p
+                                  style={{
+                                    fontWeight: block.styles.fontWeight,
+                                    fontSize:
+                                      block.styles.fontSize === 'small'
+                                        ? '12px'
+                                        : block.styles.fontSize === 'large'
+                                        ? '18px'
+                                        : '14px',
+                                    color: block.styles.color,
+                                    margin: 0,
+                                  }}
+                                >
+                                  {block.content}
+                                </p>
+                              ) : (
+                                <img
+                                  src={block.content}
+                                  alt="Footer"
+                                  style={{
+                                    width: `${block.styles.width}px`,
+                                    height: `${block.styles.height}px`,
+                                    display: 'block',
+                                  }}
+                                />
+                              )}
+                            </div>
+                          ))}
+                      </div>
                     </div>
                   )}
                 </div>
