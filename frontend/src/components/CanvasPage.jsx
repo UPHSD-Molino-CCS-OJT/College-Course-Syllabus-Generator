@@ -165,7 +165,7 @@ export default function CanvasPage({
             <img
               src={element.src}
               alt={element.alt || 'Image'}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover pointer-events-none"
             />
           ) : (
             <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400">
