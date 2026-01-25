@@ -53,7 +53,7 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
-        format: 'a4',
+        format: 'legal', // Legal paper size (8.5" x 14")
       });
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -81,8 +81,8 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
         sections: [{
           properties: {
             page: {
-              width: 11906, // A4 landscape width in twips
-              height: 8419, // A4 landscape height in twips
+              width: 20160, // Legal landscape width in twips (14" = 14 * 1440)
+              height: 12240, // Legal landscape height in twips (8.5" = 8.5 * 1440)
             },
           },
           children: [
@@ -298,7 +298,7 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
 
   if (!syllabus || !settings) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6">
           <p>Loading...</p>
         </div>
@@ -326,14 +326,14 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
             width: 100%;
           }
           @page {
-            size: landscape;
+            size: legal landscape; /* Legal paper (8.5" x 14") in landscape */
             margin: 1cm;
           }
         }
       `}</style>
 
       {/* Modal */}
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 no-print">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 no-print">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col">
           {/* Modal Header */}
           <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 flex justify-between items-center">
@@ -391,8 +391,8 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
               ref={printRef}
               className="bg-white mx-auto shadow-lg"
               style={{
-                width: '297mm', // A4 landscape width
-                minHeight: '210mm', // A4 landscape height
+                width: '356mm', // Legal landscape width (14")
+                minHeight: '216mm', // Legal landscape height (8.5")
                 padding: '20mm',
                 fontFamily: settings.fontFamily,
                 fontSize: fontSize,
