@@ -44,7 +44,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       elements: []
     },
     footer: {
-      height: 80,
+      height: 120,
       elements: []
     },
     content: {
