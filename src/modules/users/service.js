@@ -1,9 +1,9 @@
 const User = require("./model");
 
-exports.getUsers = (query) => {
-  //   -> add pagination
+exports.getUsers = async (query) => {
+  // -> add pagination
   const { page = 1, limit = 10 } = query;
-  const offset = (page - 1) * limit;
+  const skip = (page - 1) * limit;
 
   // -> filter by gender
   const filter = {};
@@ -12,12 +12,11 @@ exports.getUsers = (query) => {
 
   // -> implement other business logics if any
 
-  return User.findAll({
-    where: filter,
-    limit,
-    offset,
-    order: [["name", "ASC"]],
-  });
+  return User.find(filter)
+    .limit(parseInt(limit))
+    .skip(parseInt(skip))
+    .sort({ name: 1 })
+    .exec();
 };
 
 exports.createUser = (userData) => {
@@ -26,8 +25,12 @@ exports.createUser = (userData) => {
 };
 
 exports.updateUser = async (data, filter) => {
-  const result = await User.update(data, filter);
+  const result = await User.findOneAndUpdate(filter.where, data, {
+    new: true,
+    runValidators: true,
+  });
   return result;
 };
 
-// < define other services like update, delete, etc >
+// < define other services like delete, etc >
+

@@ -1,16 +1,18 @@
-const Sequelize = require("sequelize");
+const mongoose = require("mongoose");
 const dbConfig = require("../configs/db-config.js");
-console.log(dbConfig[process.env.NODE_ENV]);
 
-const sequelize = new Sequelize(dbConfig[process.env.NODE_ENV]);
+const env = process.env.NODE_ENV || "development";
+const connectionString = dbConfig[env];
 
-sequelize
-  .sync()
-  .then(async (result) => {
+console.log(`Connecting to MongoDB in ${env} mode...`);
+
+mongoose
+  .connect(connectionString)
+  .then(() => {
     console.log(`✔ Database connected successfully.`);
   })
   .catch((err) => {
-    console.error(err);
+    console.error("Database connection error:", err);
   });
 
-module.exports = sequelize;
+module.exports = mongoose;

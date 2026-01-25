@@ -1,80 +1,90 @@
-const { DataTypes } = require("sequelize");
+const mongoose = require("mongoose");
 const CryptoJS = require("crypto-js");
-const sequelize = require("../../utils/db"); // Import the database connection
 const { validatePayload } = require("../../utils");
 const userJoiSchema = require("./joiSchema");
 
-const User = sequelize.define(
-  "user",
+const userSchema = new mongoose.Schema(
   {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
     name: {
-      type: DataTypes.STRING(100),
-      allowNull: false,
+      type: String,
+      required: true,
+      maxlength: 100,
     },
     email: {
-      type: DataTypes.STRING(100),
-      allowNull: false,
+      type: String,
+      required: true,
       unique: true,
+      maxlength: 100,
+      lowercase: true,
     },
     password: {
-      type: DataTypes.STRING,
-      allowNull: false,
+      type: String,
+      required: true,
     },
     gender: {
-      type: DataTypes.ENUM(["Male", "Female", "Other"]),
-      allowNull: false,
-    },
-    createdAt: {
-      type: DataTypes.DATE,
-    },
-    deletedAt: {
-      type: DataTypes.DATE,
-      allowNull: true,
+      type: String,
+      required: true,
+      enum: ["Male", "Female", "Other"],
     },
   },
   {
-    paranoid: true,
-    hooks: {
-      // Hook to hash the password before creating, save the user
-      beforeSave: (instance, options) => {
-        console.log(instance, options);
-        if (instance._changed.has("password"))
-          instance.password = User.hashPassword(instance.password);
-
-        // validate payload
-        if (instance._options.isNewRecord)
-          validatePayload(instance.dataValues, userJoiSchema.create);
-        else {
-          const payload = {};
-          options.fields.forEach((field) => {
-            payload[field] = instance.get(field);
-          });
-          validatePayload(payload, userJoiSchema.update);
-        }
-      },
-    },
+    timestamps: true,
   }
 );
 
-// < ========== Static & Instance methods ========== >
-User.hashPassword = function (password) {
-  return CryptoJS.SHA256(password).toString(CryptoJS.enc.Hex);
-};
+// Pre-save middleware for password hashing and validation
+userSchema.pre("save", function (next) {
+  // Hash password if modified
+  if (this.isModified("password")) {
+    this.password = hashPassword(this.password);
+  }
 
-User.verifyPassword = function (inputPassword, hashedPassword) {
+  // Validate payload
+  const schema = this.isNew ? userJoiSchema.create : userJoiSchema.update;
+  validatePayload(this.toObject(), schema);
+
+  next();
+});
+
+// Pre-update middleware for validation
+userSchema.pre("findOneAndUpdate", function (next) {
+  const update = this.getUpdate();
+  
+  // Hash password if being updated
+  if (update.password || update.$set?.password) {
+    const password = update.password || update.$set.password;
+    if (update.$set) {
+      update.$set.password = hashPassword(password);
+    } else {
+      update.password = hashPassword(password);
+    }
+  }
+
+  // Validate update payload
+  const updateData = update.$set || update;
+  validatePayload(updateData, userJoiSchema.update);
+
+  next();
+});
+
+// < ========== Static & Instance methods ========== >
+function hashPassword(password) {
+  return CryptoJS.SHA256(password).toString(CryptoJS.enc.Hex);
+}
+
+userSchema.statics.hashPassword = hashPassword;
+
+userSchema.statics.verifyPassword = function (inputPassword, hashedPassword) {
   const hashedInputPassword = CryptoJS.SHA256(inputPassword).toString(
     CryptoJS.enc.Hex
   );
   return hashedInputPassword === hashedPassword;
 };
 
-User.prototype.getEmail = function () {
+userSchema.methods.getEmail = function () {
   return this.email.toLowerCase();
 };
+
+const User = mongoose.model("User", userSchema);
 
 module.exports = User;

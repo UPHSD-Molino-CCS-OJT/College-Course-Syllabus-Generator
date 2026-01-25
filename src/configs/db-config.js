@@ -1,41 +1,24 @@
 const config = {
   development: {
-    username: process.env.USERNAME,
-    password: process.env.PASSWORD,
-    database: process.env.DATABASE,
-    host: process.env.HOST,
-    port: 3306,
-    dialect: "mysql",
-    logging: false,
+    url:
+      process.env.MONGODB_URI ||
+      `mongodb://${process.env.MONGODB_USER || "test"}:${
+        process.env.MONGODB_PASSWORD || "test"
+      }@${process.env.MONGODB_HOST || "localhost"}:${
+        process.env.MONGODB_PORT || "27017"
+      }/${process.env.MONGODB_DATABASE || "test"}?authSource=admin`,
   },
 
   production: {
-    username: process.env.USERNAME,
-    password: process.env.PASSWORD,
-    database: process.env.DATABASE,
-    host: process.env.HOST,
-    port: 3306,
-    dialect: "mysql",
-    logging: false,
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: true, // Validates the SSL certificate
-      },
-      connectTimeout: 10000,
-      // connectionTimeoutMillis: 0.001, // PostgreSQL
-      // requestTimeoutMillis: 15000, // PostgreSQL
-    },
-    pool: {
-      max: 10,
-      min: 0,
-      acquire: 30000,
-      idle: 10000, // soft limit
-      evict: 10000,
-      // maxIdleTime: 10000, // hard limit
-      handleDisconnects: true,
-    },
+    url:
+      process.env.MONGODB_URI ||
+      `mongodb://${process.env.MONGODB_USER}:${process.env.MONGODB_PASSWORD}@${process.env.MONGODB_HOST}:${process.env.MONGODB_PORT}/${process.env.MONGODB_DATABASE}?authSource=admin&ssl=true&retryWrites=true&w=majority`,
   },
 };
 
-module.exports = config;
+// Return connection string directly
+module.exports = {
+  development: config.development.url,
+  production: config.production.url,
+};
+
