@@ -61,6 +61,20 @@ export default function CanvasPage({
     const isEditing = editingTextId === element.id;
 
     if (element.type === 'text') {
+      const textStyle = {
+        fontSize: element.fontSize,
+        fontFamily: element.fontFamily,
+        fontWeight: element.fontWeight,
+        color: element.color,
+        textAlign: element.align,
+        fontStyle: element.italic ? 'italic' : 'normal',
+        textDecoration: element.underline ? 'underline' : 'none',
+      };
+
+      if (element.bold) {
+        textStyle.fontWeight = 'bold';
+      }
+
       return (
         <div
           key={element.id}
@@ -68,12 +82,8 @@ export default function CanvasPage({
           style={{
             left: element.x,
             top: element.y,
-            fontSize: element.fontSize,
-            fontFamily: element.fontFamily,
-            fontWeight: element.fontWeight,
-            color: element.color,
-            textAlign: element.align,
-            minWidth: element.width || 100
+            minWidth: element.width || 100,
+            ...textStyle
           }}
           onMouseDown={(e) => handleMouseDown(e, element, zone)}
           onDoubleClick={() => handleDoubleClick(element, zone)}
@@ -85,13 +95,7 @@ export default function CanvasPage({
               onChange={(e) => handleTextChange(e, element, zone)}
               onBlur={handleTextBlur}
               className="w-full min-h-[30px] bg-white border-2 border-blue-500 rounded px-2 py-1 outline-none resize-none"
-              style={{
-                fontSize: element.fontSize,
-                fontFamily: element.fontFamily,
-                fontWeight: element.fontWeight,
-                color: element.color,
-                textAlign: element.align
-              }}
+              style={textStyle}
             />
           ) : (
             <div className="whitespace-pre-wrap">{element.content}</div>
@@ -140,6 +144,63 @@ export default function CanvasPage({
               ))}
             </tbody>
           </table>
+        </div>
+      );
+    }
+
+    if (element.type === 'image') {
+      return (
+        <div
+          key={element.id}
+          className={`absolute cursor-move ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+          style={{
+            left: element.x,
+            top: element.y,
+            width: element.width,
+            height: element.height
+          }}
+          onMouseDown={(e) => handleMouseDown(e, element, zone)}
+        >
+          {element.src ? (
+            <img
+              src={element.src}
+              alt={element.alt || 'Image'}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400">
+              No Image
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (element.type === 'line') {
+      return (
+        <div
+          key={element.id}
+          className={`absolute cursor-move ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+          style={{
+            left: element.x,
+            top: element.y
+          }}
+          onMouseDown={(e) => handleMouseDown(e, element, zone)}
+        >
+          <svg width={element.width || 300} height={Math.max(element.strokeWidth || 2, 10)}>
+            <line
+              x1="0"
+              y1={(element.strokeWidth || 2) / 2}
+              x2={element.width || 300}
+              y2={(element.strokeWidth || 2) / 2}
+              stroke={element.strokeColor || '#000000'}
+              strokeWidth={element.strokeWidth || 2}
+              strokeDasharray={
+                element.strokeStyle === 'dashed' ? '5,5' :
+                element.strokeStyle === 'dotted' ? '2,2' : 'none'
+              }
+            />
+          </svg>
         </div>
       );
     }

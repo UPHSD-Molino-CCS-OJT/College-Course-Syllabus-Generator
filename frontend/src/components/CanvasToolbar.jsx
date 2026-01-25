@@ -1,4 +1,4 @@
-export default function CanvasToolbar({ editingZone, onAddText, onAddTable, onZoneChange }) {
+export default function CanvasToolbar({ editingZone, onAddText, onAddTable, onAddImage, onAddLine, onZoneChange }) {
   const zones = [
     { id: 'header', label: 'Header', icon: '📄' },
     { id: 'content', label: 'Content', icon: '📝' },
@@ -7,7 +7,9 @@ export default function CanvasToolbar({ editingZone, onAddText, onAddTable, onZo
 
   const tools = [
     { id: 'text', label: 'Text', icon: 'T', action: () => onAddText(editingZone || 'content') },
-    { id: 'table', label: 'Table', icon: '⊞', action: () => onAddTable(editingZone || 'content') }
+    { id: 'table', label: 'Table', icon: '⊞', action: () => onAddTable(editingZone || 'content') },
+    { id: 'image', label: 'Image', icon: '🖼', action: () => onAddImage(editingZone || 'content') },
+    { id: 'line', label: 'Line', icon: '─', action: () => onAddLine(editingZone || 'content') }
   ];
 
   return (

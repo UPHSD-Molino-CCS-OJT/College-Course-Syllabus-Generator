@@ -3,6 +3,8 @@ import CanvasToolbar from './CanvasToolbar';
 import CanvasPage from './CanvasPage';
 import TextStylePanel from './TextStylePanel';
 import TableEditor from './TableEditor';
+import ImageStylePanel from './ImageStylePanel';
+import LineStylePanel from './LineStylePanel';
 
 // Page size configurations (in pixels, 96 DPI)
 const PAGE_SIZES = {
@@ -36,7 +38,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   const [editingZone, setEditingZone] = useState(null); // 'header', 'footer', or 'content'
   
   // Document structure
-  const [document, setDocument] = useState(template?.canvasDocument || {
+  const [canvasDocument, setCanvasDocument] = useState(template?.canvasDocument || {
     header: {
       height: 120,
       elements: []
@@ -66,7 +68,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
     if (template && !template.canvasDocument) {
       initializeDocument();
     } else if (template?.canvasDocument) {
-      setDocument(template.canvasDocument);
+      setCanvasDocument(template.canvasDocument);
     }
   }, [template]);
 
@@ -127,7 +129,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       }
     ];
 
-    setDocument(prev => ({
+    setCanvasDocument(prev => ({
       ...prev,
       header: { ...prev.header, elements: headerElements },
       footer: { ...prev.footer, elements: footerElements }
@@ -149,7 +151,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       width: 200
     };
 
-    setDocument(prev => ({
+    setCanvasDocument(prev => ({
       ...prev,
       [zone]: {
         ...prev[zone],
@@ -186,7 +188,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       )
     };
 
-    setDocument(prev => ({
+    setCanvasDocument(prev => ({
       ...prev,
       [zone]: {
         ...prev[zone],
@@ -197,8 +199,68 @@ export default function CanvasEditor({ template, onClose, onSave }) {
     setSelectedElement(newTable);
   };
 
+  const handleAddImage = (zone) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const newImage = {
+            id: `image-${Date.now()}`,
+            type: 'image',
+            src: event.target.result,
+            x: 100,
+            y: zone === 'header' ? 20 : zone === 'footer' ? 20 : 200,
+            width: 150,
+            height: 150,
+            alt: file.name
+          };
+
+          setCanvasDocument(prev => ({
+            ...prev,
+            [zone]: {
+              ...prev[zone],
+              elements: [...prev[zone].elements, newImage]
+            }
+          }));
+
+          setSelectedElement(newImage);
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    input.click();
+  };
+
+  const handleAddLine = (zone) => {
+    const newLine = {
+      id: `line-${Date.now()}`,
+      type: 'line',
+      x: 100,
+      y: zone === 'header' ? 100 : zone === 'footer' ? 40 : 300,
+      width: 300,
+      height: 0,
+      strokeColor: '#000000',
+      strokeWidth: 2,
+      strokeStyle: 'solid' // solid, dashed, dotted
+    };
+
+    setCanvasDocument(prev => ({
+      ...prev,
+      [zone]: {
+        ...prev[zone],
+        elements: [...prev[zone].elements, newLine]
+      }
+    }));
+
+    setSelectedElement(newLine);
+  };
+
   const handleUpdateElement = (zone, elementId, updates) => {
-    setDocument(prev => ({
+    setCanvasDocument(prev => ({
       ...prev,
       [zone]: {
         ...prev[zone],
@@ -214,7 +276,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   };
 
   const handleDeleteElement = (zone, elementId) => {
-    setDocument(prev => ({
+    setCanvasDocument(prev => ({
       ...prev,
       [zone]: {
         ...prev[zone],
@@ -230,7 +292,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   const handleSave = () => {
     onSave?.({
       ...template,
-      canvasDocument: document,
+      canvasDocument: canvasDocument,
       pageSize,
       orientation
     });
@@ -306,6 +368,8 @@ export default function CanvasEditor({ template, onClose, onSave }) {
           editingZone={editingZone}
           onAddText={handleAddText}
           onAddTable={handleAddTable}
+          onAddImage={handleAddImage}
+          onAddLine={handleAddLine}
           onZoneChange={setEditingZone}
         />
 
@@ -313,7 +377,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
         <div className="flex-1 overflow-auto bg-gray-800 p-8">
           <div className="mx-auto" style={{ width: 'fit-content' }}>
             <CanvasPage
-              document={document}
+              document={canvasDocument}
               pageSize={currentPageSize}
               zoom={zoom}
               selectedElement={selectedElement}
@@ -334,8 +398,8 @@ export default function CanvasEditor({ template, onClose, onSave }) {
                 element={selectedElement}
                 onUpdate={(updates) => {
                   const zone = editingZone || 
-                    (document.header.elements.find(e => e.id === selectedElement.id) ? 'header' :
-                     document.footer.elements.find(e => e.id === selectedElement.id) ? 'footer' : 'content');
+                    (canvasDocument.header.elements.find(e => e.id === selectedElement.id) ? 'header' :
+                     canvasDocument.footer.elements.find(e => e.id === selectedElement.id) ? 'footer' : 'content');
                   handleUpdateElement(zone, selectedElement.id, updates);
                 }}
               />
@@ -345,8 +409,30 @@ export default function CanvasEditor({ template, onClose, onSave }) {
                 table={selectedElement}
                 onUpdate={(updates) => {
                   const zone = editingZone || 
-                    (document.header.elements.find(e => e.id === selectedElement.id) ? 'header' :
-                     document.footer.elements.find(e => e.id === selectedElement.id) ? 'footer' : 'content');
+                    (canvasDocument.header.elements.find(e => e.id === selectedElement.id) ? 'header' :
+                     canvasDocument.footer.elements.find(e => e.id === selectedElement.id) ? 'footer' : 'content');
+                  handleUpdateElement(zone, selectedElement.id, updates);
+                }}
+              />
+            )}
+            {selectedElement.type === 'image' && (
+              <ImageStylePanel
+                element={selectedElement}
+                onUpdate={(updates) => {
+                  const zone = editingZone || 
+                    (canvasDocument.header.elements.find(e => e.id === selectedElement.id) ? 'header' :
+                     canvasDocument.footer.elements.find(e => e.id === selectedElement.id) ? 'footer' : 'content');
+                  handleUpdateElement(zone, selectedElement.id, updates);
+                }}
+              />
+            )}
+            {selectedElement.type === 'line' && (
+              <LineStylePanel
+                element={selectedElement}
+                onUpdate={(updates) => {
+                  const zone = editingZone || 
+                    (canvasDocument.header.elements.find(e => e.id === selectedElement.id) ? 'header' :
+                     canvasDocument.footer.elements.find(e => e.id === selectedElement.id) ? 'footer' : 'content');
                   handleUpdateElement(zone, selectedElement.id, updates);
                 }}
               />
