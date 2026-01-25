@@ -386,7 +386,7 @@ export default function InlineEditablePreview({ settings, handlers }) {
               <div 
                 key={child.id || childIndex}
                 className={`relative group/child ${
-                  !isPreviewMode && section !== null ? 'pt-8' : ''
+                  !isPreviewMode && section !== null ? 'pt-10' : ''
                 } ${
                   isChildDragging ? 'opacity-40' : ''
                 } ${
@@ -412,7 +412,7 @@ export default function InlineEditablePreview({ settings, handlers }) {
               >
                 {/* Hover toolbar for child elements */}
                 {!isPreviewMode && section !== null && (
-                  <div className={`absolute -top-8 left-0 flex items-center gap-1 bg-purple-900 text-white px-2 py-1 rounded shadow-lg z-20 text-xs transition-opacity ${
+                  <div className={`absolute top-0 left-0 flex items-center gap-1 bg-purple-900 text-white px-2 py-1 rounded shadow-lg z-20 text-xs transition-opacity duration-200 ${
                     isChildHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'
                   }`}>
                     <button
