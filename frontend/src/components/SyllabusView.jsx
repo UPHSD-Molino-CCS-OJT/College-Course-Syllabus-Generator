@@ -2,7 +2,7 @@ export default function SyllabusView({ syllabus, onClose, onEdit }) {
   if (!syllabus) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 z-50 overflow-y-auto">
       <div className="min-h-screen px-4 py-8">
         <div className="bg-white rounded-lg shadow-xl max-w-4xl mx-auto">
           {/* Header */}
