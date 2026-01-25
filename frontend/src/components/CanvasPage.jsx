@@ -187,6 +187,10 @@ export default function CanvasPage({
             minWidth: element.width || 100,
             ...textStyle
           }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelectElement(element);
+          }}
           onDoubleClick={() => handleDoubleClick(element, zone)}
         >
           {isSelected && (
@@ -224,6 +228,10 @@ export default function CanvasPage({
           style={{
             left: element.x,
             top: element.y
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelectElement(element);
           }}
         >
           {isSelected && (
@@ -310,6 +318,10 @@ export default function CanvasPage({
             width: element.width,
             height: element.height
           }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelectElement(element);
+          }}
         >
           {isSelected && (
             <div
@@ -345,6 +357,10 @@ export default function CanvasPage({
           style={{
             left: element.x,
             top: element.y
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelectElement(element);
           }}
         >
           {isSelected && (
