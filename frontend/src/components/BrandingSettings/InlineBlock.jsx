@@ -103,14 +103,24 @@ export default function InlineBlock({
         onDragLeave={onDragLeave}
         onDrop={(e) => onDrop(e, section, index)}
         onDragEnd={onDragEnd}
-        onMouseEnter={onMouseEnter}
-        onMouseLeave={onMouseLeave}
+        onMouseEnter={(e) => {
+          // Don't trigger hover if we're entering from a child element
+          if (!e.target.hasAttribute('data-child-element') && !e.target.closest('[data-child-element]')) {
+            onMouseEnter();
+          }
+        }}
+        onMouseLeave={(e) => {
+          // Don't trigger leave if we're leaving to a child element
+          if (!e.relatedTarget?.hasAttribute('data-child-element') && !e.relatedTarget?.closest('[data-child-element]')) {
+            onMouseLeave();
+          }
+        }}
       >
         {/* Hover toolbar */}
         {!isPreviewMode && (
           <div
-            className={`absolute top-0 left-0 flex items-center gap-1 bg-gray-900 text-white px-2 py-1 rounded shadow-lg z-10 transition-opacity ${
-              isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            className={`absolute top-0 left-0 flex items-center gap-1 bg-gray-700 text-white px-2 py-1 rounded shadow-lg z-10 transition-opacity duration-200 ${
+              isHovered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
             }`}
           >
             <button

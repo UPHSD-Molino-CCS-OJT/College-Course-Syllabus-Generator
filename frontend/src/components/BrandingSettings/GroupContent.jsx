@@ -45,6 +45,7 @@ export default function GroupContent({
 
   return (
     <div
+      data-group-container="true"
       style={{
         display: 'inline-flex',
         flexDirection: groupLayout === 'horizontal' ? 'row' : 'column',

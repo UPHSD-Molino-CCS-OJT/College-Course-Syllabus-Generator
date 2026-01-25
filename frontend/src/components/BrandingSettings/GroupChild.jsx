@@ -38,7 +38,7 @@ export default function GroupChild({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-child-element="true">
       <div
         className={`relative ${
           !isPreviewMode ? 'pt-10' : ''
@@ -69,8 +69,8 @@ export default function GroupChild({
         {/* Hover toolbar */}
         {!isPreviewMode && (
           <div
-            className={`absolute top-0 left-0 flex items-center gap-1 bg-purple-900 text-white px-2 py-1 rounded shadow-lg z-20 text-xs transition-opacity duration-200 ${
-              isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            className={`absolute top-0 left-0 flex items-center gap-1 bg-purple-600 text-white px-2 py-1 rounded shadow-lg z-30 text-xs transition-opacity duration-200 ${
+              isHovered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
             }`}
           >
             <button
