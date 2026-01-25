@@ -13,6 +13,18 @@ export function replacePlaceholders(text, syllabus) {
 
   let result = text;
 
+  // Helper function to format month-year dates
+  const formatMonthYear = (dateString) => {
+    if (!dateString) return '';
+    try {
+      const [year, month] = dateString.split('-');
+      const date = new Date(year, parseInt(month) - 1);
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+    } catch (error) {
+      return dateString;
+    }
+  };
+
   // Basic fields
   const fieldMap = {
     courseCode: syllabus.courseCode || '',
@@ -34,6 +46,11 @@ export function replacePlaceholders(text, syllabus) {
     lateSubmissionPolicy: syllabus.lateSubmissionPolicy || '',
     academicIntegrity: syllabus.academicIntegrity || '',
     disabilities: syllabus.disabilities || '',
+    dateRevised: formatMonthYear(syllabus.dateRevised),
+    dateOfEffectivity: formatMonthYear(syllabus.dateOfEffectivity),
+    reviewed: syllabus.reviewed || '',
+    recommendingApproval: syllabus.recommendingApproval || '',
+    approved: syllabus.approved || '',
   };
 
   // Replace each field

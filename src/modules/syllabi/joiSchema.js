@@ -48,8 +48,8 @@ module.exports = {
     academicIntegrity: Joi.string().max(1000).allow(""),
     disabilities: Joi.string().max(1000).allow(""),
     
-    dateRevised: Joi.date().allow(null),
-    dateOfEffectivity: Joi.date().allow(null),
+    dateRevised: Joi.string().pattern(/^\d{4}-(0[1-9]|1[0-2])$/).allow("", null),
+    dateOfEffectivity: Joi.string().pattern(/^\d{4}-(0[1-9]|1[0-2])$/).allow("", null),
     reviewed: Joi.string().max(200).allow(""),
     recommendingApproval: Joi.string().max(200).allow(""),
     approved: Joi.string().max(200).allow(""),
@@ -91,8 +91,8 @@ module.exports = {
     academicIntegrity: Joi.string().max(1000).allow(""),
     disabilities: Joi.string().max(1000).allow(""),
     
-    dateRevised: Joi.date().allow(null),
-    dateOfEffectivity: Joi.date().allow(null),
+    dateRevised: Joi.string().pattern(/^\d{4}-(0[1-9]|1[0-2])$/).allow("", null),
+    dateOfEffectivity: Joi.string().pattern(/^\d{4}-(0[1-9]|1[0-2])$/).allow("", null),
     reviewed: Joi.string().max(200).allow(""),
     recommendingApproval: Joi.string().max(200).allow(""),
     approved: Joi.string().max(200).allow(""),

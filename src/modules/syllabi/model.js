@@ -160,10 +160,12 @@ const syllabusSchema = new mongoose.Schema(
 
     // Approval Information
     dateRevised: {
-      type: Date,
+      type: String,
+      match: /^\d{4}-(0[1-9]|1[0-2])$/,
     },
     dateOfEffectivity: {
-      type: Date,
+      type: String,
+      match: /^\d{4}-(0[1-9]|1[0-2])$/,
     },
     reviewed: {
       type: String,

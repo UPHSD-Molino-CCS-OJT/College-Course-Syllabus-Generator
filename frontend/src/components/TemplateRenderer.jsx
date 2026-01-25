@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { renderCanvasDocument } from '../utils/templateRenderer';
 
 // Page size configurations (in pixels, 96 DPI)
@@ -35,8 +36,10 @@ export default function TemplateRenderer({ template, syllabus }) {
   const pageSize = PAGE_SIZES[template.pageSize] || PAGE_SIZES.longBond;
   const dimensions = pageSize[template.orientation] || pageSize.landscape;
   
-  // Render template with actual syllabus data
-  const renderedDocument = renderCanvasDocument(template.canvasDocument, syllabus);
+  // Render template with actual syllabus data - automatically updates when syllabus changes
+  const renderedDocument = useMemo(() => {
+    return renderCanvasDocument(template.canvasDocument, syllabus);
+  }, [template.canvasDocument, syllabus]);
 
   const renderElement = (element) => {
     const baseStyle = {
