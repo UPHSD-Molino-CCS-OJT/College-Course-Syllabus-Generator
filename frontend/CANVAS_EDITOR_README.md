@@ -230,7 +230,7 @@ Create and customize tables with full control:
     ]
   },
   footer: {
-    height: 80,
+    height: 120,
     elements: [...]
   },
   content: {

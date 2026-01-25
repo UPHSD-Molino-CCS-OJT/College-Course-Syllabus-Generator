@@ -300,6 +300,28 @@ export default function CanvasEditor({ template, onClose, onSave }) {
     });
   };
 
+  const handleHeaderHeightChange = (e) => {
+    const height = parseInt(e.target.value) || 120;
+    setCanvasDocument(prev => ({
+      ...prev,
+      header: {
+        ...prev.header,
+        height
+      }
+    }));
+  };
+
+  const handleFooterHeightChange = (e) => {
+    const height = parseInt(e.target.value) || 120;
+    setCanvasDocument(prev => ({
+      ...prev,
+      footer: {
+        ...prev.footer,
+        height
+      }
+    }));
+  };
+
   return (
     <div className="fixed inset-0 bg-gray-900/95 z-50 flex flex-col">
       {/* Top Toolbar */}
@@ -328,6 +350,36 @@ export default function CanvasEditor({ template, onClose, onSave }) {
             <option value="landscape">Landscape</option>
             <option value="portrait">Portrait</option>
           </select>
+
+          <div className="h-6 w-px bg-gray-600"></div>
+
+          {/* Header Height */}
+          <div className="flex items-center gap-2">
+            <label className="text-white text-xs">Header:</label>
+            <input
+              type="number"
+              min="50"
+              max="300"
+              value={canvasDocument.header.height}
+              onChange={handleHeaderHeightChange}
+              className="bg-gray-700 text-white rounded px-2 py-1 text-sm w-16 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="text-gray-400 text-xs">px</span>
+          </div>
+
+          {/* Footer Height */}
+          <div className="flex items-center gap-2">
+            <label className="text-white text-xs">Footer:</label>
+            <input
+              type="number"
+              min="50"
+              max="300"
+              value={canvasDocument.footer.height}
+              onChange={handleFooterHeightChange}
+              className="bg-gray-700 text-white rounded px-2 py-1 text-sm w-16 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <span className="text-gray-400 text-xs">px</span>
+          </div>
 
           {/* Zoom Control */}
           <div className="flex items-center gap-2">

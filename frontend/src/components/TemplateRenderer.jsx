@@ -192,7 +192,7 @@ export default function TemplateRenderer({ template, syllabus }) {
   };
 
   const headerHeight = renderedDocument.header?.height || 120;
-  const footerHeight = renderedDocument.footer?.height || 80;
+  const footerHeight = renderedDocument.footer?.height || 120;
   const contentHeight = dimensions.height - headerHeight - footerHeight;
 
   return (

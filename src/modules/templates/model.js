@@ -40,7 +40,7 @@ const templateSchema = new mongoose.Schema(
       footer: {
         height: {
           type: Number,
-          default: 80,
+          default: 120,
         },
         elements: {
           type: Array,
