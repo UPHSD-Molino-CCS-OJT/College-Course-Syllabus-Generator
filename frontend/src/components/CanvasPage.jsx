@@ -15,16 +15,22 @@ export default function CanvasPage({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [editingTextId, setEditingTextId] = useState(null);
   const [resizingCell, setResizingCell] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
   const canvasRef = useRef(null);
 
   const handleMouseDown = (e, element, zone) => {
     e.stopPropagation();
     onSelectElement(element);
+    setIsDragging(true);
     
-    const rect = e.currentTarget.getBoundingClientRect();
+    // Calculate offset from mouse to element's current position
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const mouseX = (e.clientX - canvasRect.left) / zoom;
+    const mouseY = (e.clientY - canvasRect.top) / zoom;
+    
     setDragOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
+      x: mouseX - element.x,
+      y: mouseY - element.y
     });
     setDraggingElement({ element, zone });
   };
@@ -142,6 +148,8 @@ export default function CanvasPage({
   const handleMouseUp = () => {
     setDraggingElement(null);
     setResizingCell(null);
+    // Delay clearing isDragging to prevent click events from firing immediately after drag
+    setTimeout(() => setIsDragging(false), 100);
   };
 
   const handleDoubleClick = (element, zone) => {
@@ -320,7 +328,9 @@ export default function CanvasPage({
           }}
           onClick={(e) => {
             e.stopPropagation();
-            onSelectElement(element);
+            if (!isDragging) {
+              onSelectElement(element);
+            }
           }}
         >
           {isSelected && (
@@ -338,10 +348,11 @@ export default function CanvasPage({
             <img
               src={element.src}
               alt={element.alt || 'Image'}
-              className="w-full h-full object-cover pointer-events-none"
+              className="w-full h-full object-cover pointer-events-none select-none"
+              draggable={false}
             />
           ) : (
-            <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400">
+            <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 pointer-events-none">
               No Image
             </div>
           )}
