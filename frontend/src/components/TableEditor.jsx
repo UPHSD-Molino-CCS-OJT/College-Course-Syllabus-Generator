@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import DataFieldPicker from './DataFieldPicker';
 
 export default function TableEditor({ table, onUpdate }) {
   const [selectedCell, setSelectedCell] = useState(null);
@@ -222,6 +223,13 @@ export default function TableEditor({ table, onUpdate }) {
                   </button>
                   {selectedCell?.row === rowIndex && selectedCell?.col === colIndex && (
                     <div className="mt-2 space-y-2 bg-gray-800 p-2 rounded">
+                      <DataFieldPicker 
+                        onInsert={(field) => {
+                          const currentContent = cell.content || '';
+                          handleCellUpdate(rowIndex, colIndex, { content: currentContent + field });
+                        }} 
+                        compact={true} 
+                      />
                       <input
                         type="text"
                         value={cell.content}
