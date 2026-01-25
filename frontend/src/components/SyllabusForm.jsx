@@ -7,7 +7,7 @@ const INITIAL_FORM_DATA = {
   department: '',
   credits: 3,
   semester: 'First Semester',
-  year: new Date().getFullYear(),
+  academicYear: `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`,
   instructorName: '',
   instructorEmail: '',
   officeHours: '',
@@ -252,15 +252,16 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Year *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year *</label>
                 <input
-                  type="number"
-                  name="year"
-                  value={formData.year}
+                  type="text"
+                  name="academicYear"
+                  value={formData.academicYear}
                   onChange={handleChange}
                   required
-                  min="2000"
-                  max="2100"
+                  pattern="\d{4}-\d{4}"
+                  placeholder="2025-2026"
+                  title="Format: YYYY-YYYY (e.g., 2025-2026)"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

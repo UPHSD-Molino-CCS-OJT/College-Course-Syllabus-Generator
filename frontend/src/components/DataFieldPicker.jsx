@@ -9,7 +9,7 @@ export default function DataFieldPicker({ onInsert, compact = false }) {
     { value: '{{department}}', label: 'Department' },
     { value: '{{credits}}', label: 'Credits' },
     { value: '{{semester}}', label: 'Semester' },
-    { value: '{{year}}', label: 'Year' },
+    { value: '{{academicYear}}', label: 'Academic Year' },
     { value: '{{instructorName}}', label: 'Instructor Name' },
     { value: '{{instructorEmail}}', label: 'Instructor Email' },
     { value: '{{officeHours}}', label: 'Office Hours' },

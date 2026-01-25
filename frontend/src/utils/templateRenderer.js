@@ -32,7 +32,7 @@ export function replacePlaceholders(text, syllabus) {
     department: syllabus.department || '',
     credits: syllabus.credits || '',
     semester: syllabus.semester || '',
-    year: syllabus.year || '',
+    academicYear: syllabus.academicYear || '',
     instructorName: syllabus.instructorName || '',
     instructorEmail: syllabus.instructorEmail || '',
     officeHours: syllabus.officeHours || '',

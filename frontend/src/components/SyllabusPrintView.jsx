@@ -265,7 +265,7 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
             }),
 
             new Paragraph({
-              text: `${syllabus.semester} ${syllabus.year}`,
+              text: `${syllabus.semester} ${syllabus.academicYear}`,
               alignment: AlignmentType.CENTER,
               spacing: { after: 400 },
             }),
@@ -607,7 +607,7 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
                     <h3 className="font-bold text-lg mb-3">Syllabus Information:</h3>
                     <p className="mb-2"><strong>Course:</strong> {syllabus.courseCode} - {syllabus.courseTitle}</p>
                     <p className="mb-2"><strong>Instructor:</strong> {syllabus.instructorName}</p>
-                    <p className="mb-2"><strong>Semester:</strong> {syllabus.semester} {syllabus.year}</p>
+                    <p className="mb-2"><strong>Semester:</strong> {syllabus.semester} {syllabus.academicYear}</p>
                     <p className="mb-2"><strong>Credits:</strong> {syllabus.credits}</p>
                   </div>
                 </div>

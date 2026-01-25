@@ -14,7 +14,7 @@ exports.getSyllabi = async (query) => {
   return Syllabus.find(filter)
     .limit(parseInt(limit))
     .skip(parseInt(skip))
-    .sort({ year: -1, semester: 1, courseCode: 1 })
+    .sort({ academicYear: -1, semester: 1, courseCode: 1 })
     .populate('createdBy', 'name email')
     .populate('template')
     .exec();
@@ -46,8 +46,8 @@ exports.deleteSyllabus = async (id) => {
   return Syllabus.findByIdAndDelete(id);
 };
 
-exports.getSyllabusBySemester = async (semester, year) => {
-  return Syllabus.findBySemester(semester, parseInt(year));
+exports.getSyllabusBySemester = async (semester, academicYear) => {
+  return Syllabus.findBySemester(semester, academicYear);
 };
 
 exports.countSyllabi = async (filter = {}) => {

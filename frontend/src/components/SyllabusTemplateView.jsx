@@ -26,7 +26,7 @@ export default function SyllabusTemplateView({ syllabus, onClose }) {
               {syllabus.department} • {syllabus.credits} Credits
             </p>
             <p className="text-md text-gray-500 mt-1">
-              {syllabus.semester} {syllabus.year}
+              {syllabus.semester} {syllabus.academicYear}
             </p>
           </div>
 

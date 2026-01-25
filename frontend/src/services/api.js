@@ -41,9 +41,9 @@ export const syllabusAPI = {
     return response.data;
   },
 
-  // Get syllabi by semester and year
-  getSyllabusBySemester: async (semester, year) => {
-    const response = await api.get(`/syllabi/semester/${semester}/${year}`);
+  // Get syllabi by semester and academic year
+  getSyllabusBySemester: async (semester, academicYear) => {
+    const response = await api.get(`/syllabi/semester/${semester}/${academicYear}`);
     return response.data;
   },
 };

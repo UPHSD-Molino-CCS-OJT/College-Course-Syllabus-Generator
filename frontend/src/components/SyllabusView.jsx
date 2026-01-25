@@ -48,7 +48,7 @@ export default function SyllabusView({ syllabus, onClose, onEdit }) {
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 text-white flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold">{syllabus.courseCode} - {syllabus.courseTitle}</h2>
-              <p className="text-blue-100">{syllabus.department} | {syllabus.semester} {syllabus.year}</p>
+              <p className="text-blue-100">{syllabus.department} | {syllabus.semester} {syllabus.academicYear}</p>
             </div>
             <button
               onClick={onClose}
@@ -80,7 +80,7 @@ export default function SyllabusView({ syllabus, onClose, onEdit }) {
                 <h4 className="font-bold text-lg mb-3">Syllabus Information:</h4>
                 <p className="mb-2"><strong>Course:</strong> {syllabus.courseCode} - {syllabus.courseTitle}</p>
                 <p className="mb-2"><strong>Instructor:</strong> {syllabus.instructorName}</p>
-                <p className="mb-2"><strong>Semester:</strong> {syllabus.semester} {syllabus.year}</p>
+                <p className="mb-2"><strong>Semester:</strong> {syllabus.semester} {syllabus.academicYear}</p>
                 <p className="mb-2"><strong>Credits:</strong> {syllabus.credits}</p>
               </div>
             </div>

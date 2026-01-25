@@ -79,11 +79,15 @@ const syllabusSchema = new mongoose.Schema(
       required: true,
       enum: ["First Semester", "Second Semester", "Summer"],
     },
-    year: {
-      type: Number,
+    academicYear: {
+      type: String,
       required: true,
-      min: 2000,
-      max: 2100,
+      validate: {
+        validator: function(v) {
+          return /^\d{4}-\d{4}$/.test(v);
+        },
+        message: props => `${props.value} is not a valid academic year format (YYYY-YYYY)!`
+      }
     },
 
     // Instructor Information
@@ -224,9 +228,9 @@ syllabusSchema.methods.getFullCourseName = function () {
   return `${this.courseCode} - ${this.courseTitle}`;
 };
 
-// Static method to find by semester and year
-syllabusSchema.statics.findBySemester = function (semester, year) {
-  return this.find({ semester, year, status: "published" })
+// Static method to find by semester and academic year
+syllabusSchema.statics.findBySemester = function (semester, academicYear) {
+  return this.find({ semester, academicYear, status: "published" })
     .sort({ courseCode: 1 })
     .exec();
 };

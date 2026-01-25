@@ -75,7 +75,7 @@ export default function SyllabusList({ syllabi, onEditSyllabus, onDeleteSyllabus
 
               <div className="flex items-center">
                 <Calendar className="w-4 h-4 mr-2" />
-                <span>{syllabus.semester} {syllabus.year}</span>
+                <span>{syllabus.semester} {syllabus.academicYear}</span>
               </div>
 
               <div className="flex items-center">

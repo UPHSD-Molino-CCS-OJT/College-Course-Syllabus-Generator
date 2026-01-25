@@ -7,8 +7,8 @@ router.post("/", syllabusController.createSyllabus);
 // Get all syllabi (with optional filters and pagination)
 router.get("/", syllabusController.getAllSyllabi);
 
-// Get syllabi by semester and year
-router.get("/semester/:semester/:year", syllabusController.getSyllabusBySemester);
+// Get syllabi by semester and academic year
+router.get("/semester/:semester/:academicYear", syllabusController.getSyllabusBySemester);
 
 // Get a specific syllabus by ID
 router.get("/:id", syllabusController.getSyllabusById);

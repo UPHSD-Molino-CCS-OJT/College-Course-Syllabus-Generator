@@ -24,7 +24,9 @@ module.exports = {
     department: Joi.string().max(200).required(),
     credits: Joi.number().min(1).max(10).required(),
     semester: Joi.string().valid("First Semester", "Second Semester", "Summer").required(),
-    year: Joi.number().min(2000).max(2100).required(),
+    academicYear: Joi.string().pattern(/^\d{4}-\d{4}$/).required().messages({
+      'string.pattern.base': 'Academic year must be in format YYYY-YYYY (e.g., 2025-2026)'
+    }),
     
     instructorName: Joi.string().max(200).required(),
     instructorEmail: Joi.string().email().max(200).required(),
@@ -67,7 +69,9 @@ module.exports = {
     department: Joi.string().max(200),
     credits: Joi.number().min(1).max(10),
     semester: Joi.string().valid("First Semester", "Second Semester", "Summer"),
-    year: Joi.number().min(2000).max(2100),
+    academicYear: Joi.string().pattern(/^\d{4}-\d{4}$/).messages({
+      'string.pattern.base': 'Academic year must be in format YYYY-YYYY (e.g., 2025-2026)'
+    }),
     
     instructorName: Joi.string().max(200),
     instructorEmail: Joi.string().email().max(200),

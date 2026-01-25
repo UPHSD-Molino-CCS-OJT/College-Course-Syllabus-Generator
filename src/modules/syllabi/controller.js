@@ -131,8 +131,8 @@ exports.deleteSyllabusById = async (req, res, next) => {
 
 exports.getSyllabusBySemester = async (req, res, next) => {
   try {
-    const { semester, year } = req.params;
-    const syllabi = await syllabusService.getSyllabusBySemester(semester, year);
+    const { semester, academicYear } = req.params;
+    const syllabi = await syllabusService.getSyllabusBySemester(semester, academicYear);
 
     res.status(200).json({
       status: "success",
