@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { settingsAPI } from '../services/api';
-import { Plus, Trash2, MoveUp, MoveDown, Image, Type } from 'lucide-react';
+import { Plus, Trash2, MoveUp, MoveDown, Image, Type, Folder } from 'lucide-react';
 
 // Content Block Editor Component (extracted to prevent re-creation on every render)
 const ContentBlockEditor = ({ 
@@ -12,7 +12,10 @@ const ContentBlockEditor = ({
   updateContentBlock, 
   moveContentBlock, 
   handleImageUploadForBlock,
-  onLayoutChange
+  onLayoutChange,
+  addChildToGroup,
+  removeChildFromGroup,
+  updateGroupChild
 }) => {
   const layoutField = section === 'headerContent' ? 'headerLayout' : 'footerLayout';
   
@@ -38,6 +41,14 @@ const ContentBlockEditor = ({
           >
             <Image size={16} />
             Add Image
+          </button>
+          <button
+            type="button"
+            onClick={() => addContentBlock(section, 'group')}
+            className="inline-flex items-center gap-1 px-3 py-1 bg-purple-50 text-purple-700 rounded-md hover:bg-purple-100 text-sm"
+          >
+            <Folder size={16} />
+            Add Group
           </button>
         </div>
       </div>
@@ -82,17 +93,25 @@ const ContentBlockEditor = ({
           {settings[section].map((block, index) => (
             <div
               key={block.id || index}
-              className="border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-3"
+              className={`border rounded-lg p-4 space-y-3 ${
+                block.type === 'group' 
+                  ? 'border-purple-300 bg-purple-50' 
+                  : 'border-gray-200 bg-gray-50'
+              }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {block.type === 'text' ? (
                     <Type size={16} className="text-blue-600" />
-                  ) : (
+                  ) : block.type === 'image' ? (
                     <Image size={16} className="text-green-600" />
+                  ) : (
+                    <Folder size={16} className="text-purple-600" />
                   )}
                   <span className="text-sm font-medium text-gray-700">
-                    {block.type === 'text' ? 'Text Block' : 'Image Block'}
+                    {block.type === 'text' ? 'Text Block' : 
+                     block.type === 'image' ? 'Image Block' : 
+                     'Group Container'}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -125,7 +144,216 @@ const ContentBlockEditor = ({
                 </div>
               </div>
 
-              {block.type === 'text' ? (
+              {block.type === 'group' ? (
+                <>
+                  {/* Group Alignment */}
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Group Alignment</label>
+                    <div className="flex gap-2">
+                      {['left', 'center', 'right'].map((align) => (
+                        <button
+                          key={align}
+                          type="button"
+                          onClick={() => updateContentBlock(section, index, 'alignment', align)}
+                          className={`flex-1 px-3 py-1 text-xs rounded border ${
+                            block.alignment === align
+                              ? 'bg-purple-100 border-purple-500 text-purple-700'
+                              : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                          }`}
+                        >
+                          {align.charAt(0).toUpperCase() + align.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Group Children */}
+                  <div className="border-t border-purple-200 pt-3">
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-xs font-medium text-gray-700">
+                        Group Elements ({(block.children || []).length})
+                      </label>
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => addChildToGroup(section, index, 'text')}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs hover:bg-blue-100"
+                        >
+                          <Type size={12} />
+                          Text
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => addChildToGroup(section, index, 'image')}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 rounded text-xs hover:bg-green-100"
+                        >
+                          <Image size={12} />
+                          Image
+                        </button>
+                      </div>
+                    </div>
+
+                    {(!block.children || block.children.length === 0) ? (
+                      <div className="border-2 border-dashed border-purple-200 rounded p-4 text-center">
+                        <p className="text-purple-500 text-xs">
+                          No elements in this group. Add text or image elements.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {block.children.map((child, childIndex) => (
+                          <div
+                            key={child.id || childIndex}
+                            className="border border-gray-200 rounded p-3 bg-white space-y-2"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1">
+                                {child.type === 'text' ? (
+                                  <Type size={12} className="text-blue-600" />
+                                ) : (
+                                  <Image size={12} className="text-green-600" />
+                                )}
+                                <span className="text-xs text-gray-600">
+                                  {child.type === 'text' ? 'Text' : 'Image'}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeChildFromGroup(section, index, childIndex)}
+                                className="p-0.5 text-red-400 hover:text-red-600"
+                                title="Remove"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+
+                            {child.type === 'text' ? (
+                              <>
+                                <textarea
+                                  value={child.content || ''}
+                                  onChange={(e) =>
+                                    updateGroupChild(section, index, childIndex, 'content', e.target.value)
+                                  }
+                                  rows={2}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  placeholder="Enter text content"
+                                />
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div>
+                                    <label className="block text-[10px] text-gray-600 mb-0.5">Weight</label>
+                                    <select
+                                      value={child.styles?.fontWeight || 'normal'}
+                                      onChange={(e) =>
+                                        updateGroupChild(section, index, childIndex, 'styles.fontWeight', e.target.value)
+                                      }
+                                      className="w-full px-1 py-0.5 border border-gray-300 rounded text-xs"
+                                    >
+                                      <option value="normal">Normal</option>
+                                      <option value="bold">Bold</option>
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] text-gray-600 mb-0.5">Size</label>
+                                    <select
+                                      value={child.styles?.fontSize || 'medium'}
+                                      onChange={(e) =>
+                                        updateGroupChild(section, index, childIndex, 'styles.fontSize', e.target.value)
+                                      }
+                                      className="w-full px-1 py-0.5 border border-gray-300 rounded text-xs"
+                                    >
+                                      <option value="small">Small</option>
+                                      <option value="medium">Medium</option>
+                                      <option value="large">Large</option>
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] text-gray-600 mb-0.5">Color</label>
+                                    <input
+                                      type="color"
+                                      value={child.styles?.color || '#000000'}
+                                      onChange={(e) =>
+                                        updateGroupChild(section, index, childIndex, 'styles.color', e.target.value)
+                                      }
+                                      className="w-full h-6 border border-gray-300 rounded cursor-pointer"
+                                    />
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                      const file = e.target.files[0];
+                                      if (file) {
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => {
+                                          updateGroupChild(section, index, childIndex, 'content', reader.result);
+                                        };
+                                        reader.readAsDataURL(file);
+                                      }
+                                    }}
+                                    className="block w-full text-[10px] text-gray-500 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[10px] file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                  />
+                                </div>
+                                {child.content && (
+                                  <div className="flex items-start gap-2">
+                                    <img
+                                      src={child.content}
+                                      alt="Preview"
+                                      className="w-12 h-12 object-contain border border-gray-300 rounded"
+                                    />
+                                    <div className="flex-1 grid grid-cols-2 gap-2">
+                                      <div>
+                                        <label className="block text-[10px] text-gray-600 mb-0.5">Width (px)</label>
+                                        <input
+                                          type="number"
+                                          value={child.styles?.width || 50}
+                                          onChange={(e) =>
+                                            updateGroupChild(
+                                              section,
+                                              index,
+                                              childIndex,
+                                              'styles.width',
+                                              parseInt(e.target.value)
+                                            )
+                                          }
+                                          className="w-full px-1 py-0.5 border border-gray-300 rounded text-xs"
+                                          min="10"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-[10px] text-gray-600 mb-0.5">Height (px)</label>
+                                        <input
+                                          type="number"
+                                          value={child.styles?.height || 50}
+                                          onChange={(e) =>
+                                            updateGroupChild(
+                                              section,
+                                              index,
+                                              childIndex,
+                                              'styles.height',
+                                              parseInt(e.target.value)
+                                            )
+                                          }
+                                          className="w-full px-1 py-0.5 border border-gray-300 rounded text-xs"
+                                          min="10"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : block.type === 'text' ? (
                 <>
                   <textarea
                     value={block.content}
@@ -376,6 +604,7 @@ export default function BrandingSettings() {
         height: type === 'image' ? 100 : undefined,
       },
       order: settings[section].length,
+      children: type === 'group' ? [] : undefined, // Initialize children array for groups
     };
     setSettings(prev => ({
       ...prev,
@@ -420,6 +649,74 @@ export default function BrandingSettings() {
     setSettings(prev => ({ ...prev, [section]: newContent }));
   };
 
+  // Group management functions
+  const addChildToGroup = (section, groupIndex, type) => {
+    const newChild = {
+      id: Date.now() + Math.random(),
+      type,
+      content: type === 'text' ? 'Enter text here' : '',
+      styles: {
+        fontWeight: 'normal',
+        fontSize: 'medium',
+        color: '#000000',
+        width: type === 'image' ? 50 : undefined,
+        height: type === 'image' ? 50 : undefined,
+      },
+    };
+    
+    setSettings(prev => ({
+      ...prev,
+      [section]: prev[section].map((block, i) =>
+        i === groupIndex
+          ? {
+              ...block,
+              children: [...(block.children || []), newChild],
+            }
+          : block
+      ),
+    }));
+  };
+
+  const removeChildFromGroup = (section, groupIndex, childIndex) => {
+    setSettings(prev => ({
+      ...prev,
+      [section]: prev[section].map((block, i) =>
+        i === groupIndex
+          ? {
+              ...block,
+              children: (block.children || []).filter((_, ci) => ci !== childIndex),
+            }
+          : block
+      ),
+    }));
+  };
+
+  const updateGroupChild = (section, groupIndex, childIndex, field, value) => {
+    setSettings(prev => ({
+      ...prev,
+      [section]: prev[section].map((block, i) =>
+        i === groupIndex
+          ? {
+              ...block,
+              children: (block.children || []).map((child, ci) =>
+                ci === childIndex
+                  ? field.includes('.')
+                    ? {
+                        ...child,
+                        styles: {
+                          ...child.styles,
+                          [field.split('.')[1]]: value,
+                        },
+                      }
+                    : { ...child, [field]: value }
+                  : child
+              ),
+            }
+          : block
+      ),
+    }));
+  };
+
   const handleImageUploadForBlock = (section, index, file) => {
     if (file) {
       const reader = new FileReader();
@@ -427,6 +724,88 @@ export default function BrandingSettings() {
         updateContentBlock(section, index, 'content', reader.result);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  // Helper to render content block (text, image, or group)
+  const renderContentBlock = (block, isHorizontal = false) => {
+    if (block.type === 'group') {
+      // Render group container with children
+      return (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            justifyContent: block.alignment === 'left' ? 'flex-start' : 
+                           block.alignment === 'right' ? 'flex-end' : 
+                           'center',
+            width: '100%',
+          }}
+        >
+          {(block.children || []).map((child, childIndex) => (
+            <div key={child.id || childIndex}>
+              {child.type === 'text' ? (
+                <p
+                  style={{
+                    fontWeight: child.styles?.fontWeight || 'normal',
+                    fontSize:
+                      child.styles?.fontSize === 'small'
+                        ? '12px'
+                        : child.styles?.fontSize === 'large'
+                        ? '18px'
+                        : '14px',
+                    color: child.styles?.color || '#000000',
+                    margin: 0,
+                  }}
+                >
+                  {child.content}
+                </p>
+              ) : (
+                <img
+                  src={child.content}
+                  alt="Group element"
+                  style={{
+                    width: `${child.styles?.width || 50}px`,
+                    height: `${child.styles?.height || 50}px`,
+                    display: 'block',
+                  }}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    } else if (block.type === 'text') {
+      return (
+        <p
+          style={{
+            fontWeight: block.styles.fontWeight,
+            fontSize:
+              block.styles.fontSize === 'small'
+                ? '12px'
+                : block.styles.fontSize === 'large'
+                ? '18px'
+                : '14px',
+            color: block.styles.color,
+            margin: 0,
+          }}
+        >
+          {block.content}
+        </p>
+      );
+    } else {
+      return (
+        <img
+          src={block.content}
+          alt="Header"
+          style={{
+            width: `${block.styles.width}px`,
+            height: `${block.styles.height}px`,
+            display: 'block',
+          }}
+        />
+      );
     }
   };
 
@@ -734,6 +1113,9 @@ export default function BrandingSettings() {
                 moveContentBlock={moveContentBlock}
                 handleImageUploadForBlock={handleImageUploadForBlock}
                 onLayoutChange={handleLayoutChange}
+                addChildToGroup={addChildToGroup}
+                removeChildFromGroup={removeChildFromGroup}
+                updateGroupChild={updateGroupChild}
               />
 
               {/* Footer Content Editor */}
@@ -747,6 +1129,9 @@ export default function BrandingSettings() {
                 moveContentBlock={moveContentBlock}
                 handleImageUploadForBlock={handleImageUploadForBlock}
                 onLayoutChange={handleLayoutChange}
+                addChildToGroup={addChildToGroup}
+                removeChildFromGroup={removeChildFromGroup}
+                updateGroupChild={updateGroupChild}
               />
 
               {/* Preview */}
@@ -772,35 +1157,12 @@ export default function BrandingSettings() {
                           .map((block, index) => (
                             <div
                               key={block.id || index}
-                              style={{ textAlign: settings.headerLayout === 'horizontal' ? 'initial' : block.alignment }}
+                              style={{ 
+                                textAlign: block.type === 'group' ? 'initial' : (settings.headerLayout === 'horizontal' ? 'initial' : block.alignment),
+                                width: block.type === 'group' ? '100%' : 'auto',
+                              }}
                             >
-                              {block.type === 'text' ? (
-                                <p
-                                  style={{
-                                    fontWeight: block.styles.fontWeight,
-                                    fontSize:
-                                      block.styles.fontSize === 'small'
-                                        ? '12px'
-                                        : block.styles.fontSize === 'large'
-                                        ? '18px'
-                                        : '14px',
-                                    color: block.styles.color,
-                                    margin: 0,
-                                  }}
-                                >
-                                  {block.content}
-                                </p>
-                              ) : (
-                                <img
-                                  src={block.content}
-                                  alt="Header"
-                                  style={{
-                                    width: `${block.styles.width}px`,
-                                    height: `${block.styles.height}px`,
-                                    display: 'block',
-                                  }}
-                                />
-                              )}
+                              {renderContentBlock(block, settings.headerLayout === 'horizontal')}
                             </div>
                           ))}
                       </div>
@@ -831,35 +1193,12 @@ export default function BrandingSettings() {
                           .map((block, index) => (
                             <div
                               key={block.id || index}
-                              style={{ textAlign: settings.footerLayout === 'horizontal' ? 'initial' : block.alignment }}
+                              style={{ 
+                                textAlign: block.type === 'group' ? 'initial' : (settings.footerLayout === 'horizontal' ? 'initial' : block.alignment),
+                                width: block.type === 'group' ? '100%' : 'auto',
+                              }}
                             >
-                              {block.type === 'text' ? (
-                                <p
-                                  style={{
-                                    fontWeight: block.styles.fontWeight,
-                                    fontSize:
-                                      block.styles.fontSize === 'small'
-                                        ? '12px'
-                                        : block.styles.fontSize === 'large'
-                                        ? '18px'
-                                        : '14px',
-                                    color: block.styles.color,
-                                    margin: 0,
-                                  }}
-                                >
-                                  {block.content}
-                                </p>
-                              ) : (
-                                <img
-                                  src={block.content}
-                                  alt="Footer"
-                                  style={{
-                                    width: `${block.styles.width}px`,
-                                    height: `${block.styles.height}px`,
-                                    display: 'block',
-                                  }}
-                                />
-                              )}
+                              {renderContentBlock(block, settings.footerLayout === 'horizontal')}
                             </div>
                           ))}
                       </div>
