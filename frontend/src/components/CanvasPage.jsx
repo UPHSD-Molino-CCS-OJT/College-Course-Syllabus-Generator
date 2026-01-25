@@ -32,8 +32,36 @@ export default function CanvasPage({
     if (!draggingElement) return;
 
     const canvasRect = canvasRef.current.getBoundingClientRect();
-    const x = (e.clientX - canvasRect.left) / zoom - dragOffset.x;
-    const y = (e.clientY - canvasRect.top) / zoom - dragOffset.y;
+    let x = (e.clientX - canvasRect.left) / zoom - dragOffset.x;
+    let y = (e.clientY - canvasRect.top) / zoom - dragOffset.y;
+
+    // Constrain element to its zone
+    const { zone, element } = draggingElement;
+    const elementHeight = element.height || 50; // Default element height
+    const elementWidth = element.width || 100; // Default element width
+    
+    // Calculate zone boundaries
+    let minY = 0;
+    let maxY = 0;
+    
+    if (zone === 'header') {
+      minY = 0;
+      maxY = document.header.height - elementHeight;
+    } else if (zone === 'content') {
+      minY = 0; // Content zone uses relative positioning
+      maxY = pageSize.height - document.header.height - document.footer.height - elementHeight;
+    } else if (zone === 'footer') {
+      minY = 0;
+      maxY = document.footer.height - elementHeight;
+    }
+    
+    // Constrain x within page width
+    const minX = 0;
+    const maxX = pageSize.width - elementWidth;
+    
+    // Apply constraints
+    x = Math.max(minX, Math.min(x, maxX));
+    y = Math.max(minY, Math.min(y, maxY));
 
     onUpdateElement(draggingElement.zone, draggingElement.element.id, { x, y });
   };
