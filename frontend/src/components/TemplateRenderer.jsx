@@ -74,6 +74,7 @@ export default function TemplateRenderer({ template, syllabus }) {
         textTransform: element.textTransform || 'none',
         letterSpacing: element.letterSpacing ? `${element.letterSpacing}px` : 'normal',
         lineHeight: element.lineHeight || 1.5,
+        textAlign: element.align || 'left',
       };
 
       const containerStyle = {
@@ -85,17 +86,13 @@ export default function TemplateRenderer({ template, syllabus }) {
         justifyContent: element.verticalAlign === 'middle' ? 'center' : element.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start',
       };
 
-      const innerStyle = {
-        textAlign: element.align || 'left',
-      };
-
       if (element.bold) {
         textStyle.fontWeight = 'bold';
       }
 
       return (
         <div key={element.id} style={containerStyle}>
-          <div style={{ ...textStyle, ...innerStyle }}>
+          <div style={textStyle}>
             {element.content}
           </div>
         </div>

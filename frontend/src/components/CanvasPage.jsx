@@ -187,7 +187,6 @@ export default function CanvasPage({
         fontFamily: element.fontFamily,
         fontWeight: element.fontWeight,
         color: element.color,
-        textAlign: element.align,
         fontStyle: element.italic ? 'italic' : 'normal',
         textDecoration: textDecoration,
         textTransform: element.textTransform || 'none',
@@ -209,6 +208,7 @@ export default function CanvasPage({
             display: element.autoWidth !== false ? 'inline-block' : 'block',
             width: element.autoWidth !== false ? 'auto' : (element.width || 200),
             maxWidth: element.autoWidth !== false ? `${pageSize.width - element.x}px` : (element.width || 'none'),
+            textAlign: element.autoWidth === false ? element.align : 'left',
             ...textStyle
           }}
           onClick={(e) => {
