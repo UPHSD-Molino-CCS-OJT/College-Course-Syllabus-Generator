@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, GripVertical, Settings, Type, Image, Folder, Eye, Edit } from 'lucide-react';
-import BlockEditModal from './BlockEditModal';
+import { Plus, Edit2, Trash2, GripVertical, Settings, Type, Image, Folder, Eye, Edit, X, Check } from 'lucide-react';
+import TextBlockEditor from './TextBlockEditor';
+import ImageBlockEditor from './ImageBlockEditor';
+import GroupBlockEditor from './GroupBlockEditor';
 import LayoutToggle from './LayoutToggle';
 
 export default function InlineEditablePreview({ settings, handlers }) {
@@ -12,12 +14,19 @@ export default function InlineEditablePreview({ settings, handlers }) {
   const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   const handleEdit = (section, index) => {
-    setEditingSection(section);
-    setEditingIndex(index);
-    setEditingBlock(settings[section][index]);
+    // Toggle editing - if clicking the same block, close it
+    if (editingSection === section && editingIndex === index) {
+      setEditingBlock(null);
+      setEditingSection(null);
+      setEditingIndex(null);
+    } else {
+      setEditingSection(section);
+      setEditingIndex(index);
+      setEditingBlock(settings[section][index]);
+    }
   };
 
-  const handleCloseModal = () => {
+  const handleCloseEditor = () => {
     setEditingBlock(null);
     setEditingSection(null);
     setEditingIndex(null);
@@ -42,65 +51,163 @@ export default function InlineEditablePreview({ settings, handlers }) {
 
   const renderInlineBlock = (block, section, index) => {
     const isHovered = hoveredBlock === index && hoveredSection === section;
+    const isEditing = editingSection === section && editingIndex === index && editingBlock;
 
     return (
-      <div
-        key={block.id || index}
-        className={`relative ${!isPreviewMode ? 'group/block pt-10' : ''}`}
-        onMouseEnter={() => {
-          if (!isPreviewMode) {
-            setHoveredBlock(index);
-            setHoveredSection(section);
-          }
-        }}
-        onMouseLeave={() => {
-          if (!isPreviewMode) {
-            setHoveredBlock(null);
-            setHoveredSection(null);
-          }
-        }}
-      >
-        {/* Hover toolbar - Only show in edit mode */}
-        {!isPreviewMode && (
-          <div className={`absolute top-0 left-0 flex items-center gap-1 bg-gray-900 text-white px-2 py-1 rounded shadow-lg z-10 transition-opacity ${
-            isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          }`}>
-            <button
-              type="button"
-              className="p-1 hover:bg-gray-700 rounded"
-              title="Drag to reorder"
-            >
-              <GripVertical size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleEdit(section, index)}
-              className="p-1 hover:bg-gray-700 rounded"
-              title="Edit"
-            >
-              <Edit2 size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => handlers.removeContentBlock(section, index)}
-              className="p-1 hover:bg-red-600 rounded"
-              title="Delete"
-            >
-              <Trash2 size={14} />
-            </button>
+      <div key={block.id || index} className="space-y-2">
+        <div
+          className={`relative ${!isPreviewMode ? 'group/block pt-10' : ''}`}
+          onMouseEnter={() => {
+            if (!isPreviewMode) {
+              setHoveredBlock(index);
+              setHoveredSection(section);
+            }
+          }}
+          onMouseLeave={() => {
+            if (!isPreviewMode) {
+              setHoveredBlock(null);
+              setHoveredSection(null);
+            }
+          }}
+        >
+          {/* Hover toolbar - Only show in edit mode */}
+          {!isPreviewMode && (
+            <div className={`absolute top-0 left-0 flex items-center gap-1 bg-gray-900 text-white px-2 py-1 rounded shadow-lg z-10 transition-opacity ${
+              isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}>
+              <button
+                type="button"
+                className="p-1 hover:bg-gray-700 rounded"
+                title="Drag to reorder"
+              >
+                <GripVertical size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEdit(section, index);
+                }}
+                className={`p-1 hover:bg-gray-700 rounded ${isEditing ? 'bg-blue-600' : ''}`}
+                title={isEditing ? 'Close editor' : 'Edit'}
+              >
+                {isEditing ? <X size={14} /> : <Edit2 size={14} />}
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlers.removeContentBlock(section, index);
+                }}
+                className="p-1 hover:bg-red-600 rounded"
+                title="Delete"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          )}
+
+          {/* Block content */}
+          <div
+            className={`transition-all ${
+              !isPreviewMode && (isHovered || isEditing) ? 'ring-2 ring-blue-400 ring-offset-2 rounded' : ''
+            }`}
+            onClick={() => !isPreviewMode && handleEdit(section, index)}
+            style={{ cursor: isPreviewMode ? 'default' : 'pointer' }}
+          >
+            {renderBlockContent(block)}
+          </div>
+        </div>
+
+        {/* Inline Editor Panel */}
+        {isEditing && !isPreviewMode && (
+          <div className="bg-white border-2 border-blue-500 rounded-lg shadow-xl p-4 space-y-4 animate-in slide-in-from-top-2">
+            {/* Editor Header */}
+            <div className="flex items-center justify-between pb-3 border-b">
+              <div className="flex items-center gap-2">
+                {block.type === 'text' && <Type size={18} className="text-blue-600" />}
+                {block.type === 'image' && <Image size={18} className="text-green-600" />}
+                {block.type === 'group' && <Folder size={18} className="text-purple-600" />}
+                <span className="font-semibold text-gray-900">
+                  {block.type === 'text' && 'Text Block'}
+                  {block.type === 'image' && 'Image Block'}
+                  {block.type === 'group' && 'Group Container'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseEditor}
+                className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium"
+              >
+                <Check size={14} />
+                Done
+              </button>
+            </div>
+
+            {/* Editor Content */}
+            {block.type === 'group' ? (
+              <GroupBlockEditor
+                block={editingBlock}
+                onUpdate={handleUpdate}
+                onAddChild={(type) => handlers.addChildToGroup(editingSection, editingIndex, type)}
+                onRemoveChild={(childIndex) => handlers.removeChildFromGroup(editingSection, editingIndex, childIndex)}
+                onUpdateChild={(childIndex, field, value) => handlers.updateGroupChild(editingSection, editingIndex, childIndex, field, value)}
+              />
+            ) : block.type === 'text' ? (
+              <>
+                <TextBlockEditor block={editingBlock} onUpdate={handleUpdate} />
+                {/* Alignment for text blocks */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Alignment</label>
+                  <div className="flex gap-2">
+                    {['left', 'center', 'right'].map((align) => (
+                      <button
+                        key={align}
+                        type="button"
+                        onClick={() => handleUpdate('alignment', align)}
+                        className={`flex-1 px-4 py-2 text-sm rounded border transition-colors ${
+                          editingBlock.alignment === align
+                            ? 'bg-blue-500 border-blue-500 text-white'
+                            : 'bg-white border-gray-300 text-gray-700 hover:border-blue-300'
+                        }`}
+                      >
+                        {align.charAt(0).toUpperCase() + align.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <ImageBlockEditor
+                  block={editingBlock}
+                  onUpdate={handleUpdate}
+                  onImageUpload={(file) => handlers.handleImageUploadForBlock(editingSection, editingIndex, file)}
+                />
+                {/* Alignment for image blocks */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Alignment</label>
+                  <div className="flex gap-2">
+                    {['left', 'center', 'right'].map((align) => (
+                      <button
+                        key={align}
+                        type="button"
+                        onClick={() => handleUpdate('alignment', align)}
+                        className={`flex-1 px-4 py-2 text-sm rounded border transition-colors ${
+                          editingBlock.alignment === align
+                            ? 'bg-blue-500 border-blue-500 text-white'
+                            : 'bg-white border-gray-300 text-gray-700 hover:border-blue-300'
+                        }`}
+                      >
+                        {align.charAt(0).toUpperCase() + align.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
-
-        {/* Block content */}
-        <div
-          className={`transition-all ${
-            !isPreviewMode && isHovered ? 'ring-2 ring-blue-400 ring-offset-2 rounded' : ''
-          }`}
-          onClick={() => !isPreviewMode && handleEdit(section, index)}
-          style={{ cursor: isPreviewMode ? 'default' : 'pointer' }}
-        >
-          {renderBlockContent(block)}
-        </div>
       </div>
     );
   };
@@ -490,26 +597,6 @@ export default function InlineEditablePreview({ settings, handlers }) {
           {renderSection('footerContent', 'Footer')}
         </div>
       )}
-
-      {/* Edit Modal */}
-      <BlockEditModal
-        block={editingBlock}
-        isOpen={editingBlock !== null}
-        onClose={handleCloseModal}
-        onUpdate={handleUpdate}
-        onImageUpload={(file) =>
-          handlers.handleImageUploadForBlock(editingSection, editingIndex, file)
-        }
-        onAddChild={(type) =>
-          handlers.addChildToGroup(editingSection, editingIndex, type)
-        }
-        onRemoveChild={(childIndex) =>
-          handlers.removeChildFromGroup(editingSection, editingIndex, childIndex)
-        }
-        onUpdateChild={(childIndex, field, value) =>
-          handlers.updateGroupChild(editingSection, editingIndex, childIndex, field, value)
-        }
-      />
     </>
   );
 }
