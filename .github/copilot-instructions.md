@@ -2,12 +2,12 @@
 
 ## Architecture Overview
 
-This is a modular Express.js REST API using Sequelize ORM with MySQL. The project follows a **vertical slice architecture** where each feature module (`src/modules/*`) contains all its layers (routes, controller, service, model, validation).
+This is a modular Express.js REST API using Mongoose ODM with MongoDB. The project follows a **vertical slice architecture** where each feature module (`src/modules/*`) contains all its layers (routes, controller, service, model, validation).
 
 **Key architectural decisions:**
-- Each module is self-contained: `index.js` (routes), `controller.js` (HTTP layer), `service.js` (business logic), `model.js` (ORM + validation), `joiSchema.js` (validation rules)
+- Each module is self-contained: `index.js` (routes), `controller.js` (HTTP layer), `service.js` (business logic), `model.js` (Mongoose schema + validation), `joiSchema.js` (validation rules)
 - Database connection initializes at app startup via `require("./utils/db")` in [app.js](../src/app.js)
-- Sequelize hooks handle password hashing and Joi validation in model lifecycle (see [users/model.js](../src/modules/users/model.js))
+- Mongoose middleware (pre-save/pre-update hooks) handle password hashing and Joi validation (see [users/model.js](../src/modules/users/model.js))
 - Global error handlers for uncaught exceptions in [server.js](../src/server.js)
 
 ## Module Pattern (Critical for New Features)
@@ -29,12 +29,15 @@ When adding new modules, follow the exact structure of [src/modules/users/](../s
 3. **service.js**: Business logic, query building (pagination, filtering)
    ```javascript
    const { page = 1, limit = 10 } = query;
-   const offset = (page - 1) * limit;
+   const skip = (page - 1) * limit;
+   return User.find(filter).limit(limit).skip(skip).sort({ name: 1 });
    ```
 
-4. **model.js**: Sequelize model + hooks for validation/hashing
-   - Use `beforeSave` hook for automatic validation via `validatePayload()`
+4. **model.js**: Mongoose schema + middleware for validation/hashing
+   - Use `pre('save')` hook for password hashing and validation via `validatePayload()`
+   - Use `pre('findOneAndUpdate')` hook for update validation and password hashing
    - Static methods for utilities like `hashPassword()`, `verifyPassword()`
+   - Instance methods like `getEmail()` for document-specific operations
 
 5. **joiSchema.js**: Separate schemas for `create` and `update` operations
 
@@ -42,27 +45,27 @@ When adding new modules, follow the exact structure of [src/modules/users/](../s
 
 - Database config is environment-aware: [configs/db-config.js](../src/configs/db-config.js) reads `process.env.NODE_ENV`
 - Use `.env` file for local development (not committed)
-- Docker Compose sets up MySQL + Node app: `docker-compose up` starts both services
-- Connection auto-syncs models on startup (development only)
+- Docker Compose sets up MongoDB + Node app: `docker-compose up` starts both services
+- Connection auto-establishes on startup (no manual sync needed with MongoDB)
 
 ## Development Workflow
 
 ```bash
 npm run dev          # Start with nodemon (auto-reload)
 npm start           # Production start
-docker-compose up   # Full stack (MySQL + Node)
+docker-compose up   # Full stack (MongoDB + Node)
 ```
 
-**Important:** Database credentials come from environment variables (`USERNAME`, `PASSWORD`, `DATABASE`, `HOST`). Docker Compose injects these automatically.
+**Important:** Database credentials come from environment variables (`MONGODB_USER`, `MONGODB_PASSWORD`, `MONGODB_DATABASE`, `MONGODB_HOST`, `MONGODB_PORT`). Docker Compose injects these automatically.
 
 ## Conventions & Patterns
 
 - **Response format:** Always use `{ status: "success", data: {...} }` or `{ status: "success", message: "...", data: {...} }`
 - **Error handling:** Controllers log errors with `console.error()` but don't send responses (needs improvement)
-- **Validation:** Happens in Sequelize hooks, not middleware. Validation errors are logged but not returned to client
+- **Validation:** Happens in Mongoose hooks, not middleware. Validation errors are logged but not returned to client
 - **Routing:** Register new modules in [app.js](../src/app.js): `app.use("/api/v1/<module>", require("./modules/<module>/index"))`
 - **Rate limiting:** Global 1000 requests per 60 seconds applied to all routes
-- **Soft deletes:** Models use `paranoid: true` for soft deletion via `deletedAt`
+- **Document IDs:** MongoDB uses `_id` (not `id`) - always use `_id` in queries and filters
 
 ## Known Limitations & Technical Debt
 
@@ -75,7 +78,7 @@ docker-compose up   # Full stack (MySQL + Node)
 
 ## Dependencies to Know
 
-- **Sequelize**: ORM for MySQL, handles migrations-less auto-sync
+- **Mongoose**: ODM for MongoDB, handles schema validation and middleware hooks
 - **Joi**: Schema validation integrated into model lifecycle
 - **crypto-js**: Used for SHA256 password hashing (see `User.hashPassword()`)
 - **express-rate-limit**: Applied globally, configured for 1000 req/min
@@ -84,7 +87,7 @@ docker-compose up   # Full stack (MySQL + Node)
 
 1. Create module directory under `src/modules/<feature>/`
 2. Copy structure from `users` module (5 files minimum)
-3. Define Sequelize model with hooks for validation
+3. Define Mongoose model with hooks for validation
 4. Register route in [app.js](../src/app.js)
 5. Follow pagination pattern from [users/service.js](../src/modules/users/service.js) for list operations
-6. Use `individualHooks: true` in update operations for validation (see [controller.js](../src/modules/users/controller.js))
+6. Use `{ new: true, runValidators: true }` in update operations for validation (see [controller.js](../src/modules/users/controller.js))
