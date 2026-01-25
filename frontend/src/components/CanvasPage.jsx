@@ -205,10 +205,8 @@ export default function CanvasPage({
           style={{
             left: element.x,
             top: element.y,
-            display: element.autoWidth !== false ? 'inline-block' : 'block',
-            width: element.autoWidth !== false ? 'auto' : (element.width || 200),
-            maxWidth: element.autoWidth !== false ? `${pageSize.width - element.x}px` : (element.width || 'none'),
-            textAlign: element.autoWidth === false ? element.align : 'left',
+            width: element.fullWidth ? `${pageSize.width - element.x}px` : (element.width || 200),
+            textAlign: element.align || 'left',
             ...textStyle
           }}
           onClick={(e) => {

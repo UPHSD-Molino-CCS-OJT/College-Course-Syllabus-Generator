@@ -337,14 +337,14 @@ export default function TextStylePanel({ element, onUpdate }) {
           <label className="flex items-center gap-2 text-xs cursor-pointer">
             <input
               type="checkbox"
-              checked={element.autoWidth !== false}
-              onChange={(e) => onUpdate({ autoWidth: e.target.checked })}
+              checked={element.fullWidth === true}
+              onChange={(e) => onUpdate({ fullWidth: e.target.checked })}
               className="w-4 h-4 rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-blue-500"
             />
-            Auto-fit
+            Full Width
           </label>
         </div>
-        {!element.autoWidth && (
+        {!element.fullWidth && (
           <input
             type="number"
             min="50"
@@ -352,18 +352,7 @@ export default function TextStylePanel({ element, onUpdate }) {
             value={element.width || 200}
             onChange={(e) => onUpdate({ width: parseInt(e.target.value) })}
             className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Fixed width (px)"
-          />
-        )}
-        {element.autoWidth !== false && (
-          <input
-            type="number"
-            min="50"
-            max="1000"
-            value={element.width || 200}
-            onChange={(e) => onUpdate({ width: parseInt(e.target.value) })}
-            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Max width (px)"
+            placeholder="Width (px)"
           />
         )}
       </div>
