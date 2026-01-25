@@ -47,11 +47,16 @@ const templateSchema = new mongoose.Schema(
           default: [],
         },
       },
+      // Support both old (content) and new (pages) structure
       content: {
         elements: {
           type: Array,
           default: [],
         },
+      },
+      pages: {
+        type: Array,
+        default: undefined, // Make it optional
       },
       styles: {
         defaultFont: {

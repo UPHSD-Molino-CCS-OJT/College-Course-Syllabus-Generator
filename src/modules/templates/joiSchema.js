@@ -15,9 +15,16 @@ module.exports = {
         height: Joi.number().min(0).max(500),
         elements: Joi.array(),
       }),
+      // Support both old (content) and new (pages) structure
       content: Joi.object({
         elements: Joi.array(),
-      }),
+      }).optional(),
+      pages: Joi.array().items(
+        Joi.object({
+          id: Joi.string(),
+          elements: Joi.array(),
+        })
+      ).optional(),
       styles: Joi.object({
         defaultFont: Joi.string(),
         defaultSize: Joi.number(),
@@ -46,9 +53,16 @@ module.exports = {
         height: Joi.number().min(0).max(500),
         elements: Joi.array(),
       }),
+      // Support both old (content) and new (pages) structure
       content: Joi.object({
         elements: Joi.array(),
-      }),
+      }).optional(),
+      pages: Joi.array().items(
+        Joi.object({
+          id: Joi.string(),
+          elements: Joi.array(),
+        })
+      ).optional(),
       styles: Joi.object({
         defaultFont: Joi.string(),
         defaultSize: Joi.number(),

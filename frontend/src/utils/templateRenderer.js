@@ -111,13 +111,23 @@ export function renderCanvasDocument(canvasDocument, syllabus) {
         renderElement(el, syllabus)
       ) || [],
     },
-    content: {
+  };
+
+  // Handle both old (content) and new (pages) structure
+  if (canvasDocument.pages) {
+    rendered.pages = canvasDocument.pages.map(page => ({
+      ...page,
+      elements: page.elements?.map((el) => renderElement(el, syllabus)) || [],
+    }));
+  } else if (canvasDocument.content) {
+    // Backward compatibility
+    rendered.content = {
       ...canvasDocument.content,
       elements: canvasDocument.content?.elements?.map((el) =>
         renderElement(el, syllabus)
       ) || [],
-    },
-  };
+    };
+  }
 
   return rendered;
 }

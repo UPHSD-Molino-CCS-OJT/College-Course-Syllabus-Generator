@@ -66,21 +66,8 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
     try {
       const element = printRef.current;
       
-      // Get actual element dimensions
-      const elementWidth = element.scrollWidth;
-      const elementHeight = element.scrollHeight;
-      
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        width: elementWidth,
-        height: elementHeight,
-        windowWidth: elementWidth,
-        windowHeight: elementHeight,
-      });
-
-      const imgData = canvas.toDataURL('image/png');
+      // Check if template has multiple pages
+      const hasMultiplePages = template?.canvasDocument?.pages && template.canvasDocument.pages.length > 1;
       
       // Determine page size based on template or default to legal landscape
       let orientation = 'landscape';
@@ -109,21 +96,73 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      
-      // Convert pixels to mm (assuming 96 DPI: 1 inch = 25.4mm, 96px = 25.4mm)
-      const imgWidthMM = (canvas.width * 25.4) / (96 * 2); // Divide by 2 because of scale:2
-      const imgHeightMM = (canvas.height * 25.4) / (96 * 2);
-      
-      // Scale to fit page while maintaining aspect ratio
-      const ratio = Math.min(pdfWidth / imgWidthMM, pdfHeight / imgHeightMM);
-      const finalWidth = imgWidthMM * ratio;
-      const finalHeight = imgHeightMM * ratio;
-      
-      // Center the image
-      const x = (pdfWidth - finalWidth) / 2;
-      const y = (pdfHeight - finalHeight) / 2;
 
-      pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
+      if (hasMultiplePages) {
+        // Render each page separately
+        const pageElements = element.querySelectorAll('.mx-auto.bg-white.rounded-lg.shadow-lg');
+        
+        for (let i = 0; i < pageElements.length; i++) {
+          const pageElement = pageElements[i];
+          
+          const canvas = await html2canvas(pageElement, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+          });
+
+          const imgData = canvas.toDataURL('image/png');
+          
+          // Convert pixels to mm (assuming 96 DPI: 1 inch = 25.4mm, 96px = 25.4mm)
+          const imgWidthMM = (canvas.width * 25.4) / (96 * 2); // Divide by 2 because of scale:2
+          const imgHeightMM = (canvas.height * 25.4) / (96 * 2);
+          
+          // Scale to fit page while maintaining aspect ratio
+          const ratio = Math.min(pdfWidth / imgWidthMM, pdfHeight / imgHeightMM);
+          const finalWidth = imgWidthMM * ratio;
+          const finalHeight = imgHeightMM * ratio;
+          
+          // Center the image
+          const x = (pdfWidth - finalWidth) / 2;
+          const y = (pdfHeight - finalHeight) / 2;
+
+          if (i > 0) {
+            pdf.addPage();
+          }
+          pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
+        }
+      } else {
+        // Single page rendering
+        const elementWidth = element.scrollWidth;
+        const elementHeight = element.scrollHeight;
+        
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          width: elementWidth,
+          height: elementHeight,
+          windowWidth: elementWidth,
+          windowHeight: elementHeight,
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        
+        // Convert pixels to mm (assuming 96 DPI: 1 inch = 25.4mm, 96px = 25.4mm)
+        const imgWidthMM = (canvas.width * 25.4) / (96 * 2); // Divide by 2 because of scale:2
+        const imgHeightMM = (canvas.height * 25.4) / (96 * 2);
+        
+        // Scale to fit page while maintaining aspect ratio
+        const ratio = Math.min(pdfWidth / imgWidthMM, pdfHeight / imgHeightMM);
+        const finalWidth = imgWidthMM * ratio;
+        const finalHeight = imgHeightMM * ratio;
+        
+        // Center the image
+        const x = (pdfWidth - finalWidth) / 2;
+        const y = (pdfHeight - finalHeight) / 2;
+
+        pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
+      }
+
       pdf.save(`${syllabus.courseCode}_${syllabus.courseTitle}_Syllabus.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);

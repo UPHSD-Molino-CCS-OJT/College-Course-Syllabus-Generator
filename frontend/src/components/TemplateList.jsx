@@ -100,8 +100,13 @@ export default function TemplateList({ templates, onEditTemplate, onDeleteTempla
                 <span className="font-semibold">{template.canvasDocument?.footer?.elements?.length || 0}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span>Content Elements:</span>
-                <span className="font-semibold">{template.canvasDocument?.content?.elements?.length || 0}</span>
+                <span>{template.canvasDocument?.pages ? 'Pages' : 'Content Elements'}:</span>
+                <span className="font-semibold">
+                  {template.canvasDocument?.pages ? 
+                    template.canvasDocument.pages.length : 
+                    (template.canvasDocument?.content?.elements?.length || 0)
+                  }
+                </span>
               </div>
             </div>
 
