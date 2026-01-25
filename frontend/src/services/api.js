@@ -30,4 +30,43 @@ export const userAPI = {
   },
 };
 
+// Syllabus API
+export const syllabusAPI = {
+  // Get all syllabi with optional pagination and filtering
+  getSyllabi: async (params = {}) => {
+    const response = await api.get('/syllabi', { params });
+    return response.data;
+  },
+
+  // Get a specific syllabus by ID
+  getSyllabusById: async (id) => {
+    const response = await api.get(`/syllabi/${id}`);
+    return response.data;
+  },
+
+  // Create a new syllabus
+  createSyllabus: async (syllabusData) => {
+    const response = await api.post('/syllabi', syllabusData);
+    return response.data;
+  },
+
+  // Update a syllabus by ID
+  updateSyllabus: async (id, syllabusData) => {
+    const response = await api.patch(`/syllabi/${id}`, syllabusData);
+    return response.data;
+  },
+
+  // Delete a syllabus by ID
+  deleteSyllabus: async (id) => {
+    const response = await api.delete(`/syllabi/${id}`);
+    return response.data;
+  },
+
+  // Get syllabi by semester and year
+  getSyllabusBySemester: async (semester, year) => {
+    const response = await api.get(`/syllabi/semester/${semester}/${year}`);
+    return response.data;
+  },
+};
+
 export default api;
