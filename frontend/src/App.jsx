@@ -9,8 +9,10 @@ import SyllabusView from './components/SyllabusView';
 import SyllabusFilters from './components/SyllabusFilters';
 import SyllabusTemplateView from './components/SyllabusTemplateView';
 import SyllabusPrintView from './components/SyllabusPrintView';
+import TemplateForm from './components/TemplateForm';
+import TemplateList from './components/TemplateList';
 import CanvasEditor from './components/CanvasEditor';
-import { syllabusAPI } from './services/api';
+import { syllabusAPI, templateAPI } from './services/api';
 
 function App() {
   const [activeSection, setActiveSection] = useState('syllabi');
@@ -21,17 +23,25 @@ function App() {
   const [viewingSyllabus, setViewingSyllabus] = useState(null);
   const [viewingTemplate, setViewingTemplate] = useState(null);
   const [viewingPrint, setViewingPrint] = useState(null);
-  const [editingCanvas, setEditingCanvas] = useState(null);
   const [syllabiLoading, setSyllabiLoading] = useState(false);
   const [syllabusPage, setSyllabusPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState('');
   const [filterSemester, setFilterSemester] = useState('');
 
+  // Template state
+  const [templates, setTemplates] = useState([]);
+  const [editingTemplate, setEditingTemplate] = useState(null);
+  const [editingCanvas, setEditingCanvas] = useState(null);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatePage, setTemplatePage] = useState(1);
+
   useEffect(() => {
     if (activeSection === 'syllabi') {
       fetchSyllabi();
+    } else if (activeSection === 'templates') {
+      fetchTemplates();
     }
-  }, [activeSection, syllabusPage, filterStatus, filterSemester]);
+  }, [activeSection, syllabusPage, filterStatus, filterSemester, templatePage]);
 
   const fetchSyllabi = async () => {
     setSyllabiLoading(true);
@@ -79,15 +89,62 @@ function App() {
     setViewingPrint(syllabus);
   };
 
-  const handleEditCanvas = (syllabus) => {
-    setEditingCanvas(syllabus);
+  const handleDeleteSyllabus = (id) => {
+    setSyllabi(syllabi.filter(syllabus => syllabus._id !== id));
   };
 
-  const handleCanvasSave = async (updatedSyllabus) => {
+  const handleCancelEditSyllabus = () => {
+    setEditingSyllabus(null);
+  };
+
+  // Template handlers
+  const fetchTemplates = async () => {
+    setTemplatesLoading(true);
     try {
-      const response = await syllabusAPI.updateSyllabus(updatedSyllabus._id, updatedSyllabus);
-      setSyllabi(syllabi.map(syllabus => 
-        syllabus._id === updatedSyllabus._id ? response.data.syllabus : syllabus
+      const params = { page: templatePage, limit: 12 };
+      const response = await templateAPI.getTemplates(params);
+      setTemplates(response.data.templates);
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
+  const handleTemplateCreated = (newTemplate) => {
+    setTemplates([newTemplate, ...templates]);
+    setEditingTemplate(null);
+  };
+
+  const handleTemplateUpdated = (updatedTemplate) => {
+    setTemplates(templates.map(template => 
+      template._id === updatedTemplate._id ? updatedTemplate : template
+    ));
+    setEditingTemplate(null);
+  };
+
+  const handleEditTemplate = (template) => {
+    setEditingTemplate(template);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteTemplate = (id) => {
+    setTemplates(templates.filter(template => template._id !== id));
+  };
+
+  const handleCancelEditTemplate = () => {
+    setEditingTemplate(null);
+  };
+
+  const handleEditCanvas = (template) => {
+    setEditingCanvas(template);
+  };
+
+  const handleCanvasSave = async (updatedTemplate) => {
+    try {
+      const response = await templateAPI.updateTemplate(updatedTemplate._id, updatedTemplate);
+      setTemplates(templates.map(template => 
+        template._id === updatedTemplate._id ? response.data.template : template
       ));
       setEditingCanvas(null);
     } catch (error) {
@@ -95,12 +152,11 @@ function App() {
     }
   };
 
-  const handleDeleteSyllabus = (id) => {
-    setSyllabi(syllabi.filter(syllabus => syllabus._id !== id));
-  };
-
-  const handleCancelEditSyllabus = () => {
-    setEditingSyllabus(null);
+  const handleSetDefault = (id) => {
+    setTemplates(templates.map(template => ({
+      ...template,
+      isDefault: template._id === id
+    })));
   };
 
   return (
@@ -148,7 +204,6 @@ function App() {
               onDeleteSyllabus={handleDeleteSyllabus}
               onViewSyllabus={handleViewSyllabus}
               onViewPrint={handleViewPrint}
-              onEditCanvas={handleEditCanvas}
               loading={syllabiLoading}
             />
 
@@ -158,6 +213,53 @@ function App() {
                 currentPage={syllabusPage}
                 onPageChange={setSyllabusPage}
                 itemsCount={syllabi.length}
+                itemsPerPage={12}
+              />
+            )}
+          </>
+        )}
+
+        {/* Templates Section */}
+        {activeSection === 'templates' && (
+          <>
+            {/* Template Form */}
+            {(editingTemplate || !templates.length) && (
+              <TemplateForm
+                onTemplateCreated={handleTemplateCreated}
+                editTemplate={editingTemplate}
+                onTemplateUpdated={handleTemplateUpdated}
+                onCancel={handleCancelEditTemplate}
+              />
+            )}
+
+            {/* Create Button for Templates */}
+            {!editingTemplate && templates.length > 0 && (
+              <div className="mb-6 flex justify-end">
+                <button
+                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+                >
+                  Create New Template
+                </button>
+              </div>
+            )}
+
+            {/* Template List */}
+            <TemplateList
+              templates={templates}
+              onEditTemplate={handleEditTemplate}
+              onDeleteTemplate={handleDeleteTemplate}
+              onEditCanvas={handleEditCanvas}
+              onSetDefault={handleSetDefault}
+              loading={templatesLoading}
+            />
+
+            {/* Template Pagination */}
+            {templates.length > 0 && (
+              <Pagination
+                currentPage={templatePage}
+                onPageChange={setTemplatePage}
+                itemsCount={templates.length}
                 itemsPerPage={12}
               />
             )}

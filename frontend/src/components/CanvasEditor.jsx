@@ -28,15 +28,15 @@ const PAGE_SIZES = {
   }
 };
 
-export default function CanvasEditor({ syllabus, onClose, onSave }) {
-  const [pageSize, setPageSize] = useState('longBond');
-  const [orientation, setOrientation] = useState('landscape');
+export default function CanvasEditor({ template, onClose, onSave }) {
+  const [pageSize, setPageSize] = useState(template?.pageSize || 'longBond');
+  const [orientation, setOrientation] = useState(template?.orientation || 'landscape');
   const [zoom, setZoom] = useState(1);
   const [selectedElement, setSelectedElement] = useState(null);
   const [editingZone, setEditingZone] = useState(null); // 'header', 'footer', or 'content'
   
   // Document structure
-  const [document, setDocument] = useState({
+  const [document, setDocument] = useState(template?.canvasDocument || {
     header: {
       height: 120,
       elements: []
@@ -61,12 +61,14 @@ export default function CanvasEditor({ syllabus, onClose, onSave }) {
   // Get current page dimensions
   const currentPageSize = PAGE_SIZES[pageSize][orientation];
 
-  // Initialize document with syllabus data
+  // Initialize document with template data
   useEffect(() => {
-    if (syllabus) {
+    if (template && !template.canvasDocument) {
       initializeDocument();
+    } else if (template?.canvasDocument) {
+      setDocument(template.canvasDocument);
     }
-  }, [syllabus]);
+  }, [template]);
 
   const initializeDocument = () => {
     // Create initial header elements
@@ -74,7 +76,7 @@ export default function CanvasEditor({ syllabus, onClose, onSave }) {
       {
         id: 'header-title',
         type: 'text',
-        content: syllabus.courseTitle || 'Course Title',
+        content: 'Header Title',
         x: 40,
         y: 30,
         fontSize: 24,
@@ -84,9 +86,9 @@ export default function CanvasEditor({ syllabus, onClose, onSave }) {
         align: 'left'
       },
       {
-        id: 'header-code',
+        id: 'header-subtitle',
         type: 'text',
-        content: syllabus.courseCode || '',
+        content: 'Subtitle',
         x: 40,
         y: 70,
         fontSize: 16,
@@ -114,7 +116,7 @@ export default function CanvasEditor({ syllabus, onClose, onSave }) {
       {
         id: 'footer-info',
         type: 'text',
-        content: `${syllabus.department || ''} | ${syllabus.semester || ''} ${syllabus.year || ''}`,
+        content: 'Footer Information',
         x: 40,
         y: 30,
         fontSize: 12,
@@ -227,7 +229,7 @@ export default function CanvasEditor({ syllabus, onClose, onSave }) {
 
   const handleSave = () => {
     onSave?.({
-      ...syllabus,
+      ...template,
       canvasDocument: document,
       pageSize,
       orientation

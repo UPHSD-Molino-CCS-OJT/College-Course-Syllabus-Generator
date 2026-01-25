@@ -1,7 +1,7 @@
 import { syllabusAPI } from '../services/api';
-import { User, Calendar, BookOpen, Printer, Edit, Trash2, Eye, Palette } from 'lucide-react';
+import { User, Calendar, BookOpen, Printer, Edit, Trash2, Eye } from 'lucide-react';
 
-export default function SyllabusList({ syllabi, onEditSyllabus, onDeleteSyllabus, onViewSyllabus, onViewPrint, onEditCanvas, loading }) {
+export default function SyllabusList({ syllabi, onEditSyllabus, onDeleteSyllabus, onViewSyllabus, onViewPrint, loading }) {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this syllabus?')) {
       try {
@@ -96,14 +96,6 @@ export default function SyllabusList({ syllabi, onEditSyllabus, onDeleteSyllabus
               >
                 <Eye className="w-4 h-4" />
                 View
-              </button>
-              <button
-                onClick={() => onEditCanvas?.(syllabus)}
-                className="flex-1 px-3 py-2 bg-purple-600 text-white text-sm rounded-md hover:bg-purple-700 transition-colors flex items-center justify-center gap-1"
-                title="Canvas Editor"
-              >
-                <Palette className="w-4 h-4" />
-                Canvas
               </button>
               <button
                 onClick={() => onViewPrint(syllabus)}

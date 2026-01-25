@@ -69,4 +69,49 @@ export const settingsAPI = {
   },
 };
 
+// Templates API
+export const templateAPI = {
+  // Get all templates with optional pagination and filtering
+  getTemplates: async (params = {}) => {
+    const response = await api.get('/templates', { params });
+    return response.data;
+  },
+
+  // Get a specific template by ID
+  getTemplateById: async (id) => {
+    const response = await api.get(`/templates/${id}`);
+    return response.data;
+  },
+
+  // Get default template
+  getDefaultTemplate: async () => {
+    const response = await api.get('/templates/default');
+    return response.data;
+  },
+
+  // Create a new template
+  createTemplate: async (templateData) => {
+    const response = await api.post('/templates', templateData);
+    return response.data;
+  },
+
+  // Update a template by ID
+  updateTemplate: async (id, templateData) => {
+    const response = await api.put(`/templates/${id}`, templateData);
+    return response.data;
+  },
+
+  // Delete a template by ID
+  deleteTemplate: async (id) => {
+    const response = await api.delete(`/templates/${id}`);
+    return response.data;
+  },
+
+  // Set template as default
+  setDefaultTemplate: async (id) => {
+    const response = await api.patch(`/templates/${id}/set-default`);
+    return response.data;
+  },
+};
+
 export default api;

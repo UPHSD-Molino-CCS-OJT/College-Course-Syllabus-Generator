@@ -20,6 +20,7 @@ app.use(limiter);
 
 app.use("/api/v1/syllabi", require("./modules/syllabi/index"));
 app.use("/api/v1/settings", require("./modules/settings/index"));
+app.use("/api/v1/templates", require("./modules/templates/index"));
 
 // changes added from remote
 
