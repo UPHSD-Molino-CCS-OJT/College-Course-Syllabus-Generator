@@ -211,8 +211,6 @@ export default function TemplateRenderer({ template, syllabus }) {
         style={{
           position: 'relative',
           height: `${headerHeight}px`,
-          backgroundColor: renderedDocument.styles?.headerBg || '#f8f9fa',
-          borderBottom: '1px solid #ddd',
           overflow: 'visible',
         }}
       >
@@ -235,8 +233,6 @@ export default function TemplateRenderer({ template, syllabus }) {
         style={{
           position: 'relative',
           height: `${footerHeight}px`,
-          backgroundColor: renderedDocument.styles?.footerBg || '#f8f9fa',
-          borderTop: '1px solid #ddd',
           overflow: 'visible',
         }}
       >
