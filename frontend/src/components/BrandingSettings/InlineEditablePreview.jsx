@@ -34,24 +34,14 @@ export default function InlineEditablePreview({ settings, handlers }) {
 
   const handleUpdate = (field, value) => {
     handlers.updateContentBlock(editingSection, editingIndex, field, value);
-    setEditingBlock(prev => {
-      if (field.includes('.')) {
-        const [parent, child] = field.split('.');
-        return {
-          ...prev,
-          [parent]: {
-            ...prev[parent],
-            [child]: value
-          }
-        };
-      }
-      return { ...prev, [field]: value };
-    });
   };
 
   const renderInlineBlock = (block, section, index) => {
     const isHovered = hoveredBlock === index && hoveredSection === section;
     const isEditing = editingSection === section && editingIndex === index && editingBlock;
+    
+    // Get the live block from settings for editing
+    const liveBlock = isEditing ? settings[section][index] : block;
 
     return (
       <div key={block.id || index} className="space-y-2">
@@ -147,7 +137,7 @@ export default function InlineEditablePreview({ settings, handlers }) {
             {/* Editor Content */}
             {block.type === 'group' ? (
               <GroupBlockEditor
-                block={editingBlock}
+                block={liveBlock}
                 onUpdate={handleUpdate}
                 onAddChild={(type) => handlers.addChildToGroup(editingSection, editingIndex, type)}
                 onRemoveChild={(childIndex) => handlers.removeChildFromGroup(editingSection, editingIndex, childIndex)}
@@ -155,7 +145,7 @@ export default function InlineEditablePreview({ settings, handlers }) {
               />
             ) : block.type === 'text' ? (
               <>
-                <TextBlockEditor block={editingBlock} onUpdate={handleUpdate} />
+                <TextBlockEditor block={liveBlock} onUpdate={handleUpdate} />
                 {/* Alignment for text blocks */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Alignment</label>
@@ -166,7 +156,7 @@ export default function InlineEditablePreview({ settings, handlers }) {
                         type="button"
                         onClick={() => handleUpdate('alignment', align)}
                         className={`flex-1 px-4 py-2 text-sm rounded border transition-colors ${
-                          editingBlock.alignment === align
+                          liveBlock.alignment === align
                             ? 'bg-blue-500 border-blue-500 text-white'
                             : 'bg-white border-gray-300 text-gray-700 hover:border-blue-300'
                         }`}
@@ -180,7 +170,7 @@ export default function InlineEditablePreview({ settings, handlers }) {
             ) : (
               <>
                 <ImageBlockEditor
-                  block={editingBlock}
+                  block={liveBlock}
                   onUpdate={handleUpdate}
                   onImageUpload={(file) => handlers.handleImageUploadForBlock(editingSection, editingIndex, file)}
                 />
@@ -194,7 +184,7 @@ export default function InlineEditablePreview({ settings, handlers }) {
                         type="button"
                         onClick={() => handleUpdate('alignment', align)}
                         className={`flex-1 px-4 py-2 text-sm rounded border transition-colors ${
-                          editingBlock.alignment === align
+                          liveBlock.alignment === align
                             ? 'bg-blue-500 border-blue-500 text-white'
                             : 'bg-white border-gray-300 text-gray-700 hover:border-blue-300'
                         }`}
