@@ -12,6 +12,8 @@ export default function InlineEditablePreview({ settings, handlers }) {
   const [hoveredBlock, setHoveredBlock] = useState(null);
   const [hoveredSection, setHoveredSection] = useState(null);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
 
   const handleEdit = (section, index) => {
     // Toggle editing - if clicking the same block, close it
@@ -36,9 +38,68 @@ export default function InlineEditablePreview({ settings, handlers }) {
     handlers.updateContentBlock(editingSection, editingIndex, field, value);
   };
 
+  const handleDragStart = (e, section, index) => {
+    setDraggedItem({ section, index });
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, section, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex({ section, index });
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e, targetSection, targetIndex) => {
+    e.preventDefault();
+    
+    if (!draggedItem) return;
+    
+    const { section: sourceSection, index: sourceIndex } = draggedItem;
+    
+    // Only allow reordering within the same section
+    if (sourceSection !== targetSection) {
+      setDraggedItem(null);
+      setDragOverIndex(null);
+      return;
+    }
+    
+    if (sourceIndex === targetIndex) {
+      setDraggedItem(null);
+      setDragOverIndex(null);
+      return;
+    }
+    
+    // Reorder blocks
+    const blocks = [...settings[sourceSection]];
+    const [removed] = blocks.splice(sourceIndex, 1);
+    blocks.splice(targetIndex, 0, removed);
+    
+    // Update order property
+    const reorderedBlocks = blocks.map((block, idx) => ({
+      ...block,
+      order: idx,
+    }));
+    
+    handlers.updateContentBlock(sourceSection, null, null, null, reorderedBlocks);
+    
+    setDraggedItem(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItem(null);
+    setDragOverIndex(null);
+  };
+
   const renderInlineBlock = (block, section, index) => {
     const isHovered = hoveredBlock === index && hoveredSection === section;
     const isEditing = editingSection === section && editingIndex === index && editingBlock;
+    const isDragging = draggedItem?.section === section && draggedItem?.index === index;
+    const isDragOver = dragOverIndex?.section === section && dragOverIndex?.index === index;
     
     // Get the live block from settings for editing
     const liveBlock = isEditing ? settings[section][index] : block;
@@ -46,7 +107,13 @@ export default function InlineEditablePreview({ settings, handlers }) {
     return (
       <div key={block.id || index} className="space-y-2">
         <div
-          className={`relative ${!isPreviewMode ? 'group/block pt-10' : ''}`}
+          className={`relative ${!isPreviewMode ? 'group/block pt-10' : ''} ${isDragging ? 'opacity-40' : ''} ${isDragOver ? 'border-t-4 border-blue-500' : ''}`}
+          draggable={!isPreviewMode && !isEditing}
+          onDragStart={(e) => handleDragStart(e, section, index)}
+          onDragOver={(e) => handleDragOver(e, section, index)}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, section, index)}
+          onDragEnd={handleDragEnd}
           onMouseEnter={() => {
             if (!isPreviewMode) {
               setHoveredBlock(index);
@@ -67,8 +134,9 @@ export default function InlineEditablePreview({ settings, handlers }) {
             }`}>
               <button
                 type="button"
-                className="p-1 hover:bg-gray-700 rounded"
+                className="p-1 hover:bg-gray-700 rounded cursor-grab active:cursor-grabbing"
                 title="Drag to reorder"
+                onMouseDown={(e) => e.stopPropagation()}
               >
                 <GripVertical size={14} />
               </button>
@@ -102,8 +170,8 @@ export default function InlineEditablePreview({ settings, handlers }) {
             className={`transition-all ${
               !isPreviewMode && (isHovered || isEditing) ? 'ring-2 ring-blue-400 ring-offset-2 rounded' : ''
             }`}
-            onClick={() => !isPreviewMode && handleEdit(section, index)}
-            style={{ cursor: isPreviewMode ? 'default' : 'pointer' }}
+            onClick={() => !isPreviewMode && !isDragging && handleEdit(section, index)}
+            style={{ cursor: isPreviewMode ? 'default' : isDragging ? 'grabbing' : 'pointer' }}
           >
             {renderBlockContent(block)}
           </div>

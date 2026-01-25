@@ -170,7 +170,16 @@ export default function BrandingSettings() {
     }));
   };
 
-  const updateContentBlock = (section, index, field, value) => {
+  const updateContentBlock = (section, index, field, value, reorderedBlocks = null) => {
+    // If reorderedBlocks is provided, replace the entire section
+    if (reorderedBlocks) {
+      setSettings((prev) => ({
+        ...prev,
+        [section]: reorderedBlocks,
+      }));
+      return;
+    }
+    
     setSettings((prev) => ({
       ...prev,
       [section]: prev[section].map((block, i) =>
