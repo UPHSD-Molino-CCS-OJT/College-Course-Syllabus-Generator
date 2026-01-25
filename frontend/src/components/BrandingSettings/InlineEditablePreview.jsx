@@ -45,7 +45,7 @@ export default function InlineEditablePreview({ settings, handlers }) {
     return (
       <div
         key={block.id || index}
-        className="relative group/block"
+        className="relative group/block pt-10"
         onMouseEnter={() => {
           setHoveredBlock(index);
           setHoveredSection(section);
@@ -56,33 +56,33 @@ export default function InlineEditablePreview({ settings, handlers }) {
         }}
       >
         {/* Hover toolbar */}
-        {isHovered && (
-          <div className="absolute -top-10 left-0 flex items-center gap-1 bg-gray-900 text-white px-2 py-1 rounded shadow-lg z-10">
-            <button
-              type="button"
-              className="p-1 hover:bg-gray-700 rounded"
-              title="Drag to reorder"
-            >
-              <GripVertical size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleEdit(section, index)}
-              className="p-1 hover:bg-gray-700 rounded"
-              title="Edit"
-            >
-              <Edit2 size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => handlers.removeContentBlock(section, index)}
-              className="p-1 hover:bg-red-600 rounded"
-              title="Delete"
-            >
-              <Trash2 size={14} />
-            </button>
-          </div>
-        )}
+        <div className={`absolute top-0 left-0 flex items-center gap-1 bg-gray-900 text-white px-2 py-1 rounded shadow-lg z-10 transition-opacity ${
+          isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}>
+          <button
+            type="button"
+            className="p-1 hover:bg-gray-700 rounded"
+            title="Drag to reorder"
+          >
+            <GripVertical size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => handleEdit(section, index)}
+            className="p-1 hover:bg-gray-700 rounded"
+            title="Edit"
+          >
+            <Edit2 size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => handlers.removeContentBlock(section, index)}
+            className="p-1 hover:bg-red-600 rounded"
+            title="Delete"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
 
         {/* Block content */}
         <div
