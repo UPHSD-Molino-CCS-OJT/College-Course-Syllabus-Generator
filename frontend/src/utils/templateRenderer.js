@@ -58,13 +58,13 @@ export function renderElement(element, syllabus) {
 
   if (element.type === 'text') {
     rendered.content = replacePlaceholders(element.content, syllabus);
-  } else if (element.type === 'table' && element.rows) {
+  } else if (element.type === 'table' && element.rows && Array.isArray(element.rows)) {
     rendered.rows = element.rows.map((row) => ({
       ...row,
-      cells: row.cells.map((cell) => ({
+      cells: Array.isArray(row.cells) ? row.cells.map((cell) => ({
         ...cell,
         content: replacePlaceholders(cell.content, syllabus),
-      })),
+      })) : row.cells,
     }));
   }
 
