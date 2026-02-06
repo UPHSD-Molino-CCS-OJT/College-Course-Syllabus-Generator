@@ -7,6 +7,11 @@ import ImageStylePanel from './ImageStylePanel';
 import LineStylePanel from './LineStylePanel';
 import { useAutoSave, AutoSaveIndicator } from '../utils/useAutoSave.jsx';
 import { templateAPI } from '../services/api';
+import PageSettings from './canvas-toolbar/PageSettings';
+import ZoneHeightControls from './canvas-toolbar/ZoneHeightControls';
+import ViewControls from './canvas-toolbar/ViewControls';
+import PageNavigation from './canvas-toolbar/PageNavigation';
+import EditorActions from './canvas-toolbar/EditorActions';
 
 // Page size configurations (in pixels, 96 DPI)
 const PAGE_SIZES = {
@@ -531,182 +536,62 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   return (
     <div className="fixed inset-0 bg-gray-900/95 z-50 flex flex-col">
       {/* Top Toolbar */}
-      <div className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h2 className="text-white font-semibold text-lg">Canvas Editor</h2>
-          <div className="h-6 w-px bg-gray-600"></div>
-          
-          {/* Auto-save indicator */}
-          <div className="text-white">
+      <div className="bg-gray-800 border-b-2 border-gray-700 shadow-lg">
+        {/* Top Row: Title and Auto-save Status */}
+        <div className="px-6 py-2 flex items-center justify-between border-b border-gray-700/50">
+          <div className="flex items-center gap-3">
+            <h2 className="text-white font-bold text-xl tracking-tight">📐 Canvas Editor</h2>
+            <div className="h-5 w-px bg-gray-600"></div>
             <AutoSaveIndicator saveStatus={saveStatus} lastSaved={lastSaved} error={autoSaveError} />
           </div>
-          
-          <div className="h-6 w-px bg-gray-600"></div>
-          
-          {/* Page Size Selector */}
-          <select
-            value={pageSize}
-            onChange={(e) => setPageSize(e.target.value)}
-            className="bg-gray-700 text-white rounded px-3 py-1.5 text-sm border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {Object.entries(PAGE_SIZES).map(([key, value]) => (
-              <option key={key} value={key}>{value.name}</option>
-            ))}
-          </select>
-
-          {/* Orientation Selector */}
-          <select
-            value={orientation}
-            onChange={(e) => setOrientation(e.target.value)}
-            className="bg-gray-700 text-white rounded px-3 py-1.5 text-sm border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="landscape">Landscape</option>
-            <option value="portrait">Portrait</option>
-          </select>
-
-          <div className="h-6 w-px bg-gray-600"></div>
-
-          {/* Header Height */}
-          <div className="flex items-center gap-2">
-            <label className="text-white text-xs">Header:</label>
-            <input
-              type="number"
-              min="50"
-              max="300"
-              value={canvasDocument.header.height}
-              onChange={handleHeaderHeightChange}
-              className="bg-gray-700 text-white rounded px-2 py-1 text-sm w-16 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <span className="text-gray-400 text-xs">px</span>
-          </div>
-
-          {/* Footer Height */}
-          <div className="flex items-center gap-2">
-            <label className="text-white text-xs">Footer:</label>
-            <input
-              type="number"
-              min="50"
-              max="300"
-              value={canvasDocument.footer.height}
-              onChange={handleFooterHeightChange}
-              className="bg-gray-700 text-white rounded px-2 py-1 text-sm w-16 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <span className="text-gray-400 text-xs">px</span>
-          </div>
-
-          {/* Zoom Control */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setZoom(Math.max(0.25, zoom - 0.25))}
-              className="bg-gray-700 text-white px-2 py-1 rounded hover:bg-gray-600"
-            >
-              −
-            </button>
-            <span className="text-white text-sm min-w-[60px] text-center">{Math.round(zoom * 100)}%</span>
-            <button
-              onClick={() => setZoom(Math.min(2, zoom + 0.25))}
-              className="bg-gray-700 text-white px-2 py-1 rounded hover:bg-gray-600"
-            >
-              +
-            </button>
-          </div>
-
-          <div className="h-6 w-px bg-gray-600"></div>
-
-          {/* Page Navigation */}
-          <div className="flex items-center gap-2">
-            <span className="text-white text-xs">Page:</span>
-            <button
-              onClick={() => setCurrentPageIndex(Math.max(0, currentPageIndex - 1))}
-              disabled={currentPageIndex === 0}
-              className="bg-gray-700 text-white px-2 py-1 rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              ‹
-            </button>
-            <span className="text-white text-sm min-w-[60px] text-center">
-              {currentPageIndex + 1} / {canvasDocument.pages?.length || 1}
-            </span>
-            <button
-              onClick={() => setCurrentPageIndex(Math.min((canvasDocument.pages?.length || 1) - 1, currentPageIndex + 1))}
-              disabled={currentPageIndex === (canvasDocument.pages?.length || 1) - 1}
-              className="bg-gray-700 text-white px-2 py-1 rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              ›
-            </button>
-          </div>
-
-          {/* Page Actions */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleAddPage()}
-              className="bg-green-700 text-white px-3 py-1 rounded hover:bg-green-600 text-sm"
-              title="Add new page"
-            >
-              + Page
-            </button>
-            <button
-              onClick={() => handleDuplicatePage(currentPageIndex)}
-              className="bg-blue-700 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm"
-              title="Duplicate current page"
-            >
-              Duplicate
-            </button>
-            <button
-              onClick={() => handleDeletePage(currentPageIndex)}
-              disabled={(canvasDocument.pages?.length || 1) === 1}
-              className="bg-red-700 text-white px-3 py-1 rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-              title="Delete current page"
-            >
-              Delete
-            </button>
-          </div>
+          <EditorActions
+            autoSaveEnabled={autoSaveEnabled}
+            onAutoSaveToggle={setAutoSaveEnabled}
+            onClose={onClose}
+            onSave={handleSave}
+          />
         </div>
 
-        <div className="flex items-center gap-3">
-          <label className="flex items-center text-sm text-white">
-            <input
-              type="checkbox"
-              checked={showGrid}
-              onChange={(e) => setShowGrid(e.target.checked)}
-              className="mr-2"
+        {/* Bottom Row: Controls */}
+        <div className="px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <PageSettings
+              pageSize={pageSize}
+              orientation={orientation}
+              onPageSizeChange={setPageSize}
+              onOrientationChange={setOrientation}
+              pageSizes={PAGE_SIZES}
             />
-            Show Grid
-          </label>
-          {showGrid && (
-            <div className="flex items-center gap-2 text-sm text-white">
-              <label>Size:</label>
-              <input
-                type="number"
-                value={gridSize}
-                onChange={(e) => setGridSize(Math.max(5, parseInt(e.target.value) || 20))}
-                min="5"
-                max="100"
-                className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
-              />
-              <span>px</span>
-            </div>
-          )}
-          <label className="flex items-center text-sm text-white">
-            <input
-              type="checkbox"
-              checked={autoSaveEnabled}
-              onChange={(e) => setAutoSaveEnabled(e.target.checked)}
-              className="mr-2"
+            
+            <div className="h-10 w-px bg-gray-600"></div>
+            
+            <ZoneHeightControls
+              headerHeight={canvasDocument.header.height}
+              footerHeight={canvasDocument.footer.height}
+              onHeaderHeightChange={handleHeaderHeightChange}
+              onFooterHeightChange={handleFooterHeightChange}
             />
-            Auto-save
-          </label>
-          <button
-            onClick={onClose}
-            className="px-4 py-1.5 text-white border border-gray-600 rounded hover:bg-gray-700 text-sm"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-4 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-          >
-            Save
-          </button>
+            
+            <div className="h-10 w-px bg-gray-600"></div>
+            
+            <ViewControls
+              zoom={zoom}
+              onZoomChange={setZoom}
+              showGrid={showGrid}
+              gridSize={gridSize}
+              onGridToggle={setShowGrid}
+              onGridSizeChange={setGridSize}
+            />
+          </div>
+
+          <PageNavigation
+            currentPage={currentPageIndex}
+            totalPages={canvasDocument.pages?.length || 1}
+            onPageChange={setCurrentPageIndex}
+            onAddPage={handleAddPage}
+            onDuplicatePage={() => handleDuplicatePage(currentPageIndex)}
+            onDeletePage={() => handleDeletePage(currentPageIndex)}
+          />
         </div>
       </div>
 
