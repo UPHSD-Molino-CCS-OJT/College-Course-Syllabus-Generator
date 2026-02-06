@@ -303,7 +303,8 @@ export default function CanvasPage({
         width: pageSize.width * zoom,
         height: pageSize.height * zoom,
         transform: `scale(${zoom})`,
-        transformOrigin: 'top left'
+        transformOrigin: 'top left',
+        userSelect: resizingCell || draggingElement ? 'none' : 'auto'
       }}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}

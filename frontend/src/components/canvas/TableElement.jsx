@@ -47,7 +47,7 @@ export default function TableElement({
       }}
     >
       {isSelected && <ElementDragHandle onMouseDown={(e) => onMouseDown(e, element, zone)} />}
-      <table style={{ borderCollapse: 'collapse', borderSpacing: '0' }}>
+      <table style={{ borderCollapse: 'collapse', borderSpacing: '0', userSelect: 'none' }}>
         <tbody>
           {element.data.map((row, rowIndex) => (
             <tr key={rowIndex}>
@@ -78,6 +78,8 @@ export default function TableElement({
                       padding: isCellEditing ? '0' : '8px',
                       whiteSpace: 'pre-wrap',
                       wordWrap: 'break-word',
+                      position: 'relative',
+                      userSelect: isCellEditing ? 'text' : 'none'
                     }}
                     onMouseEnter={() => setHoveredCell({ rowIndex, colIndex })}
                     onMouseLeave={() => setHoveredCell(null)}
@@ -113,33 +115,57 @@ export default function TableElement({
                       <>
                         {/* Right edge handle for column width */}
                         <div
-                          className="resize-handle absolute top-0 right-0 w-2 h-full bg-blue-400/60 hover:bg-blue-500 cursor-ew-resize transition-all"
+                          className="resize-handle absolute top-0 right-0 w-2 h-full bg-blue-400/60 hover:bg-blue-500 cursor-ew-resize transition-all select-none"
                           style={{
                             transform: 'translateX(1px)',
-                            zIndex: 10
+                            zIndex: 10,
+                            userSelect: 'none',
+                            WebkitUserSelect: 'none',
+                            MozUserSelect: 'none',
+                            msUserSelect: 'none'
                           }}
-                          onMouseDown={(e) => handleCellResizeStart(e, rowIndex, colIndex, 'width')}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onCellResizeStart(e, element, zone, rowIndex, colIndex, 'width');
+                          }}
                           title="Resize column width"
                         />
                         {/* Bottom edge handle for row height */}
                         <div
-                          className="resize-handle absolute bottom-0 left-0 w-full h-2 bg-blue-400/60 hover:bg-blue-500 cursor-ns-resize transition-all"
+                          className="resize-handle absolute bottom-0 left-0 w-full h-2 bg-blue-400/60 hover:bg-blue-500 cursor-ns-resize transition-all select-none"
                           style={{
                             transform: 'translateY(1px)',
-                            zIndex: 10
+                            zIndex: 10,
+                            userSelect: 'none',
+                            WebkitUserSelect: 'none',
+                            MozUserSelect: 'none',
+                            msUserSelect: 'none'
                           }}
-                          onMouseDown={(e) => handleCellResizeStart(e, rowIndex, colIndex, 'height')}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onCellResizeStart(e, element, zone, rowIndex, colIndex, 'height');
+                          }}
                           title="Resize row height"
                         />
                         {/* Corner handle for both dimensions */}
                         <div
-                          className="resize-handle absolute bottom-0 right-0 w-4 h-4 bg-blue-500 hover:bg-blue-600 cursor-nwse-resize transition-all shadow-md"
+                          className="resize-handle absolute bottom-0 right-0 w-4 h-4 bg-blue-500 hover:bg-blue-600 cursor-nwse-resize transition-all shadow-md select-none"
                           style={{
                             transform: 'translate(2px, 2px)',
                             borderRadius: '0 0 4px 0',
-                            zIndex: 11
+                            zIndex: 11,
+                            userSelect: 'none',
+                            WebkitUserSelect: 'none',
+                            MozUserSelect: 'none',
+                            msUserSelect: 'none'
                           }}
-                          onMouseDown={(e) => handleCellResizeStart(e, rowIndex, colIndex, 'both')}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onCellResizeStart(e, element, zone, rowIndex, colIndex, 'both');
+                          }}
                           title="Resize both width and height"
                         />
                       </>
