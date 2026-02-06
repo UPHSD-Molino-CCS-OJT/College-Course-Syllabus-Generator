@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 
 export default function RichTextEditor({ content, onUpdate, style, className, onBlur }) {
   const editorRef = useRef(null);
+  const toolbarRef = useRef(null);
   const [showToolbar, setShowToolbar] = useState(false);
   const [toolbarPosition, setToolbarPosition] = useState({ top: 0, left: 0 });
 
@@ -40,18 +41,24 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
     handleInput();
   };
 
-  const handleBlurEditor = () => {
-    // Longer delay to allow toolbar clicks to register
+  const handleBlurEditor = (e) => {
+    // Don't hide toolbar if clicking on toolbar itself
     setTimeout(() => {
+      const activeElement = document.activeElement;
+      // Check if the focus moved to the toolbar or its children
+      if (toolbarRef.current && toolbarRef.current.contains(activeElement)) {
+        return; // Don't hide toolbar, keep it visible
+      }
       setShowToolbar(false);
       if (onBlur) onBlur();
-    }, 300);
+    }, 150);
   };
 
   return (
     <div className="relative">
       {showToolbar && (
         <div
+          ref={toolbarRef}
           className="absolute z-50 bg-gray-800 border border-gray-600 rounded shadow-lg p-1 flex gap-1"
           style={{
             top: `${toolbarPosition.top}px`,
