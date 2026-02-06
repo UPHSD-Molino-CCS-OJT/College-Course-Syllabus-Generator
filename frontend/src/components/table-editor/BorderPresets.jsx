@@ -1,67 +1,66 @@
-export default function BorderPresets({ onApplyPreset }) {
+export default function BorderPresets({ activeToggles, onToggle, onClearAll }) {
+  const getButtonClasses = (isActive) => {
+    return `px-3 py-2 rounded text-xs font-medium transition-all border-2 ${
+      isActive 
+        ? 'bg-green-600 hover:bg-green-700 border-green-400 shadow-lg shadow-green-500/50' 
+        : 'bg-gray-700 hover:bg-gray-600 border-gray-600'
+    }`;
+  };
+
   return (
     <>
-      {/* Quick Border Presets */}
       <div>
-        <label className="block text-xs font-medium text-gray-300 mb-2">Quick Presets (Apply to All Cells)</label>
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-xs font-medium text-gray-300">Border Toggles (Mix & Match)</label>
+          <button
+            onClick={onClearAll}
+            className="px-2 py-1 bg-red-600 hover:bg-red-700 rounded text-xs font-medium transition-colors"
+            title="Clear all borders"
+          >
+            ✕ Clear All
+          </button>
+        </div>
         <div className="grid grid-cols-2 gap-2">
           <button
-            onClick={() => onApplyPreset('full-grid')}
-            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium transition-colors"
-            title="Add all borders to all cells"
+            onClick={() => onToggle('fullGrid')}
+            className={getButtonClasses(activeToggles.fullGrid)}
+            title="Toggle all borders on/off"
           >
-            ⊞ Full Grid
+            {activeToggles.fullGrid ? '✓' : '⊞'} Full Grid
           </button>
           <button
-            onClick={() => onApplyPreset('outer-only')}
-            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium transition-colors"
-            title="Only outer table borders"
+            onClick={() => onToggle('outer')}
+            className={getButtonClasses(activeToggles.outer)}
+            title="Toggle outer borders"
           >
-            ⊡ Outer Only
+            {activeToggles.outer ? '✓' : '⊡'} Outer
           </button>
           <button
-            onClick={() => onApplyPreset('horizontal')}
-            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium transition-colors"
-            title="Horizontal lines only"
+            onClick={() => onToggle('horizontal')}
+            className={getButtonClasses(activeToggles.horizontal)}
+            title="Toggle horizontal lines"
           >
-            ☰ Horizontal
+            {activeToggles.horizontal ? '✓' : '☰'} Horizontal
           </button>
           <button
-            onClick={() => onApplyPreset('vertical')}
-            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium transition-colors"
-            title="Vertical lines only"
+            onClick={() => onToggle('vertical')}
+            className={getButtonClasses(activeToggles.vertical)}
+            title="Toggle vertical lines"
           >
-            ☱ Vertical
+            {activeToggles.vertical ? '✓' : '☱'} Vertical
           </button>
           <button
-            onClick={() => onApplyPreset('no-borders')}
-            className="px-3 py-2 bg-gray-600 hover:bg-gray-500 rounded text-xs font-medium transition-colors"
-            title="Remove all borders"
+            onClick={() => onToggle('inner')}
+            className={getButtonClasses(activeToggles.inner)}
+            title="Toggle inner borders"
           >
-            ∅ No Borders
+            {activeToggles.inner ? '✓' : '⊟'} Inner
           </button>
         </div>
       </div>
-
-      {/* Border Toggles */}
-      <div>
-        <label className="block text-xs font-medium text-gray-300 mb-2">Toggle Borders</label>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => onApplyPreset('outer-borders')}
-            className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 rounded text-xs font-medium transition-colors"
-            title="Toggle outer borders on/off"
-          >
-            ⬜ Toggle Outer
-          </button>
-          <button
-            onClick={() => onApplyPreset('inner-borders')}
-            className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 rounded text-xs font-medium transition-colors"
-            title="Toggle inner borders on/off"
-          >
-            ⊟ Toggle Inner
-          </button>
-        </div>
+      
+      <div className="text-xs text-gray-400 italic mt-2 p-2 bg-gray-800/50 rounded">
+        💡 Tip: Click multiple toggles to combine border styles
       </div>
     </>
   );
