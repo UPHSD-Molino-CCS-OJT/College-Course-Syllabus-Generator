@@ -41,11 +41,11 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
   };
 
   const handleBlurEditor = () => {
-    // Delay to allow toolbar clicks to register
+    // Longer delay to allow toolbar clicks to register
     setTimeout(() => {
       setShowToolbar(false);
       if (onBlur) onBlur();
-    }, 200);
+    }, 300);
   };
 
   return (
@@ -58,10 +58,23 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
             left: `${toolbarPosition.left}px`,
             minWidth: '300px'
           }}
+          onMouseDown={(e) => {
+            // Prevent event from bubbling to cell/table handlers
+            e.stopPropagation();
+            e.preventDefault();
+          }}
+          onClick={(e) => {
+            // Prevent event from bubbling to cell/table handlers
+            e.stopPropagation();
+          }}
         >
           <button
             type="button"
-            onClick={() => applyStyle('bold')}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              applyStyle('bold');
+            }}
             className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold"
             title="Bold"
           >
@@ -69,7 +82,11 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
           </button>
           <button
             type="button"
-            onClick={() => applyStyle('italic')}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              applyStyle('italic');
+            }}
             className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs italic"
             title="Italic"
           >
@@ -77,7 +94,11 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
           </button>
           <button
             type="button"
-            onClick={() => applyStyle('underline')}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              applyStyle('underline');
+            }}
             className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs underline"
             title="Underline"
           >
@@ -85,7 +106,11 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
           </button>
           <button
             type="button"
-            onClick={() => applyStyle('strikeThrough')}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              applyStyle('strikeThrough');
+            }}
             className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs line-through"
             title="Strikethrough"
           >
@@ -93,6 +118,8 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
           </button>
           <div className="w-px bg-gray-600"></div>
           <select
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
             onChange={(e) => {
               applyStyle('fontSize', e.target.value);
               e.target.value = '3'; // Reset to default
@@ -111,12 +138,16 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
           </select>
           <input
             type="color"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
             onChange={(e) => applyStyle('foreColor', e.target.value)}
             className="w-8 h-6 bg-gray-700 rounded cursor-pointer"
             title="Text Color"
           />
           <input
             type="color"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
             onChange={(e) => applyStyle('backColor', e.target.value)}
             className="w-8 h-6 bg-gray-700 rounded cursor-pointer"
             title="Background Color"
@@ -124,7 +155,11 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
           <div className="w-px bg-gray-600"></div>
           <button
             type="button"
-            onClick={() => applyStyle('removeFormat')}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              applyStyle('removeFormat');
+            }}
             className="px-2 py-1 bg-red-700 hover:bg-red-600 text-white rounded text-xs"
             title="Clear Formatting"
           >
@@ -139,6 +174,14 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
         onMouseUp={handleSelect}
         onKeyUp={handleSelect}
         onBlur={handleBlurEditor}
+        onMouseDown={(e) => {
+          // Prevent event from bubbling to parent handlers when editing
+          e.stopPropagation();
+        }}
+        onClick={(e) => {
+          // Prevent event from bubbling to parent handlers when editing
+          e.stopPropagation();
+        }}
         className={className}
         style={{
           ...style,
