@@ -7,10 +7,10 @@ export default function TableElement({
   isSelected,
   onSelect,
   onUpdate,
-  onMouseDown
+  onMouseDown,
+  onCellResizeStart
 }) {
   const [editingCell, setEditingCell] = useState(null);
-  const [resizingCell, setResizingCell] = useState(null);
   const [hoveredCell, setHoveredCell] = useState(null);
 
   const handleCellDoubleClick = (e, rowIndex, colIndex) => {
@@ -33,37 +33,13 @@ export default function TableElement({
     setEditingCell(null);
   };
 
-  const handleCellResizeStart = (e, rowIndex, colIndex, direction) => {
-    e.stopPropagation();
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const cell = element.data[rowIndex][colIndex];
-    const startWidth = cell.width || element.cellWidth || 150;
-    const startHeight = cell.height || element.cellHeight || 40;
-    
-    setResizingCell({
-      rowIndex,
-      colIndex,
-      direction,
-      startX,
-      startY,
-      startWidth,
-      startHeight
-    });
-  };
-
   return (
     <div
       key={element.id}
-      className={`absolute ${isSelected ? 'ring-2 ring-blue-500' : ''} ${resizingCell ? 'select-none' : ''}`}
+      className={`absolute ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
       style={{
         left: element.x,
-        top: element.y,
-        cursor: resizingCell ? (
-          resizingCell.direction === 'width' ? 'ew-resize' :
-          resizingCell.direction === 'height' ? 'ns-resize' : 
-          'nwse-resize'
-        ) : 'default'
+        top: element.y
       }}
       onClick={(e) => {
         e.stopPropagation();
@@ -80,13 +56,6 @@ export default function TableElement({
                                      editingCell?.colIndex === colIndex;
                 const isHovered = isSelected && hoveredCell?.rowIndex === rowIndex && 
                                  hoveredCell?.colIndex === colIndex;
-                const isResizing = resizingCell?.rowIndex === rowIndex && 
-                                  resizingCell?.colIndex === colIndex;
-                const willBeResized = resizingCell && (
-                  (resizingCell.direction === 'width' && colIndex === resizingCell.colIndex) ||
-                  (resizingCell.direction === 'height' && rowIndex === resizingCell.rowIndex) ||
-                  (resizingCell.direction === 'both' && rowIndex === resizingCell.rowIndex && colIndex === resizingCell.colIndex)
-                );
                 
                 return (
                   <td
@@ -99,7 +68,7 @@ export default function TableElement({
                       borderRight: (cell.showBorderRight !== undefined ? cell.showBorderRight : element.showBorderRight !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
                       borderBottom: (cell.showBorderBottom !== undefined ? cell.showBorderBottom : element.showBorderBottom !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
                       borderLeft: (cell.showBorderLeft !== undefined ? cell.showBorderLeft : element.showBorderLeft !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
-                      backgroundColor: isResizing ? '#bfdbfe' : isHovered ? '#dbeafe' : willBeResized ? '#eff6ff' : cell.bg,
+                      backgroundColor: isHovered ? '#dbeafe' : cell.bg,
                       fontSize: cell.fontSize,
                       fontFamily: cell.fontFamily,
                       fontWeight: cell.fontWeight,

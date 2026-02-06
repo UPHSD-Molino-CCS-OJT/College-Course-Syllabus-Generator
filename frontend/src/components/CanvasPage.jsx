@@ -210,6 +210,7 @@ export default function CanvasPage({
           onSelect={onSelectElement}
           onUpdate={onUpdateElement}
           onMouseDown={handleMouseDown}
+          onCellResizeStart={handleCellResizeStart}
         />
       );
     }
