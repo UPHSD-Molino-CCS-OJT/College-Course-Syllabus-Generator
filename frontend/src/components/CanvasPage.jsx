@@ -1,4 +1,9 @@
 import { useState, useRef } from 'react';
+import { 
+  calculateSnap, 
+  getAllElementsInZone, 
+  getZoneDimensions 
+} from '../utils/snapping';
 
 export default function CanvasPage({
   document,
@@ -18,6 +23,7 @@ export default function CanvasPage({
   const [editingCell, setEditingCell] = useState(null); // { elementId, rowIndex, colIndex }
   const [resizingCell, setResizingCell] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [snapGuides, setSnapGuides] = useState([]); // Visual snap guides
   const canvasRef = useRef(null);
 
   const handleMouseDown = (e, element, zone) => {
@@ -95,15 +101,35 @@ export default function CanvasPage({
     let x = (e.clientX - canvasRect.left) / zoom - dragOffset.x;
     let y = (e.clientY - canvasRect.top) / zoom - dragOffset.y;
 
-    // Constrain element to its zone
+    // Get the zone and element
     const { zone, element } = draggingElement;
     
-    // Calculate element dimensions more accurately
+    // Get zone dimensions for boundary constraints
+    const zoneDimensions = getZoneDimensions(document, pageSize, zone);
+    
+    // Get all other elements in the zone for snapping
+    const allElements = getAllElementsInZone(document, currentPage, zone);
+    const otherElements = allElements.filter(el => el.id !== element.id);
+    
+    // Apply snapping
+    const snapResult = calculateSnap(
+      element,
+      x,
+      y,
+      otherElements,
+      zoneDimensions.width,
+      zoneDimensions.height
+    );
+    
+    x = snapResult.x;
+    y = snapResult.y;
+    setSnapGuides(snapResult.guides);
+    
+    // Calculate element dimensions for boundary constraints
     let elementHeight;
     let elementWidth;
     
     if (element.type === 'text') {
-      // Estimate text height based on fontSize with some padding
       elementHeight = (element.fontSize || 14) + 10;
       elementWidth = element.width || 200;
     } else if (element.type === 'image') {
@@ -116,31 +142,16 @@ export default function CanvasPage({
       elementHeight = element.strokeWidth || 2;
       elementWidth = element.length || 100;
     } else {
-      // Default fallback
       elementHeight = element.height || 50;
       elementWidth = element.width || 100;
     }
     
-    // Calculate zone boundaries
-    let minY = 0;
-    let maxY = 0;
-    
-    if (zone === 'header') {
-      minY = 0;
-      maxY = document.header.height - elementHeight;
-    } else if (zone === 'content') {
-      minY = 0; // Content zone uses relative positioning
-      maxY = pageSize.height - document.header.height - document.footer.height - elementHeight;
-    } else if (zone === 'footer') {
-      minY = 0;
-      maxY = document.footer.height - elementHeight;
-    }
-    
-    // Constrain x within page width
+    // Apply boundary constraints
     const minX = 0;
-    const maxX = pageSize.width - elementWidth;
+    const maxX = zoneDimensions.width - elementWidth;
+    const minY = 0;
+    const maxY = zoneDimensions.height - elementHeight;
     
-    // Apply constraints
     x = Math.max(minX, Math.min(x, maxX));
     y = Math.max(minY, Math.min(y, maxY));
 
@@ -150,6 +161,7 @@ export default function CanvasPage({
   const handleMouseUp = () => {
     setDraggingElement(null);
     setResizingCell(null);
+    setSnapGuides([]); // Clear snap guides when drag ends
     // Delay clearing isDragging to prevent click events from firing immediately after drag
     setTimeout(() => setIsDragging(false), 100);
   };
@@ -553,6 +565,70 @@ export default function CanvasPage({
           Delete Selected
         </button>
       )}
+
+      {/* Snap Guides - Visual feedback during dragging */}
+      {snapGuides.map((guide, index) => {
+        if (guide.type === 'vertical') {
+          return (
+            <div
+              key={`guide-v-${index}`}
+              className="absolute pointer-events-none"
+              style={{
+                left: guide.x,
+                top: 0,
+                bottom: 0,
+                width: 1,
+                backgroundColor: '#3b82f6',
+                boxShadow: '0 0 4px rgba(59, 130, 246, 0.5)',
+                zIndex: 9999
+              }}
+            >
+              {guide.label && (
+                <div 
+                  className="absolute bg-blue-500 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap"
+                  style={{
+                    top: 10,
+                    left: 5,
+                    transform: 'translateX(-50%)'
+                  }}
+                >
+                  {guide.label}
+                </div>
+              )}
+            </div>
+          );
+        } else if (guide.type === 'horizontal') {
+          return (
+            <div
+              key={`guide-h-${index}`}
+              className="absolute pointer-events-none"
+              style={{
+                top: guide.y,
+                left: 0,
+                right: 0,
+                height: 1,
+                backgroundColor: '#3b82f6',
+                boxShadow: '0 0 4px rgba(59, 130, 246, 0.5)',
+                zIndex: 9999
+              }}
+            >
+              {guide.label && (
+                <div 
+                  className="absolute bg-blue-500 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap"
+                  style={{
+                    left: 10,
+                    top: 5,
+                    transform: 'translateY(-50%)'
+                  }}
+                >
+                  {guide.label}
+                </div>
+              )}
+            </div>
+          );
+        }
+        return null;
+      })}
     </div>
   );
 }
