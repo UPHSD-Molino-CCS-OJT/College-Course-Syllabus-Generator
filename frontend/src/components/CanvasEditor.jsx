@@ -642,7 +642,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-400 text-xs">
-                  ID: {selectedElement.id.substring(0, 8)}...
+                  ID: {selectedElement.id}
                 </span>
                 <button
                   onClick={() => {
