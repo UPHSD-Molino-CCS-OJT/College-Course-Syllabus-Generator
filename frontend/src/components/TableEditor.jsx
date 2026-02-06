@@ -111,6 +111,14 @@ export default function TableEditor({ table, onUpdate }) {
           showBorderLeft: false
         };
         break;
+      case 'vertical':
+        borderUpdates = {
+          showBorderTop: false,
+          showBorderRight: true,
+          showBorderBottom: false,
+          showBorderLeft: true
+        };
+        break;
       case 'no-borders':
         borderUpdates = {
           showBorderTop: false,
@@ -118,6 +126,10 @@ export default function TableEditor({ table, onUpdate }) {
           showBorderBottom: false,
           showBorderLeft: false
         };
+        break;
+      case 'outer-borders':
+      case 'inner-borders':
+        // Will be applied conditionally per cell
         break;
     }
 
@@ -131,6 +143,30 @@ export default function TableEditor({ table, onUpdate }) {
             showBorderRight: j === table.cols - 1,
             showBorderBottom: i === table.rows - 1,
             showBorderLeft: j === 0
+          };
+        }
+        if (preset === 'outer-borders') {
+          // Toggle outer borders
+          const isOuter = i === 0 || j === table.cols - 1 || i === table.rows - 1 || j === 0;
+          if (isOuter) {
+            return {
+              ...cell,
+              showBorderTop: i === 0 ? !cell.showBorderTop : cell.showBorderTop,
+              showBorderRight: j === table.cols - 1 ? !cell.showBorderRight : cell.showBorderRight,
+              showBorderBottom: i === table.rows - 1 ? !cell.showBorderBottom : cell.showBorderBottom,
+              showBorderLeft: j === 0 ? !cell.showBorderLeft : cell.showBorderLeft
+            };
+          }
+          return cell;
+        }
+        if (preset === 'inner-borders') {
+          // Toggle inner borders (all borders except outer edges)
+          return {
+            ...cell,
+            showBorderTop: i === 0 ? cell.showBorderTop : !cell.showBorderTop,
+            showBorderRight: j === table.cols - 1 ? cell.showBorderRight : !cell.showBorderRight,
+            showBorderBottom: i === table.rows - 1 ? cell.showBorderBottom : !cell.showBorderBottom,
+            showBorderLeft: j === 0 ? cell.showBorderLeft : !cell.showBorderLeft
           };
         }
         return { ...cell, ...borderUpdates };
@@ -297,11 +333,39 @@ export default function TableEditor({ table, onUpdate }) {
                     ☰ Horizontal
                   </button>
                   <button
+                    onClick={() => applyBorderPreset('vertical')}
+                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium transition-colors"
+                    title="Vertical lines only"
+                  >
+                    ☱ Vertical
+                  </button>
+                  <button
                     onClick={() => applyBorderPreset('no-borders')}
                     className="px-3 py-2 bg-gray-600 hover:bg-gray-500 rounded text-xs font-medium transition-colors"
                     title="Remove all borders"
                   >
                     ∅ No Borders
+                  </button>
+                </div>
+              </div>
+
+              {/* Border Toggles */}
+              <div>
+                <label className="block text-xs font-medium text-gray-300 mb-2">Toggle Borders</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => applyBorderPreset('outer-borders')}
+                    className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 rounded text-xs font-medium transition-colors"
+                    title="Toggle outer borders on/off"
+                  >
+                    ⬜ Toggle Outer
+                  </button>
+                  <button
+                    onClick={() => applyBorderPreset('inner-borders')}
+                    className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 rounded text-xs font-medium transition-colors"
+                    title="Toggle inner borders on/off"
+                  >
+                    ⊟ Toggle Inner
                   </button>
                 </div>
               </div>
