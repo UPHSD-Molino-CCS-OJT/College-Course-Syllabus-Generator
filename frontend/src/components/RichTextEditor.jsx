@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 export default function RichTextEditor({ content, onUpdate, style, className, onBlur }) {
   const editorRef = useRef(null);
   const toolbarRef = useRef(null);
+  const savedSelectionRef = useRef(null);
   const [showToolbar, setShowToolbar] = useState(false);
   const [toolbarPosition, setToolbarPosition] = useState({ top: 0, left: 0 });
 
@@ -22,6 +23,9 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
     const selection = window.getSelection();
     if (selection && !selection.isCollapsed && selection.toString().trim()) {
       const range = selection.getRangeAt(0);
+      // Save the selection range
+      savedSelectionRef.current = range.cloneRange();
+      
       const rect = range.getBoundingClientRect();
       const editorRect = editorRef.current.getBoundingClientRect();
       
@@ -36,7 +40,24 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
   };
 
   const applyStyle = (command, value = null) => {
+    // Restore the saved selection before applying style
+    if (savedSelectionRef.current) {
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(savedSelectionRef.current);
+    }
+    
+    // Apply the formatting
     document.execCommand(command, false, value);
+    
+    // Keep the selection visible after formatting
+    if (savedSelectionRef.current) {
+      const selection = window.getSelection();
+      if (selection.rangeCount === 0) {
+        selection.addRange(savedSelectionRef.current);
+      }
+    }
+    
     editorRef.current?.focus();
     handleInput();
   };
