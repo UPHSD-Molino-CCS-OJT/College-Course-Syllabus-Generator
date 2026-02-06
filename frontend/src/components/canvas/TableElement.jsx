@@ -18,7 +18,10 @@ export default function TableElement({
     e.stopPropagation();
     // Select table and enter edit mode immediately
     onSelect(element);
-    setEditingCell({ rowIndex, colIndex });
+    // Only change editing cell if clicking a different cell
+    if (!editingCell || editingCell.rowIndex !== rowIndex || editingCell.colIndex !== colIndex) {
+      setEditingCell({ rowIndex, colIndex });
+    }
   };
 
   const handleCellChange = (newContent, rowIndex, colIndex) => {
@@ -32,10 +35,6 @@ export default function TableElement({
     onUpdate(zone, element.id, { data: newData });
   };
 
-  const handleCellBlur = () => {
-    setEditingCell(null);
-  };
-
   return (
     <div
       key={element.id}
@@ -47,6 +46,10 @@ export default function TableElement({
       onClick={(e) => {
         e.stopPropagation();
         onSelect(element);
+        // Close editor if clicking on table background (not a cell)
+        if (e.target === e.currentTarget) {
+          setEditingCell(null);
+        }
       }}
     >
       {isSelected && <ElementDragHandle onMouseDown={(e) => onMouseDown(e, element, zone)} />}
@@ -108,7 +111,6 @@ export default function TableElement({
                       <RichTextEditor
                         content={cell.content}
                         onUpdate={(newContent) => handleCellChange(newContent, rowIndex, colIndex)}
-                        onBlur={handleCellBlur}
                         style={{
                           fontSize: cell.fontSize,
                           fontFamily: cell.fontFamily,
