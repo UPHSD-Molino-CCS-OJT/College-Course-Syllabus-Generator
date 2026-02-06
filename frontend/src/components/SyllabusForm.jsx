@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { syllabusAPI, templateAPI } from '../services/api';
+import { useAutoSave, AutoSaveIndicator } from '../utils/useAutoSave.jsx';
 
 const INITIAL_FORM_DATA = {
   courseCode: '',
@@ -39,6 +40,7 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('basic');
   const [templates, setTemplates] = useState([]);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(!!editSyllabus);
 
   useEffect(() => {
     fetchTemplates();
@@ -52,6 +54,31 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
       console.error('Error fetching templates:', err);
     }
   };
+
+  // Auto-save function
+  const autoSaveFunction = useCallback(async (data) => {
+    if (editSyllabus && editSyllabus._id) {
+      await syllabusAPI.updateSyllabus(editSyllabus._id, data);
+      if (onSyllabusUpdated) {
+        const response = await syllabusAPI.updateSyllabus(editSyllabus._id, data);
+        onSyllabusUpdated(response.data.syllabus);
+      }
+    }
+  }, [editSyllabus, onSyllabusUpdated]);
+
+  // Set up auto-save (only for editing existing syllabi)
+  const { saveStatus, lastSaved, error: autoSaveError, manualSave } = useAutoSave(
+    autoSaveFunction,
+    formData,
+    {
+      delay: 3000, // 3 seconds for syllabi (more data)
+      enabled: autoSaveEnabled,
+      shouldSave: (data) => {
+        // Only auto-save if we have required fields
+        return !!data.courseCode && !!data.courseTitle && !!editSyllabus?._id;
+      }
+    }
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -148,9 +175,27 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">
-        {editSyllabus ? 'Edit Syllabus' : 'Create New Syllabus'}
-      </h2>
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-4">
+          <h2 className="text-2xl font-bold text-gray-800">
+            {editSyllabus ? 'Edit Syllabus' : 'Create New Syllabus'}
+          </h2>
+          {editSyllabus && <AutoSaveIndicator saveStatus={saveStatus} lastSaved={lastSaved} error={autoSaveError} />}
+        </div>
+        <div className="flex items-center gap-3">
+          {editSyllabus && (
+            <label className="flex items-center text-sm text-gray-600">
+              <input
+                type="checkbox"
+                checked={autoSaveEnabled}
+                onChange={(e) => setAutoSaveEnabled(e.target.checked)}
+                className="mr-2"
+              />
+              Auto-save
+            </label>
+          )}
+        </div>
+      </div>
 
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">

@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import CanvasToolbar from './CanvasToolbar';
 import CanvasPage from './CanvasPage';
 import TextStylePanel from './TextStylePanel';
 import TableEditor from './TableEditor';
 import ImageStylePanel from './ImageStylePanel';
 import LineStylePanel from './LineStylePanel';
+import { useAutoSave, AutoSaveIndicator } from '../utils/useAutoSave.jsx';
 
 // Page size configurations (in pixels, 96 DPI)
 const PAGE_SIZES = {
@@ -37,6 +38,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   const [selectedElement, setSelectedElement] = useState(null);
   const [editingZone, setEditingZone] = useState(null); // 'header', 'footer', or 'content'
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   
   // Document structure with multi-page support
   const [canvasDocument, setCanvasDocument] = useState(template?.canvasDocument || {
@@ -61,6 +63,29 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   });
 
   const canvasRef = useRef(null);
+
+  // Auto-save function for canvas editor
+  const autoSaveFunction = useCallback(async () => {
+    if (onSave && template) {
+      onSave({
+        ...template,
+        canvasDocument: canvasDocument,
+        pageSize,
+        orientation
+      });
+    }
+  }, [onSave, template, canvasDocument, pageSize, orientation]);
+
+  // Set up auto-save
+  const { saveStatus, lastSaved, error: autoSaveError } = useAutoSave(
+    autoSaveFunction,
+    { canvasDocument, pageSize, orientation },
+    {
+      delay: 2000,
+      enabled: autoSaveEnabled && !!template,
+      shouldSave: () => true
+    }
+  );
 
   // Get current page dimensions
   const currentPageSize = PAGE_SIZES[pageSize][orientation];
@@ -501,6 +526,13 @@ export default function CanvasEditor({ template, onClose, onSave }) {
           <h2 className="text-white font-semibold text-lg">Canvas Editor</h2>
           <div className="h-6 w-px bg-gray-600"></div>
           
+          {/* Auto-save indicator */}
+          <div className="text-white">
+            <AutoSaveIndicator saveStatus={saveStatus} lastSaved={lastSaved} error={autoSaveError} />
+          </div>
+          
+          <div className="h-6 w-px bg-gray-600"></div>
+          
           {/* Page Size Selector */}
           <select
             value={pageSize}
@@ -621,6 +653,15 @@ export default function CanvasEditor({ template, onClose, onSave }) {
         </div>
 
         <div className="flex items-center gap-3">
+          <label className="flex items-center text-sm text-white">
+            <input
+              type="checkbox"
+              checked={autoSaveEnabled}
+              onChange={(e) => setAutoSaveEnabled(e.target.checked)}
+              className="mr-2"
+            />
+            Auto-save
+          </label>
           <button
             onClick={onClose}
             className="px-4 py-1.5 text-white border border-gray-600 rounded hover:bg-gray-700 text-sm"

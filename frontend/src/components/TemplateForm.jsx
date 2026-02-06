@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { templateAPI } from '../services/api';
+import { useAutoSave, AutoSaveIndicator } from '../utils/useAutoSave.jsx';
 
 const INITIAL_FORM_DATA = {
   name: '',
@@ -14,6 +15,32 @@ export default function TemplateForm({ onTemplateCreated, editTemplate, onTempla
   const [formData, setFormData] = useState(editTemplate || INITIAL_FORM_DATA);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(!!editTemplate);
+
+  // Auto-save function
+  const autoSaveFunction = useCallback(async (data) => {
+    if (editTemplate && editTemplate._id) {
+      await templateAPI.updateTemplate(editTemplate._id, data);
+      if (onTemplateUpdated) {
+        const response = await templateAPI.updateTemplate(editTemplate._id, data);
+        onTemplateUpdated(response.data.template);
+      }
+    }
+  }, [editTemplate, onTemplateUpdated]);
+
+  // Set up auto-save (only for editing existing templates)
+  const { saveStatus, lastSaved, error: autoSaveError, manualSave } = useAutoSave(
+    autoSaveFunction,
+    formData,
+    {
+      delay: 2000,
+      enabled: autoSaveEnabled,
+      shouldSave: (data) => {
+        // Only auto-save if we have required fields
+        return !!data.name && !!editTemplate?._id;
+      }
+    }
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -48,17 +75,33 @@ export default function TemplateForm({ onTemplateCreated, editTemplate, onTempla
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">
-          {editTemplate ? 'Edit Template' : 'Create New Template'}
-        </h2>
-        {editTemplate && (
-          <button
-            onClick={onCancel}
-            className="text-gray-600 hover:text-gray-800"
-          >
-            Cancel
-          </button>
-        )}
+        <div className="flex items-center gap-4">
+          <h2 className="text-2xl font-bold text-gray-900">
+            {editTemplate ? 'Edit Template' : 'Create New Template'}
+          </h2>
+          {editTemplate && <AutoSaveIndicator saveStatus={saveStatus} lastSaved={lastSaved} error={autoSaveError} />}
+        </div>
+        <div className="flex items-center gap-3">
+          {editTemplate && (
+            <label className="flex items-center text-sm text-gray-600">
+              <input
+                type="checkbox"
+                checked={autoSaveEnabled}
+                onChange={(e) => setAutoSaveEnabled(e.target.checked)}
+                className="mr-2"
+              />
+              Auto-save
+            </label>
+          )}
+          {editTemplate && (
+            <button
+              onClick={onCancel}
+              className="text-gray-600 hover:text-gray-800"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
