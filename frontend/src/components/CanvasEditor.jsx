@@ -53,6 +53,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const isUndoRedoRef = useRef(false); // Prevent history tracking during undo/redo
+  const isDraggingRef = useRef(false); // Prevent history tracking during active drag
   const maxHistorySize = 50; // Limit history to prevent memory issues
   
   // Document structure with multi-page support
@@ -81,7 +82,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
 
   // Save current state to history
   const saveToHistory = useCallback((newDocument) => {
-    if (isUndoRedoRef.current) return; // Don't save during undo/redo
+    if (isUndoRedoRef.current || isDraggingRef.current) return; // Don't save during undo/redo or dragging
     
     setHistory(prev => {
       // Remove any future history if we're not at the end
@@ -734,6 +735,19 @@ export default function CanvasEditor({ template, onClose, onSave }) {
     });
   };
 
+  // Handle drag state changes
+  const handleDragStart = () => {
+    isDraggingRef.current = true;
+  };
+
+  const handleDragEnd = () => {
+    isDraggingRef.current = false;
+    // Save state after drag completes
+    if (!isUndoRedoRef.current) {
+      saveToHistory(canvasDocument);
+    }
+  };
+
   const handleHeaderHeightChange = (e) => {
     const height = parseInt(e.target.value) || 120;
     setCanvasDocument(prev => ({
@@ -866,6 +880,8 @@ export default function CanvasEditor({ template, onClose, onSave }) {
               onZoneClick={setEditingZone}
               showGrid={showGrid}
               gridSize={gridSize}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
             />
           </div>
         </div>

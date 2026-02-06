@@ -22,7 +22,9 @@ export default function CanvasPage({
   editingZone,
   onZoneClick,
   showGrid = false,
-  gridSize = 20
+  gridSize = 20,
+  onDragStart,
+  onDragEnd
 }) {
   const [draggingElement, setDraggingElement] = useState(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -35,6 +37,7 @@ export default function CanvasPage({
     e.stopPropagation();
     onSelectElement(element);
     setIsDragging(true);
+    onDragStart?.(); // Notify parent that drag started
     
     // Calculate offset from mouse to element's current position
     const canvasRect = canvasRef.current.getBoundingClientRect();
@@ -166,11 +169,17 @@ export default function CanvasPage({
   };
 
   const handleMouseUp = () => {
+    const wasDragging = draggingElement !== null;
     setDraggingElement(null);
     setResizingCell(null);
     setSnapGuides([]); // Clear snap guides when drag ends
     // Delay clearing isDragging to prevent click events from firing immediately after drag
     setTimeout(() => setIsDragging(false), 100);
+    
+    // Notify parent that drag ended (only if we were actually dragging)
+    if (wasDragging) {
+      onDragEnd?.();
+    }
   };
 
   const renderElement = (element, zone) => {
