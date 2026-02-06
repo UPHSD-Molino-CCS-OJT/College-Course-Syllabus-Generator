@@ -12,12 +12,26 @@ export default function TableElement({
   onCellResizeStart
 }) {
   const [editingCell, setEditingCell] = useState(null);
+  const [selectedCell, setSelectedCell] = useState(null);
   const [hoveredCell, setHoveredCell] = useState(null);
 
   const handleCellClick = (e, rowIndex, colIndex) => {
     e.stopPropagation();
-    // Only enter edit mode if table is already selected
-    if (isSelected && !editingCell) {
+    // Select the cell (highlight it)
+    if (isSelected) {
+      setSelectedCell({ rowIndex, colIndex });
+      // Exit edit mode if clicking a different cell
+      if (editingCell && (editingCell.rowIndex !== rowIndex || editingCell.colIndex !== colIndex)) {
+        setEditingCell(null);
+      }
+    }
+  };
+
+  const handleCellDoubleClick = (e, rowIndex, colIndex) => {
+    e.stopPropagation();
+    // Double-click enters edit mode
+    if (isSelected) {
+      setSelectedCell({ rowIndex, colIndex });
       setEditingCell({ rowIndex, colIndex });
     }
   };
@@ -35,6 +49,18 @@ export default function TableElement({
 
   const handleCellBlur = () => {
     setEditingCell(null);
+  };
+
+  const handleKeyDown = (e, rowIndex, colIndex) => {
+    // Enter key starts editing on selected cell
+    if (e.key === 'Enter' && selectedCell && !editingCell) {
+      e.preventDefault();
+      setEditingCell({ rowIndex, colIndex });
+    }
+    // Escape exits edit mode
+    if (e.key === 'Escape' && editingCell) {
+      setEditingCell(null);
+    }
   };
 
   return (
@@ -58,13 +84,19 @@ export default function TableElement({
               {row.map((cell, colIndex) => {
                 const isCellEditing = editingCell?.rowIndex === rowIndex && 
                                      editingCell?.colIndex === colIndex;
+                const isCellSelected = isSelected && selectedCell?.rowIndex === rowIndex && 
+                                      selectedCell?.colIndex === colIndex;
                 const isHovered = isSelected && hoveredCell?.rowIndex === rowIndex && 
                                  hoveredCell?.colIndex === colIndex;
                 
                 return (
                   <td
                     key={colIndex}
-                    className={`relative group transition-all ${isSelected && !isCellEditing ? 'hover:ring-1 hover:ring-blue-400 hover:ring-inset' : ''}`}
+                    className={`relative group transition-all ${
+                      isCellEditing ? 'ring-2 ring-blue-500 ring-inset' :
+                      isCellSelected ? 'ring-2 ring-blue-300 ring-inset bg-blue-50' :
+                      isSelected && !isCellEditing ? 'hover:ring-1 hover:ring-blue-400 hover:ring-inset' : ''
+                    }`}
                     style={{
                       width: cell.width || element.cellWidth,
                       height: cell.height || element.cellHeight,
@@ -72,7 +104,7 @@ export default function TableElement({
                       borderRight: (cell.showBorderRight !== undefined ? cell.showBorderRight : element.showBorderRight !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
                       borderBottom: (cell.showBorderBottom !== undefined ? cell.showBorderBottom : element.showBorderBottom !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
                       borderLeft: (cell.showBorderLeft !== undefined ? cell.showBorderLeft : element.showBorderLeft !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
-                      backgroundColor: isHovered ? '#dbeafe' : cell.bg,
+                      backgroundColor: isCellSelected && !isCellEditing ? '#eff6ff' : isHovered ? '#dbeafe' : cell.bg,
                       fontSize: cell.fontSize,
                       fontFamily: cell.fontFamily,
                       fontWeight: cell.fontWeight,
@@ -83,8 +115,8 @@ export default function TableElement({
                       whiteSpace: 'pre-wrap',
                       wordWrap: 'break-word',
                       position: 'relative',
-                      userSelect: isCellEditing ? 'text' : (isSelected ? 'auto' : 'none'),
-                      cursor: isSelected && !isCellEditing ? 'text' : 'default'
+                      userSelect: isCellEditing ? 'text' : 'none',
+                      cursor: isCellSelected && !isCellEditing ? 'text' : (isSelected ? 'pointer' : 'default')
                     }}
                     onMouseEnter={() => setHoveredCell({ rowIndex, colIndex })}
                     onMouseLeave={() => setHoveredCell(null)}
@@ -96,11 +128,14 @@ export default function TableElement({
                       if (!isSelected) {
                         onMouseDown(e, element, zone);
                       } else {
-                        // When table is selected, prevent drag to allow cell editing
+                        // When table is selected, prevent drag to allow cell selection
                         e.stopPropagation();
                       }
                     }}
                     onClick={(e) => handleCellClick(e, rowIndex, colIndex)}
+                    onDoubleClick={(e) => handleCellDoubleClick(e, rowIndex, colIndex)}
+                    onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex)}
+                    tabIndex={isSelected ? 0 : -1}
                   >
                     {isCellEditing ? (
                       <RichTextEditor
@@ -124,6 +159,11 @@ export default function TableElement({
                         dangerouslySetInnerHTML={{ __html: cell.content || '' }}
                         style={{ pointerEvents: 'none' }}
                       />
+                    )}
+                    {isCellSelected && !isCellEditing && (
+                      <div className="absolute top-1 right-1 text-blue-400 text-xs opacity-75 pointer-events-none">
+                        Press Enter or Double-click to edit
+                      </div>
                     )}
                     {isSelected && !isCellEditing && (
                       <>
