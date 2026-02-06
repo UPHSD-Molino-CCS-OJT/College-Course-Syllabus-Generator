@@ -1,114 +1,249 @@
-import { useRef, useEffect, useState } from 'react';
-import ReactQuill, { Quill } from 'react-quill';
-import 'quill/dist/quill.bubble.css';
+import { useState, useRef, useEffect } from 'react';
 
-export default function RichTextEditor({ content, onUpdate, style, className }) {
-  const quillRef = useRef(null);
-  const [isEditing, setIsEditing] = useState(false);
+export default function RichTextEditor({ content, onUpdate, style, className, onBlur }) {
+  const editorRef = useRef(null);
+  const toolbarRef = useRef(null);
+  const savedSelectionRef = useRef(null);
+  const [showToolbar, setShowToolbar] = useState(false);
+  const [toolbarPosition, setToolbarPosition] = useState({ top: 0, left: 0 });
 
-  // Configure Quill modules with custom toolbar
-  const modules = {
-    toolbar: {
-      container: [
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ 'size': ['small', false, 'large', 'huge'] }],
-        [{ 'color': [] }, { 'background': [] }],
-        ['clean']
-      ],
-      handlers: {}
-    }
-  };
-
-  const formats = [
-    'bold', 'italic', 'underline', 'strike',
-    'size', 'color', 'background'
-  ];
-
-  const handleChange = (value) => {
-    onUpdate(value);
-  };
-
-  const handleFocus = () => {
-    setIsEditing(true);
-  };
-
-  const handleBlur = () => {
-    // Small delay to allow toolbar clicks
-    setTimeout(() => {
-      setIsEditing(false);
-    }, 200);
-  };
-
-  // Custom styling to merge with Quill
-  const editorStyle = {
-    ...style,
-    minHeight: '20px',
-    border: 'none',
-    outline: 'none'
-  };
-
-  // Add custom styles for active toolbar buttons and read-only cursor
   useEffect(() => {
-    // Add CSS for active buttons if not already added
-    const styleId = 'quill-active-button-styles';
-    if (!document.getElementById(styleId)) {
-      const styleSheet = document.createElement('style');
-      styleSheet.id = styleId;
-      styleSheet.textContent = `
-        .ql-bubble .ql-toolbar button.ql-active,
-        .ql-bubble .ql-toolbar .ql-picker-label.ql-active,
-        .ql-bubble .ql-toolbar .ql-picker-item.ql-selected {
-          background-color: #06b6d4 !important;
-          color: white !important;
-        }
-        .ql-bubble .ql-toolbar button.ql-active .ql-stroke {
-          stroke: white !important;
-        }
-        .ql-bubble .ql-toolbar button.ql-active .ql-fill {
-          fill: white !important;
-        }
-        .rich-text-editor.read-only-mode .ql-editor {
-          cursor: default !important;
-        }
-        .rich-text-editor.read-only-mode .ql-editor * {
-          cursor: text !important;
-        }
-      `;
-      document.head.appendChild(styleSheet);
+    if (editorRef.current && content !== undefined) {
+      editorRef.current.innerHTML = content || '';
     }
   }, []);
 
-  // Toggle read-only mode based on editing state
-  useEffect(() => {
-    if (quillRef.current) {
-      const editor = quillRef.current.getEditor();
-      if (!isEditing) {
-        editor.enable(false);
-        // Re-enable after a tick to allow selection but not editing
-        setTimeout(() => {
-          editor.enable(true);
-        }, 0);
+  const handleInput = () => {
+    if (editorRef.current) {
+      onUpdate(editorRef.current.innerHTML);
+    }
+  };
+
+  const handleSelect = () => {
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed && selection.toString().trim()) {
+      const range = selection.getRangeAt(0);
+      // Save the selection range
+      savedSelectionRef.current = range.cloneRange();
+      
+      const rect = range.getBoundingClientRect();
+      const editorRect = editorRef.current.getBoundingClientRect();
+      
+      setToolbarPosition({
+        top: rect.top - editorRect.top - 45,
+        left: rect.left - editorRect.left + (rect.width / 2) - 150
+      });
+      setShowToolbar(true);
+    } else {
+      setShowToolbar(false);
+    }
+  };
+
+  const applyStyle = (command, value = null) => {
+    // Restore the saved selection before applying style
+    if (savedSelectionRef.current) {
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(savedSelectionRef.current);
+    }
+    
+    // For color commands, wrap entire selection in a span to ensure color applies to all formatting
+    if (command === 'foreColor' || command === 'backColor') {
+      const selection = window.getSelection();
+      if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const span = document.createElement('span');
+        
+        if (command === 'foreColor') {
+          span.style.color = value;
+        } else {
+          span.style.backgroundColor = value;
+        }
+        
+        // Extract contents and wrap in span
+        const contents = range.extractContents();
+        span.appendChild(contents);
+        range.insertNode(span);
+        
+        // Reselect the content
+        range.selectNodeContents(span);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        savedSelectionRef.current = range.cloneRange();
+      }
+    } else {
+      // Apply the formatting using execCommand for non-color commands
+      document.execCommand(command, false, value);
+    }
+    
+    // Keep the selection visible after formatting
+    if (savedSelectionRef.current) {
+      const selection = window.getSelection();
+      if (selection.rangeCount === 0) {
+        selection.addRange(savedSelectionRef.current);
       }
     }
-  }, [isEditing]);
+    
+    editorRef.current?.focus();
+    handleInput();
+  };
+
+  const handleBlurEditor = (e) => {
+    // Don't hide toolbar if clicking on toolbar itself
+    setTimeout(() => {
+      const activeElement = document.activeElement;
+      // Check if the focus moved to the toolbar or its children
+      if (toolbarRef.current && toolbarRef.current.contains(activeElement)) {
+        return; // Don't hide toolbar, keep it visible
+      }
+      setShowToolbar(false);
+      if (onBlur) onBlur();
+    }, 150);
+  };
 
   return (
-    <div className={`rich-text-editor ${!isEditing ? 'read-only-mode' : ''} ${className || ''}`}>
-      <ReactQuill
-        ref={quillRef}
-        theme="bubble"
-        value={content || ''}
-        onChange={handleChange}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        modules={modules}
-        formats={formats}
-        style={editorStyle}
-        placeholder="Type here..."
-        onMouseDown={(e) => e.stopPropagation()}
-        onClick={(e) => e.stopPropagation()}
+    <div className="relative">
+      {showToolbar && (
+        <div
+          ref={toolbarRef}
+          className="absolute z-50 bg-gray-800 border border-gray-600 rounded shadow-lg p-1 flex gap-1"
+          style={{
+            top: `${toolbarPosition.top}px`,
+            left: `${toolbarPosition.left}px`,
+            minWidth: '300px'
+          }}
+          onMouseDown={(e) => {
+            // Prevent event from bubbling to cell/table handlers
+            e.stopPropagation();
+            e.preventDefault();
+          }}
+          onClick={(e) => {
+            // Prevent event from bubbling to cell/table handlers
+            e.stopPropagation();
+          }}
+        >
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              applyStyle('bold');
+            }}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold"
+            title="Bold"
+          >
+            B
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              applyStyle('italic');
+            }}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs italic"
+            title="Italic"
+          >
+            I
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              applyStyle('underline');
+            }}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs underline"
+            title="Underline"
+          >
+            U
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              applyStyle('strikeThrough');
+            }}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs line-through"
+            title="Strikethrough"
+          >
+            S
+          </button>
+          <div className="w-px bg-gray-600"></div>
+          <select
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => {
+              applyStyle('fontSize', e.target.value);
+              e.target.value = '3'; // Reset to default
+            }}
+            className="bg-gray-700 text-white rounded text-xs px-1"
+            defaultValue="3"
+            title="Font Size"
+          >
+            <option value="1">8px</option>
+            <option value="2">10px</option>
+            <option value="3">12px</option>
+            <option value="4">14px</option>
+            <option value="5">18px</option>
+            <option value="6">24px</option>
+            <option value="7">36px</option>
+          </select>
+          <input
+            type="color"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => applyStyle('foreColor', e.target.value)}
+            className="w-8 h-6 bg-gray-700 rounded cursor-pointer"
+            title="Text Color"
+          />
+          <input
+            type="color"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => applyStyle('backColor', e.target.value)}
+            className="w-8 h-6 bg-gray-700 rounded cursor-pointer"
+            title="Background Color"
+          />
+          <div className="w-px bg-gray-600"></div>
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              applyStyle('removeFormat');
+            }}
+            className="px-2 py-1 bg-red-700 hover:bg-red-600 text-white rounded text-xs"
+            title="Clear Formatting"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+      <div
+        ref={editorRef}
+        contentEditable
+        onInput={handleInput}
+        onMouseUp={handleSelect}
+        onKeyUp={handleSelect}
+        onBlur={handleBlurEditor}
+        onMouseDown={(e) => {
+          // Prevent event from bubbling to parent handlers when editing
+          e.stopPropagation();
+        }}
+        onClick={(e) => {
+          // Prevent event from bubbling to parent handlers when editing
+          e.stopPropagation();
+        }}
+        className={className}
+        style={{
+          ...style,
+          outline: 'none',
+          minHeight: '20px'
+        }}
+        suppressContentEditableWarning
       />
     </div>
   );
 }
-
