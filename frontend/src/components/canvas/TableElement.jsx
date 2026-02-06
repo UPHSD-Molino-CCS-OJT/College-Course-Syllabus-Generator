@@ -64,7 +64,7 @@ export default function TableElement({
                 return (
                   <td
                     key={colIndex}
-                    className={`relative group transition-all ${
+                    className={`relative group ${
                       isCellEditing ? 'ring-2 ring-blue-500 ring-inset' :
                       isSelected && !isCellEditing ? 'hover:ring-1 hover:ring-blue-400 hover:ring-inset hover:bg-blue-50' : ''
                     }`}
