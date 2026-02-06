@@ -20,7 +20,9 @@ export default function CanvasPage({
   onUpdateElement,
   onDeleteElement,
   editingZone,
-  onZoneClick
+  onZoneClick,
+  showGrid = false,
+  gridSize = 20
 }) {
   const [draggingElement, setDraggingElement] = useState(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -231,6 +233,56 @@ export default function CanvasPage({
     return null;
   };
 
+  // Render grid overlay
+  const renderGrid = () => {
+    if (!showGrid) return null;
+
+    const gridLines = [];
+    const width = pageSize.width;
+    const height = pageSize.height;
+
+    // Vertical lines
+    for (let x = 0; x <= width; x += gridSize) {
+      gridLines.push(
+        <line
+          key={`v-${x}`}
+          x1={x}
+          y1={0}
+          x2={x}
+          y2={height}
+          stroke="#e0e0e0"
+          strokeWidth={x % (gridSize * 5) === 0 ? 1 : 0.5}
+          opacity={x % (gridSize * 5) === 0 ? 0.6 : 0.3}
+        />
+      );
+    }
+
+    // Horizontal lines
+    for (let y = 0; y <= height; y += gridSize) {
+      gridLines.push(
+        <line
+          key={`h-${y}`}
+          x1={0}
+          y1={y}
+          x2={width}
+          y2={y}
+          stroke="#e0e0e0"
+          strokeWidth={y % (gridSize * 5) === 0 ? 1 : 0.5}
+          opacity={y % (gridSize * 5) === 0 ? 0.6 : 0.3}
+        />
+      );
+    }
+
+    return (
+      <svg
+        className="absolute inset-0 pointer-events-none"
+        style={{ width: '100%', height: '100%', zIndex: 1 }}
+      >
+        {gridLines}
+      </svg>
+    );
+  };
+
   return (
     <div
       ref={canvasRef}
@@ -245,6 +297,9 @@ export default function CanvasPage({
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
+      {/* Grid Overlay */}
+      {renderGrid()}
+
       {/* Header Zone */}
       <div
         className={`absolute left-0 right-0 top-0 ${

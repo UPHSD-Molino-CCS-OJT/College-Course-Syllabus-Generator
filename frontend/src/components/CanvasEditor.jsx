@@ -40,6 +40,8 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   const [editingZone, setEditingZone] = useState(null); // 'header', 'footer', or 'content'
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const [showGrid, setShowGrid] = useState(false);
+  const [gridSize, setGridSize] = useState(20); // Grid spacing in pixels
   
   // Document structure with multi-page support
   const [canvasDocument, setCanvasDocument] = useState(template?.canvasDocument || {
@@ -664,6 +666,29 @@ export default function CanvasEditor({ template, onClose, onSave }) {
           <label className="flex items-center text-sm text-white">
             <input
               type="checkbox"
+              checked={showGrid}
+              onChange={(e) => setShowGrid(e.target.checked)}
+              className="mr-2"
+            />
+            Show Grid
+          </label>
+          {showGrid && (
+            <div className="flex items-center gap-2 text-sm text-white">
+              <label>Size:</label>
+              <input
+                type="number"
+                value={gridSize}
+                onChange={(e) => setGridSize(Math.max(5, parseInt(e.target.value) || 20))}
+                min="5"
+                max="100"
+                className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+              />
+              <span>px</span>
+            </div>
+          )}
+          <label className="flex items-center text-sm text-white">
+            <input
+              type="checkbox"
               checked={autoSaveEnabled}
               onChange={(e) => setAutoSaveEnabled(e.target.checked)}
               className="mr-2"
@@ -711,6 +736,8 @@ export default function CanvasEditor({ template, onClose, onSave }) {
               onDeleteElement={handleDeleteElement}
               editingZone={editingZone}
               onZoneClick={setEditingZone}
+              showGrid={showGrid}
+              gridSize={gridSize}
             />
           </div>
         </div>
