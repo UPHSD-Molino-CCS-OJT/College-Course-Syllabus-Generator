@@ -47,6 +47,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [showGrid, setShowGrid] = useState(false);
   const [gridSize, setGridSize] = useState(20); // Grid spacing in pixels
+  const [clipboard, setClipboard] = useState(null); // Stores copied element with zone info
   
   // Document structure with multi-page support
   const [canvasDocument, setCanvasDocument] = useState(template?.canvasDocument || {
@@ -502,6 +503,126 @@ export default function CanvasEditor({ template, onClose, onSave }) {
     }
   };
 
+  // Copy selected element to clipboard
+  const handleCopyElement = () => {
+    if (!selectedElement) return;
+    
+    const zone = findElementZone(selectedElement.id);
+    setClipboard({
+      element: { ...selectedElement },
+      sourceZone: zone,
+      sourcePageIndex: zone === 'content' ? currentPageIndex : null
+    });
+  };
+
+  // Paste element from clipboard
+  const handlePasteElement = () => {
+    if (!clipboard) return;
+
+    const { element } = clipboard;
+    const targetZone = editingZone || 'content';
+    
+    // Create new element with offset position and new ID
+    const newElement = {
+      ...element,
+      id: `${element.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      x: element.x + 20, // Offset by 20px
+      y: element.y + 20
+    };
+
+    // Add to appropriate zone
+    if (targetZone === 'header' || targetZone === 'footer') {
+      setCanvasDocument(prev => ({
+        ...prev,
+        [targetZone]: {
+          ...prev[targetZone],
+          elements: [...prev[targetZone].elements, newElement]
+        }
+      }));
+    } else {
+      setCanvasDocument(prev => ({
+        ...prev,
+        pages: (prev.pages || []).map((page, idx) =>
+          idx === currentPageIndex
+            ? { ...page, elements: [...(page.elements || []), newElement] }
+            : page
+        )
+      }));
+    }
+
+    setSelectedElement(newElement);
+  };
+
+  // Duplicate selected element
+  const handleDuplicateElement = () => {
+    if (!selectedElement) return;
+
+    const zone = findElementZone(selectedElement.id);
+    const newElement = {
+      ...selectedElement,
+      id: `${selectedElement.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      x: selectedElement.x + 20,
+      y: selectedElement.y + 20
+    };
+
+    if (zone === 'header' || zone === 'footer') {
+      setCanvasDocument(prev => ({
+        ...prev,
+        [zone]: {
+          ...prev[zone],
+          elements: [...prev[zone].elements, newElement]
+        }
+      }));
+    } else {
+      setCanvasDocument(prev => ({
+        ...prev,
+        pages: (prev.pages || []).map((page, idx) =>
+          idx === currentPageIndex
+            ? { ...page, elements: [...(page.elements || []), newElement] }
+            : page
+        )
+      }));
+    }
+
+    setSelectedElement(newElement);
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+      // Copy: Cmd/Ctrl + C
+      if (cmdOrCtrl && e.key === 'c' && selectedElement) {
+        e.preventDefault();
+        handleCopyElement();
+      }
+
+      // Paste: Cmd/Ctrl + V
+      if (cmdOrCtrl && e.key === 'v' && clipboard) {
+        e.preventDefault();
+        handlePasteElement();
+      }
+
+      // Duplicate: Cmd/Ctrl + D
+      if (cmdOrCtrl && e.key === 'd' && selectedElement) {
+        e.preventDefault();
+        handleDuplicateElement();
+      }
+
+      // Delete: Delete or Backspace
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElement) {
+        e.preventDefault();
+        const zone = findElementZone(selectedElement.id);
+        handleDeleteElement(zone, selectedElement.id);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedElement, clipboard, currentPageIndex, editingZone]);
+
   const handleSave = () => {
     onSave?.({
       ...template,
@@ -630,9 +751,9 @@ export default function CanvasEditor({ template, onClose, onSave }) {
         {/* Right Panel - Properties */}
         {selectedElement && (
           <div className="w-80 bg-gray-800 border-l border-gray-700 overflow-y-auto flex flex-col">
-            {/* Panel Header with Delete Button */}
+            {/* Panel Header with Copy/Paste/Delete Actions */}
             <div className="p-4 bg-gray-900 border-b border-gray-700 flex-shrink-0">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-3">
                 <h3 className="text-white font-semibold text-lg">
                   {selectedElement.type === 'text' && '📝 Text Properties'}
                   {selectedElement.type === 'table' && '📊 Table Properties'}
@@ -640,20 +761,45 @@ export default function CanvasEditor({ template, onClose, onSave }) {
                   {selectedElement.type === 'line' && '➖ Line Properties'}
                 </h3>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400 text-xs">
-                  ID: {selectedElement.id}
-                </span>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={handleCopyElement}
+                    className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors flex items-center gap-1"
+                    title="Copy (Ctrl+C)"
+                  >
+                    📋 Copy
+                  </button>
+                  <button
+                    onClick={handleDuplicateElement}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors flex items-center gap-1"
+                    title="Duplicate (Ctrl+D)"
+                  >
+                    📑 Duplicate
+                  </button>
+                  {clipboard && (
+                    <button
+                      onClick={handlePasteElement}
+                      className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors flex items-center gap-1 animate-pulse"
+                      title="Paste (Ctrl+V)"
+                    >
+                      📥 Paste
+                    </button>
+                  )}
+                </div>
                 <button
                   onClick={() => {
                     const zone = editingZone || findElementZone(selectedElement.id);
                     handleDeleteElement(zone, selectedElement.id);
                   }}
                   className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded text-sm font-medium transition-colors shadow-sm flex items-center gap-1"
-                  title="Delete this element"
+                  title="Delete (Delete key)"
                 >
                   🗑️ Delete
                 </button>
+              </div>
+              <div className="mt-2 text-gray-400 text-xs">
+                ID: {selectedElement.id.substring(0, 16)}...
               </div>
             </div>
 
