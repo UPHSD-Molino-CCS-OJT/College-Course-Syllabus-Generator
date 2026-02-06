@@ -89,8 +89,8 @@ export default function CanvasPage({
             shouldUpdate = true;
           }
           
-          // Height adjustment affects only the specific cell
-          if ((direction === 'height' || direction === 'both') && rIdx === rowIndex && cIdx === colIndex) {
+          // Height adjustment affects entire row
+          if ((direction === 'height' || direction === 'both') && rIdx === rowIndex) {
             updates.height = Math.max(20, startHeight + deltaY);
             shouldUpdate = true;
           }
