@@ -355,21 +355,6 @@ export default function CanvasPage({
         )}
       </div>
 
-      {/* Delete button for selected element */}
-      {selectedElement && (
-        <button
-          onClick={() => {
-            const zone = 
-              document.header.elements.find(e => e.id === selectedElement.id) ? 'header' :
-              document.footer.elements.find(e => e.id === selectedElement.id) ? 'footer' : 'content';
-            onDeleteElement(zone, selectedElement.id);
-          }}
-          className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600"
-        >
-          Delete Selected
-        </button>
-      )}
-
       {/* Snap Guides - Visual feedback during dragging */}
       <SnapGuides guides={snapGuides} />
     </div>
