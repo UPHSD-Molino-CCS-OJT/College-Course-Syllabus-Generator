@@ -115,7 +115,7 @@ export default function CanvasPage({
     // Get all elements from all zones with absolute coordinates for cross-zone snapping
     const allElementsAbsolute = getAllElementsWithAbsoluteCoords(document, currentPage);
     
-    // Apply cross-zone snapping
+    // Apply cross-zone snapping (with grid snapping if enabled)
     const snapResult = calculateSnapCrossZone(
       element,
       x,
@@ -123,7 +123,9 @@ export default function CanvasPage({
       zone,
       allElementsAbsolute,
       document,
-      pageSize
+      pageSize,
+      8, // snap threshold
+      { enabled: showGrid, size: gridSize } // grid snapping settings
     );
     
     x = snapResult.x;

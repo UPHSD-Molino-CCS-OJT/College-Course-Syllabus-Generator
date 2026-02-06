@@ -8,6 +8,35 @@
 const SNAP_THRESHOLD = 8; // pixels - distance at which snapping occurs
 
 /**
+ * Snap coordinates to grid
+ */
+export function snapToGrid(x, y, gridSize, snapThreshold = SNAP_THRESHOLD) {
+  if (!gridSize || gridSize <= 0) {
+    return { x, y, snappedToGrid: false };
+  }
+
+  const snappedX = Math.round(x / gridSize) * gridSize;
+  const snappedY = Math.round(y / gridSize) * gridSize;
+
+  const deltaX = Math.abs(x - snappedX);
+  const deltaY = Math.abs(y - snappedY);
+
+  // Only snap if within threshold
+  const shouldSnapX = deltaX <= snapThreshold;
+  const shouldSnapY = deltaY <= snapThreshold;
+
+  return {
+    x: shouldSnapX ? snappedX : x,
+    y: shouldSnapY ? snappedY : y,
+    snappedToGrid: shouldSnapX || shouldSnapY,
+    guides: [
+      ...(shouldSnapX ? [{ type: 'vertical', x: snappedX, label: `${snappedX}px` }] : []),
+      ...(shouldSnapY ? [{ type: 'horizontal', y: snappedY, label: `${snappedY}px` }] : [])
+    ]
+  };
+}
+
+/**
  * Calculate element bounds
  */
 export function getElementBounds(element) {
@@ -83,7 +112,7 @@ export function getOtherElements(allElements, draggingElementId) {
 }
 
 /**
- * Calculate snap position with cross-zone support
+ * Calculate snap position with cross-zone support and grid snapping
  * Uses absolute page coordinates for comparison
  */
 export function calculateSnapCrossZone(
@@ -94,7 +123,8 @@ export function calculateSnapCrossZone(
   allElementsAbsolute,
   document,
   pageSize,
-  threshold = SNAP_THRESHOLD
+  threshold = SNAP_THRESHOLD,
+  gridSettings = { enabled: false, size: 20 }
 ) {
   // Convert zone-relative coords to absolute
   const absolutePos = zoneToAbsoluteCoords(newX, newY, zone, document, pageSize);
@@ -318,13 +348,27 @@ export function calculateSnapCrossZone(
     guides.push(closest.guide);
   }
   
+  // Apply grid snapping first if enabled (has priority)
+  let finalX = snappedX;
+  let finalY = snappedY;
+  let gridGuides = [];
+
+  if (gridSettings.enabled && gridSettings.size > 0) {
+    const gridSnap = snapToGrid(snappedX, snappedY, gridSettings.size, threshold);
+    if (gridSnap.snappedToGrid) {
+      finalX = gridSnap.x;
+      finalY = gridSnap.y;
+      gridGuides = gridSnap.guides || [];
+    }
+  }
+
   // Convert back to zone-relative coordinates
-  const zoneRelative = absoluteToZoneCoords(snappedX, snappedY, zone, document, pageSize);
+  const zoneRelative = absoluteToZoneCoords(finalX, finalY, zone, document, pageSize);
   
   return {
     x: zoneRelative.x,
     y: zoneRelative.y,
-    guides
+    guides: gridGuides.length > 0 ? gridGuides : guides
   };
 }
 
