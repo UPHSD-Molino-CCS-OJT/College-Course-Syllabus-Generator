@@ -90,9 +90,10 @@ export default function TemplateRenderer({ template, syllabus }) {
 
       return (
         <div key={element.id} style={containerStyle}>
-          <div style={textStyle}>
-            {element.content}
-          </div>
+          <div 
+            style={textStyle}
+            dangerouslySetInnerHTML={{ __html: element.content || '' }}
+          />
         </div>
       );
     }
@@ -195,8 +196,8 @@ export default function TemplateRenderer({ template, syllabus }) {
                         wordWrap: 'break-word',
                         verticalAlign: cell.verticalAlign || 'top',
                       }}
+                      dangerouslySetInnerHTML={{ __html: cell.content || '' }}
                     >
-                      {cell.content}
                     </td>
                   );
                 })}

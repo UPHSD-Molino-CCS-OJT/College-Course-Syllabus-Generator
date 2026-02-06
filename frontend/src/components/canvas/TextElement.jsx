@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import ElementDragHandle from './ElementDragHandle';
+import RichTextEditor from '../RichTextEditor';
 
 export default function TextElement({
   element,
@@ -16,8 +17,8 @@ export default function TextElement({
     setIsEditing(true);
   };
 
-  const handleChange = (e) => {
-    onUpdate(zone, element.id, { content: e.target.value });
+  const handleChange = (newContent) => {
+    onUpdate(zone, element.id, { content: newContent });
   };
 
   const handleBlur = () => {
@@ -70,16 +71,18 @@ export default function TextElement({
     >
       {isSelected && <ElementDragHandle onMouseDown={(e) => onMouseDown(e, element, zone)} />}
       {isEditing ? (
-        <textarea
-          autoFocus
-          value={element.content}
-          onChange={handleChange}
+        <RichTextEditor
+          content={element.content}
+          onUpdate={handleChange}
           onBlur={handleBlur}
-          className="w-full min-h-[30px] bg-white border-2 border-blue-500 rounded px-2 py-1 outline-none resize-none"
           style={textStyle}
+          className="w-full min-h-[30px] px-2 py-1"
         />
       ) : (
-        <div className="whitespace-pre-wrap">{element.content}</div>
+        <div 
+          className="whitespace-pre-wrap"
+          dangerouslySetInnerHTML={{ __html: element.content || '' }}
+        />
       )}
     </div>
   );

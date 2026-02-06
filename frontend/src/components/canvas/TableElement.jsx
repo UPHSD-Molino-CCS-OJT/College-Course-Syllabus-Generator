@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import ElementDragHandle from './ElementDragHandle';
+import RichTextEditor from '../RichTextEditor';
 
 export default function TableElement({
   element,
@@ -13,16 +14,19 @@ export default function TableElement({
   const [editingCell, setEditingCell] = useState(null);
   const [hoveredCell, setHoveredCell] = useState(null);
 
-  const handleCellDoubleClick = (e, rowIndex, colIndex) => {
+  const handleCellClick = (e, rowIndex, colIndex) => {
     e.stopPropagation();
-    setEditingCell({ rowIndex, colIndex });
+    // Only enter edit mode if table is already selected
+    if (isSelected && !editingCell) {
+      setEditingCell({ rowIndex, colIndex });
+    }
   };
 
-  const handleCellChange = (e, rowIndex, colIndex) => {
+  const handleCellChange = (newContent, rowIndex, colIndex) => {
     const newData = element.data.map((row, rIdx) =>
       row.map((cell, cIdx) =>
         rIdx === rowIndex && cIdx === colIndex
-          ? { ...cell, content: e.target.value }
+          ? { ...cell, content: newContent }
           : cell
       )
     );
@@ -60,7 +64,7 @@ export default function TableElement({
                 return (
                   <td
                     key={colIndex}
-                    className="relative group transition-all"
+                    className={`relative group transition-all ${isSelected && !isCellEditing ? 'hover:ring-1 hover:ring-blue-400 hover:ring-inset' : ''}`}
                     style={{
                       width: cell.width || element.cellWidth,
                       height: cell.height || element.cellHeight,
@@ -79,7 +83,8 @@ export default function TableElement({
                       whiteSpace: 'pre-wrap',
                       wordWrap: 'break-word',
                       position: 'relative',
-                      userSelect: isCellEditing ? 'text' : 'none'
+                      userSelect: isCellEditing ? 'text' : (isSelected ? 'auto' : 'none'),
+                      cursor: isSelected && !isCellEditing ? 'text' : 'default'
                     }}
                     onMouseEnter={() => setHoveredCell({ rowIndex, colIndex })}
                     onMouseLeave={() => setHoveredCell(null)}
@@ -87,29 +92,38 @@ export default function TableElement({
                       if (e.target.classList.contains('resize-handle') || isCellEditing) {
                         return;
                       }
-                      onMouseDown(e, element, zone);
+                      // Only allow table dragging if clicking outside cell content area when selected
+                      if (!isSelected) {
+                        onMouseDown(e, element, zone);
+                      } else {
+                        // When table is selected, prevent drag to allow cell editing
+                        e.stopPropagation();
+                      }
                     }}
-                    onDoubleClick={(e) => handleCellDoubleClick(e, rowIndex, colIndex)}
+                    onClick={(e) => handleCellClick(e, rowIndex, colIndex)}
                   >
                     {isCellEditing ? (
-                      <textarea
-                        autoFocus
-                        value={cell.content}
-                        onChange={(e) => handleCellChange(e, rowIndex, colIndex)}
+                      <RichTextEditor
+                        content={cell.content}
+                        onUpdate={(newContent) => handleCellChange(newContent, rowIndex, colIndex)}
                         onBlur={handleCellBlur}
-                        className="w-full h-full bg-white border-2 border-blue-500 outline-none resize-none p-2"
                         style={{
                           fontSize: cell.fontSize,
                           fontFamily: cell.fontFamily,
                           fontWeight: cell.fontWeight,
                           color: cell.color,
                           textAlign: cell.align,
+                          width: '100%',
+                          height: '100%',
+                          padding: '8px'
                         }}
-                        onClick={(e) => e.stopPropagation()}
-                        onMouseDown={(e) => e.stopPropagation()}
+                        className="bg-white border-2 border-blue-500"
                       />
                     ) : (
-                      cell.content
+                      <div
+                        dangerouslySetInnerHTML={{ __html: cell.content || '' }}
+                        style={{ pointerEvents: 'none' }}
+                      />
                     )}
                     {isSelected && !isCellEditing && (
                       <>
