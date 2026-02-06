@@ -11,18 +11,8 @@ export default function TextElement({
   onUpdate,
   onMouseDown
 }) {
-  const [isEditing, setIsEditing] = useState(false);
-
-  const handleDoubleClick = () => {
-    setIsEditing(true);
-  };
-
   const handleChange = (newContent) => {
     onUpdate(zone, element.id, { content: newContent });
-  };
-
-  const handleBlur = () => {
-    setIsEditing(false);
   };
 
   let textDecoration = '';
@@ -67,14 +57,12 @@ export default function TextElement({
         e.stopPropagation();
         onSelect(element);
       }}
-      onDoubleClick={handleDoubleClick}
     >
       {isSelected && <ElementDragHandle onMouseDown={(e) => onMouseDown(e, element, zone)} />}
-      {isEditing ? (
+      {isSelected ? (
         <RichTextEditor
           content={element.content}
           onUpdate={handleChange}
-          onBlur={handleBlur}
           style={textStyle}
           className="w-full min-h-[30px] px-2 py-1"
         />
