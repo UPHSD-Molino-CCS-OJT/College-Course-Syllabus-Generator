@@ -87,6 +87,89 @@ export default function TableEditor({ table, onUpdate }) {
     onUpdate({ data: newData });
   };
 
+  // Apply border preset to all cells
+  const applyBorderPreset = (preset) => {
+    let borderUpdates = {};
+    
+    switch(preset) {
+      case 'full-grid':
+        borderUpdates = {
+          showBorderTop: true,
+          showBorderRight: true,
+          showBorderBottom: true,
+          showBorderLeft: true
+        };
+        break;
+      case 'outer-only':
+        // Will be applied conditionally per cell
+        break;
+      case 'horizontal':
+        borderUpdates = {
+          showBorderTop: true,
+          showBorderRight: false,
+          showBorderBottom: true,
+          showBorderLeft: false
+        };
+        break;
+      case 'no-borders':
+        borderUpdates = {
+          showBorderTop: false,
+          showBorderRight: false,
+          showBorderBottom: false,
+          showBorderLeft: false
+        };
+        break;
+    }
+
+    const newData = table.data.map((row, i) =>
+      row.map((cell, j) => {
+        if (preset === 'outer-only') {
+          // Only outer edges get borders
+          return {
+            ...cell,
+            showBorderTop: i === 0,
+            showBorderRight: j === table.cols - 1,
+            showBorderBottom: i === table.rows - 1,
+            showBorderLeft: j === 0
+          };
+        }
+        return { ...cell, ...borderUpdates };
+      })
+    );
+    onUpdate({ data: newData });
+  };
+
+  // Apply current cell's style to all cells
+  const applyCellStyleToAll = () => {
+    if (!selectedCell) return;
+    const sourceCell = table.data[selectedCell.row][selectedCell.col];
+    const styleProps = {
+      fontSize: sourceCell.fontSize,
+      fontWeight: sourceCell.fontWeight,
+      color: sourceCell.color,
+      bg: sourceCell.bg,
+      align: sourceCell.align,
+      verticalAlign: sourceCell.verticalAlign,
+      showBorderTop: sourceCell.showBorderTop,
+      showBorderRight: sourceCell.showBorderRight,
+      showBorderBottom: sourceCell.showBorderBottom,
+      showBorderLeft: sourceCell.showBorderLeft
+    };
+
+    const newData = table.data.map(row =>
+      row.map(cell => ({ ...cell, ...styleProps }))
+    );
+    onUpdate({ data: newData });
+  };
+
+  // Bulk update all cells with specific properties
+  const bulkUpdateCells = (updates) => {
+    const newData = table.data.map(row =>
+      row.map(cell => ({ ...cell, ...updates }))
+    );
+    onUpdate({ data: newData });
+  };
+
   return (
     <div className="p-4 text-white h-full flex flex-col overflow-hidden">
       <h3 className="text-lg font-semibold mb-4 border-b border-gray-700 pb-2 flex-shrink-0">Table Properties</h3>
@@ -188,50 +271,87 @@ export default function TableEditor({ table, onUpdate }) {
           </button>
           {expandedSections.borders && (
             <div className="p-3 space-y-3 bg-gray-800/50">
+              {/* Quick Border Presets */}
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Width (px)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="10"
-                  value={table.borderWidth}
-                  onChange={(e) => onUpdate({ borderWidth: parseInt(e.target.value) })}
-                  className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 mb-1 block">Style</label>
-                <select
-                  value={table.borderStyle || 'solid'}
-                  onChange={(e) => onUpdate({ borderStyle: e.target.value })}
-                  className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="solid">Solid</option>
-                  <option value="dashed">Dashed</option>
-                  <option value="dotted">Dotted</option>
-                  <option value="double">Double</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 mb-1 block">Color</label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    value={table.borderColor}
-                    onChange={(e) => onUpdate({ borderColor: e.target.value })}
-                    className="w-12 h-10 bg-gray-700 border border-gray-600 rounded cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={table.borderColor}
-                    onChange={(e) => onUpdate({ borderColor: e.target.value })}
-                    className="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                <label className="block text-xs font-medium text-gray-300 mb-2">Quick Presets (Apply to All Cells)</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => applyBorderPreset('full-grid')}
+                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium transition-colors"
+                    title="Add all borders to all cells"
+                  >
+                    ⊞ Full Grid
+                  </button>
+                  <button
+                    onClick={() => applyBorderPreset('outer-only')}
+                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium transition-colors"
+                    title="Only outer table borders"
+                  >
+                    ⊡ Outer Only
+                  </button>
+                  <button
+                    onClick={() => applyBorderPreset('horizontal')}
+                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium transition-colors"
+                    title="Horizontal lines only"
+                  >
+                    ☰ Horizontal
+                  </button>
+                  <button
+                    onClick={() => applyBorderPreset('no-borders')}
+                    className="px-3 py-2 bg-gray-600 hover:bg-gray-500 rounded text-xs font-medium transition-colors"
+                    title="Remove all borders"
+                  >
+                    ∅ No Borders
+                  </button>
                 </div>
               </div>
-              <div>
-                <label className="text-xs text-gray-400 mb-2 block">Show Borders</label>
-                <div className="grid grid-cols-2 gap-2">
+
+              <div className="border-t border-gray-700 pt-3 space-y-3">
+                <label className="block text-xs font-medium text-gray-400 mb-2">Table Border Settings</label>
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">Width (px)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={table.borderWidth}
+                    onChange={(e) => onUpdate({ borderWidth: parseInt(e.target.value) })}
+                    className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">Style</label>
+                  <select
+                    value={table.borderStyle || 'solid'}
+                    onChange={(e) => onUpdate({ borderStyle: e.target.value })}
+                    className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="solid">Solid</option>
+                    <option value="dashed">Dashed</option>
+                    <option value="dotted">Dotted</option>
+                    <option value="double">Double</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">Color</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={table.borderColor}
+                      onChange={(e) => onUpdate({ borderColor: e.target.value })}
+                      className="w-12 h-10 bg-gray-700 border border-gray-600 rounded cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={table.borderColor}
+                      onChange={(e) => onUpdate({ borderColor: e.target.value })}
+                      className="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 mb-2 block">Show Borders</label>
+                  <div className="grid grid-cols-2 gap-2">
                   <label className="flex items-center gap-2 text-sm cursor-pointer p-2 bg-gray-700/50 rounded hover:bg-gray-700">
                     <input
                       type="checkbox"
@@ -269,6 +389,7 @@ export default function TableEditor({ table, onUpdate }) {
                     Left
                   </label>
                 </div>
+              </div>
               </div>
             </div>
           )}
@@ -358,18 +479,50 @@ export default function TableEditor({ table, onUpdate }) {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-gray-700 flex items-center justify-between bg-gray-900">
-              <h4 className="text-lg font-semibold text-white">
-                Edit Cell [{selectedCell.row}, {selectedCell.col}]
-              </h4>
-              <button
-                onClick={closeCellEditor}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+            <div className="px-6 py-4 border-b border-gray-700 bg-gray-900">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-lg font-semibold text-white">
+                  Edit Cell [{selectedCell.row}, {selectedCell.col}]
+                </h4>
+                <button
+                  onClick={closeCellEditor}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={applyCellStyleToAll}
+                  className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 rounded text-xs font-medium transition-colors flex items-center gap-1.5"
+                  title="Apply this cell's style to all cells"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                  Apply Style to All
+                </button>
+                <button
+                  onClick={() => {
+                    const cell = table.data[selectedCell.row][selectedCell.col];
+                    bulkUpdateCells({
+                      showBorderTop: cell.showBorderTop,
+                      showBorderRight: cell.showBorderRight,
+                      showBorderBottom: cell.showBorderBottom,
+                      showBorderLeft: cell.showBorderLeft
+                    });
+                  }}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 rounded text-xs font-medium transition-colors flex items-center gap-1.5"
+                  title="Copy this cell's borders to all cells"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  Copy Borders to All
+                </button>
+              </div>
             </div>
 
             {/* Modal Body */}
