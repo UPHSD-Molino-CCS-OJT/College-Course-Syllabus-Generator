@@ -49,6 +49,12 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   const [gridSize, setGridSize] = useState(20); // Grid spacing in pixels
   const [clipboard, setClipboard] = useState(null); // Stores copied element with zone info
   
+  // History management for undo/redo
+  const [history, setHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const isUndoRedoRef = useRef(false); // Prevent history tracking during undo/redo
+  const maxHistorySize = 50; // Limit history to prevent memory issues
+  
   // Document structure with multi-page support
   const [canvasDocument, setCanvasDocument] = useState(template?.canvasDocument || {
     header: {
@@ -72,6 +78,70 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   });
 
   const canvasRef = useRef(null);
+
+  // Save current state to history
+  const saveToHistory = useCallback((newDocument) => {
+    if (isUndoRedoRef.current) return; // Don't save during undo/redo
+    
+    setHistory(prev => {
+      // Remove any future history if we're not at the end
+      const newHistory = prev.slice(0, historyIndex + 1);
+      
+      // Add new state
+      newHistory.push({
+        document: JSON.parse(JSON.stringify(newDocument)),
+        pageSize,
+        orientation,
+        timestamp: Date.now()
+      });
+      
+      // Limit history size
+      if (newHistory.length > maxHistorySize) {
+        return newHistory.slice(newHistory.length - maxHistorySize);
+      }
+      
+      return newHistory;
+    });
+    
+    setHistoryIndex(prev => {
+      const newIndex = prev + 1;
+      return newIndex >= maxHistorySize ? maxHistorySize - 1 : newIndex;
+    });
+  }, [historyIndex, pageSize, orientation]);
+
+  // Undo function
+  const handleUndo = useCallback(() => {
+    if (historyIndex <= 0) return;
+    
+    isUndoRedoRef.current = true;
+    const previousState = history[historyIndex - 1];
+    setCanvasDocument(previousState.document);
+    setPageSize(previousState.pageSize);
+    setOrientation(previousState.orientation);
+    setHistoryIndex(prev => prev - 1);
+    setSelectedElement(null);
+    
+    setTimeout(() => {
+      isUndoRedoRef.current = false;
+    }, 0);
+  }, [history, historyIndex]);
+
+  // Redo function
+  const handleRedo = useCallback(() => {
+    if (historyIndex >= history.length - 1) return;
+    
+    isUndoRedoRef.current = true;
+    const nextState = history[historyIndex + 1];
+    setCanvasDocument(nextState.document);
+    setPageSize(nextState.pageSize);
+    setOrientation(nextState.orientation);
+    setHistoryIndex(prev => prev + 1);
+    setSelectedElement(null);
+    
+    setTimeout(() => {
+      isUndoRedoRef.current = false;
+    }, 0);
+  }, [history, historyIndex]);
 
   // Auto-save function for canvas editor (saves without closing)
   const autoSaveFunction = useCallback(async () => {
@@ -136,8 +206,26 @@ export default function CanvasEditor({ template, onClose, onSave }) {
         };
       }
       setCanvasDocument(doc);
+      
+      // Initialize history with first state
+      if (history.length === 0) {
+        setHistory([{
+          document: JSON.parse(JSON.stringify(doc)),
+          pageSize,
+          orientation,
+          timestamp: Date.now()
+        }]);
+        setHistoryIndex(0);
+      }
     }
   }, [template]);
+
+  // Track document changes for history
+  useEffect(() => {
+    if (!isUndoRedoRef.current && history.length > 0) {
+      saveToHistory(canvasDocument);
+    }
+  }, [canvasDocument]);
 
   const initializeDocument = () => {
     // Create initial header elements
@@ -593,6 +681,20 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
 
+      // Undo: Cmd/Ctrl + Z
+      if (cmdOrCtrl && !e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        handleUndo();
+        return;
+      }
+
+      // Redo: Cmd/Ctrl + Shift + Z or Cmd/Ctrl + Y
+      if (cmdOrCtrl && ((e.shiftKey && e.key === 'z') || e.key === 'y')) {
+        e.preventDefault();
+        handleRedo();
+        return;
+      }
+
       // Copy: Cmd/Ctrl + C
       if (cmdOrCtrl && e.key === 'c' && selectedElement) {
         e.preventDefault();
@@ -621,7 +723,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedElement, clipboard, currentPageIndex, editingZone]);
+  }, [selectedElement, clipboard, currentPageIndex, editingZone, handleUndo, handleRedo]);
 
   const handleSave = () => {
     onSave?.({
@@ -664,6 +766,26 @@ export default function CanvasEditor({ template, onClose, onSave }) {
             <h2 className="text-white font-bold text-xl tracking-tight">📐 Canvas Editor</h2>
             <div className="h-5 w-px bg-gray-600"></div>
             <AutoSaveIndicator saveStatus={saveStatus} lastSaved={lastSaved} error={autoSaveError} />
+            <div className="h-5 w-px bg-gray-600"></div>
+            {/* Undo/Redo Controls */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleUndo}
+                disabled={historyIndex <= 0}
+                className="px-3 py-1.5 rounded bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-700 flex items-center gap-1.5"
+                title="Undo (Ctrl+Z)"
+              >
+                ↶ Undo
+              </button>
+              <button
+                onClick={handleRedo}
+                disabled={historyIndex >= history.length - 1}
+                className="px-3 py-1.5 rounded bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-700 flex items-center gap-1.5"
+                title="Redo (Ctrl+Shift+Z or Ctrl+Y)"
+              >
+                ↷ Redo
+              </button>
+            </div>
           </div>
           <EditorActions
             autoSaveEnabled={autoSaveEnabled}

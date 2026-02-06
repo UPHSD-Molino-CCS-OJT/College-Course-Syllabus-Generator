@@ -1,11 +1,19 @@
-# Copy/Paste/Duplicate Features
+# Element Manipulation Features
 
 ## Overview
-Implemented Figma/Canva-style element manipulation with keyboard shortcuts and visual controls.
+Implemented Figma/Canva-style element manipulation with keyboard shortcuts, visual controls, and comprehensive undo/redo functionality.
 
 ## Features
 
-### 1. Copy Element (Ctrl+C / Cmd+C)
+### 1. Undo/Redo (NEW)
+- **Undo (Ctrl+Z / Cmd+Z)**: Revert to previous state
+- **Redo (Ctrl+Shift+Z / Cmd+Shift+Z or Ctrl+Y / Cmd+Y)**: Restore undone changes
+- Tracks up to 50 history states
+- Works for all operations: element add/update/delete, page changes, document settings
+- Visual buttons in toolbar (disabled when unavailable)
+- Preserves page size, orientation, and all document properties
+
+### 2. Copy Element (Ctrl+C / Cmd+C)
 - Copies the currently selected element to clipboard
 - Stores element data with source zone and page information
 - Works across header, footer, and content zones
@@ -23,11 +31,16 @@ Implemented Figma/Canva-style element manipulation with keyboard shortcuts and v
 - Maintains exact position (elements will overlap)
 - Automatically selects the new duplicate
 
-### 4. Delete Element (Delete / Backspace)
+### 5. Delete Element (Delete / Backspace)
 - Keyboard shortcut for quick deletion
 - Also available via button in properties panel
 
 ## UI Controls
+
+### Toolbar Header
+**Undo/Redo Buttons:**
+- ↶ **Undo** - Reverts last change (grayed when at start of history)
+- ↷ **Redo** - Restores undone change (grayed when at end of history)
 
 ### Properties Panel Header
 When an element is selected, the panel header shows:
@@ -65,7 +78,9 @@ New elements get unique IDs: `${type}-${timestamp}-${random9chars}`
 
 ### Position Behavior
 Duplicates/pastes maintain exact X and Y coordinates from the original element
-
+Undo | Ctrl+Z | Cmd+Z | Undo last change |
+| Redo | Ctrl+Shift+Z / Ctrl+Y | Cmd+Shift+Z / Cmd+Y | Redo undone change |
+| 
 ## Keyboard Shortcuts
 
 | Shortcut | Windows | Mac | Action |
@@ -75,7 +90,17 @@ Duplicates/pastes maintain exact X and Y coordinates from the original element
 | Duplicate | Ctrl+D | Cmd+D | Duplicate selected element |
 | Delete | Delete/Backspace | Delete/Backspace | Remove selected element |
 
-## Usage Examples
+## UUndo a mistake
+1. Make a change (e.g., delete an element)
+2. Press `Ctrl+Z` or click "Undo" button
+3. Element is restored to previous state
+
+### Redo after undo
+1. Undo a change with `Ctrl+Z`
+2. Press `Ctrl+Shift+Z` or `Ctrl+Y` or click "Redo" button
+3. Change is reapplied
+
+### sage Examples
 
 ### Duplicate element on same page
 1. Select element
@@ -88,8 +113,22 @@ Duplicates/pastes maintain exact X and Y coordinates from the original element
 3. Navigate to page 2
 4. Press `Ctrl+V` or click "Paste" button
 5. Element appears on page 2 at exact same coordinates
+Undo/Redo buttons disabled (grayed) when unavailable
+- History limited to 50 states to optimize performance
+- Selected element highlighted with blue border
+- Action tooltips show keyboard shortcuts
 
-### Copy from header to content
+## History Management
+- **Max History**: 50 states (oldest automatically removed)
+- **Tracked Operations**:
+  - Element creation (text, table, image, line)
+  - Element updates (position, style, content)
+  - Element deletion
+  - Page addition/removal
+  - Zone height changes
+  - Page size/orientation changes
+- **Not Tracked**: Zoom, grid visibility, selection changes
+- **State Preservation**: All undo/redo operations preserve page size, orientation, and document structure
 1. Select element in header zone
 2. Press `Ctrl+C`
 3. Click in content zone to make it active
