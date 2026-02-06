@@ -679,6 +679,12 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Don't intercept keyboard shortcuts when editing rich text
+      const activeElement = document.activeElement;
+      if (activeElement && activeElement.contentEditable === 'true') {
+        return; // Let the rich text editor handle the event
+      }
+
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
 

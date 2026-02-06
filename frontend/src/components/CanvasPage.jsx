@@ -303,8 +303,7 @@ export default function CanvasPage({
         width: pageSize.width * zoom,
         height: pageSize.height * zoom,
         transform: `scale(${zoom})`,
-        transformOrigin: 'top left',
-        userSelect: resizingCell || draggingElement ? 'none' : 'auto'
+        transformOrigin: 'top left'
       }}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -317,13 +316,24 @@ export default function CanvasPage({
       <div
         className={`absolute left-0 right-0 top-0 ${
           editingZone === 'header' ? 'bg-blue-50/50' : ''
-        } hover:bg-gray-50/30 transition-colors cursor-pointer`}
+        } hover:bg-gray-50/30 transition-colors`}
         style={{
-          height: document.header.height
+          height: document.header.height,
+          pointerEvents: 'none' // Let clicks pass through to elements
         }}
-        onClick={() => onZoneClick('header')}
       >
-        {document.header.elements.map((el) => renderElement(el, 'header'))}
+        <div
+          style={{ pointerEvents: 'auto' }}
+          onClick={(e) => {
+            // Only handle clicks on empty areas, not on elements
+            if (e.target === e.currentTarget) {
+              onZoneClick('header');
+            }
+          }}
+          className="absolute inset-0"
+        >
+          {document.header.elements.map((el) => renderElement(el, 'header'))}
+        </div>
         {editingZone === 'header' && (
           <div className="absolute top-2 right-2 text-xs text-blue-600 font-semibold bg-white px-2 py-1 rounded">
             HEADER
@@ -335,14 +345,25 @@ export default function CanvasPage({
       <div
         className={`absolute left-0 right-0 ${
           editingZone === 'content' ? 'bg-blue-50/30' : ''
-        } hover:bg-gray-50/20 transition-colors cursor-pointer`}
+        } hover:bg-gray-50/20 transition-colors`}
         style={{
           top: document.header.height,
-          bottom: document.footer.height
+          bottom: document.footer.height,
+          pointerEvents: 'none' // Let clicks pass through to elements
         }}
-        onClick={() => onZoneClick('content')}
       >
-        {currentPage?.elements.map((el) => renderElement(el, 'content'))}
+        <div
+          style={{ pointerEvents: 'auto' }}
+          onClick={(e) => {
+            // Only handle clicks on empty areas, not on elements
+            if (e.target === e.currentTarget) {
+              onZoneClick('content');
+            }
+          }}
+          className="absolute inset-0"
+        >
+          {currentPage?.elements.map((el) => renderElement(el, 'content'))}
+        </div>
         {editingZone === 'content' && (
           <div className="absolute top-2 right-2 text-xs text-blue-600 font-semibold bg-white px-2 py-1 rounded">
             CONTENT
@@ -354,13 +375,24 @@ export default function CanvasPage({
       <div
         className={`absolute left-0 right-0 bottom-0 ${
           editingZone === 'footer' ? 'bg-blue-50/50' : ''
-        } hover:bg-gray-50/30 transition-colors cursor-pointer`}
+        } hover:bg-gray-50/30 transition-colors`}
         style={{
-          height: document.footer.height
+          height: document.footer.height,
+          pointerEvents: 'none' // Let clicks pass through to elements
         }}
-        onClick={() => onZoneClick('footer')}
       >
-        {document.footer.elements.map((el) => renderElement(el, 'footer'))}
+        <div
+          style={{ pointerEvents: 'auto' }}
+          onClick={(e) => {
+            // Only handle clicks on empty areas, not on elements
+            if (e.target === e.currentTarget) {
+              onZoneClick('footer');
+            }
+          }}
+          className="absolute inset-0"
+        >
+          {document.footer.elements.map((el) => renderElement(el, 'footer'))}
+        </div>
         {editingZone === 'footer' && (
           <div className="absolute top-2 right-2 text-xs text-blue-600 font-semibold bg-white px-2 py-1 rounded">
             FOOTER
