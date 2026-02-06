@@ -47,8 +47,34 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
       selection.addRange(savedSelectionRef.current);
     }
     
-    // Apply the formatting
-    document.execCommand(command, false, value);
+    // For color commands, wrap entire selection in a span to ensure color applies to all formatting
+    if (command === 'foreColor' || command === 'backColor') {
+      const selection = window.getSelection();
+      if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const span = document.createElement('span');
+        
+        if (command === 'foreColor') {
+          span.style.color = value;
+        } else {
+          span.style.backgroundColor = value;
+        }
+        
+        // Extract contents and wrap in span
+        const contents = range.extractContents();
+        span.appendChild(contents);
+        range.insertNode(span);
+        
+        // Reselect the content
+        range.selectNodeContents(span);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        savedSelectionRef.current = range.cloneRange();
+      }
+    } else {
+      // Apply the formatting using execCommand for non-color commands
+      document.execCommand(command, false, value);
+    }
     
     // Keep the selection visible after formatting
     if (savedSelectionRef.current) {
