@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { 
-  calculateSnap, 
-  getAllElementsInZone, 
+  calculateSnapCrossZone, 
+  getAllElementsWithAbsoluteCoords, 
   getZoneDimensions 
 } from '../utils/snapping';
 
@@ -107,18 +107,18 @@ export default function CanvasPage({
     // Get zone dimensions for boundary constraints
     const zoneDimensions = getZoneDimensions(document, pageSize, zone);
     
-    // Get all other elements in the zone for snapping
-    const allElements = getAllElementsInZone(document, currentPage, zone);
-    const otherElements = allElements.filter(el => el.id !== element.id);
+    // Get all elements from all zones with absolute coordinates for cross-zone snapping
+    const allElementsAbsolute = getAllElementsWithAbsoluteCoords(document, currentPage);
     
-    // Apply snapping
-    const snapResult = calculateSnap(
+    // Apply cross-zone snapping
+    const snapResult = calculateSnapCrossZone(
       element,
       x,
       y,
-      otherElements,
-      zoneDimensions.width,
-      zoneDimensions.height
+      zone,
+      allElementsAbsolute,
+      document,
+      pageSize
     );
     
     x = snapResult.x;

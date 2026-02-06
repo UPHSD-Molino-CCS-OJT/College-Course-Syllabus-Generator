@@ -83,6 +83,252 @@ export function getOtherElements(allElements, draggingElementId) {
 }
 
 /**
+ * Calculate snap position with cross-zone support
+ * Uses absolute page coordinates for comparison
+ */
+export function calculateSnapCrossZone(
+  draggedElement,
+  newX,
+  newY,
+  zone,
+  allElementsAbsolute,
+  document,
+  pageSize,
+  threshold = SNAP_THRESHOLD
+) {
+  // Convert zone-relative coords to absolute
+  const absolutePos = zoneToAbsoluteCoords(newX, newY, zone, document, pageSize);
+  
+  // Create element with absolute coordinates
+  const draggedAbsolute = {
+    ...draggedElement,
+    x: absolutePos.x,
+    y: absolutePos.y,
+    absoluteX: absolutePos.x,
+    absoluteY: absolutePos.y
+  };
+  
+  // Filter out the dragged element
+  const otherElements = allElementsAbsolute.filter(el => el.id !== draggedElement.id);
+  
+  let snappedX = absolutePos.x;
+  let snappedY = absolutePos.y;
+  const guides = [];
+  
+  // Get bounds for the dragged element
+  const draggedBounds = getElementBoundsAbsolute(draggedAbsolute);
+  
+  // Container snap points (for current zone)
+  const zoneDimensions = getZoneDimensions(document, pageSize, zone);
+  const container = getContainerSnapPoints(zoneDimensions.width, zoneDimensions.height);
+  
+  // Arrays to hold potential snap positions
+  const snapX = [];
+  const snapY = [];
+  
+  // Check snapping to zone container edges and center
+  const zoneAbsolutePos = zoneToAbsoluteCoords(0, 0, zone, document, pageSize);
+  
+  // Left edge to zone left
+  if (Math.abs(draggedBounds.left - absolutePos.x) < threshold) {
+    snapX.push({
+      position: absolutePos.x,
+      guide: { type: 'vertical', x: absolutePos.x, y: zoneAbsolutePos.y, label: 'Left Edge' }
+    });
+  }
+  
+  // Right edge to zone right
+  if (Math.abs(draggedBounds.right - (absolutePos.x + zoneDimensions.width)) < threshold) {
+    snapX.push({
+      position: absolutePos.x + zoneDimensions.width - draggedBounds.width,
+      guide: { type: 'vertical', x: absolutePos.x + zoneDimensions.width, y: zoneAbsolutePos.y, label: 'Right Edge' }
+    });
+  }
+  
+  // Center to zone center (horizontal)
+  const zoneCenterX = absolutePos.x + zoneDimensions.width / 2;
+  if (Math.abs(draggedBounds.centerX - zoneCenterX) < threshold) {
+    snapX.push({
+      position: zoneCenterX - draggedBounds.width / 2,
+      guide: { type: 'vertical', x: zoneCenterX, y: zoneAbsolutePos.y, label: 'Center' }
+    });
+  }
+  
+  // Check snapping to other elements (across all zones)
+  otherElements.forEach(otherElement => {
+    const otherBounds = getElementBoundsAbsolute(otherElement);
+    
+    // Horizontal snapping (X-axis alignment)
+    // Left to left
+    if (Math.abs(draggedBounds.left - otherBounds.left) < threshold) {
+      snapX.push({
+        position: otherBounds.left,
+        guide: { 
+          type: 'vertical', 
+          x: otherBounds.left,
+          y: Math.min(draggedBounds.top, otherBounds.top),
+          label: `Align Left${otherElement.zone !== zone ? ` (${otherElement.zone})` : ''}`,
+          elementId: otherElement.id 
+        }
+      });
+    }
+    
+    // Right to right
+    if (Math.abs(draggedBounds.right - otherBounds.right) < threshold) {
+      snapX.push({
+        position: otherBounds.right - draggedBounds.width,
+        guide: { 
+          type: 'vertical', 
+          x: otherBounds.right,
+          y: Math.min(draggedBounds.top, otherBounds.top),
+          label: `Align Right${otherElement.zone !== zone ? ` (${otherElement.zone})` : ''}`,
+          elementId: otherElement.id 
+        }
+      });
+    }
+    
+    // Left to right (adjacent)
+    if (Math.abs(draggedBounds.left - otherBounds.right) < threshold) {
+      snapX.push({
+        position: otherBounds.right,
+        guide: { 
+          type: 'vertical', 
+          x: otherBounds.right,
+          y: Math.min(draggedBounds.top, otherBounds.top),
+          label: `Adjacent${otherElement.zone !== zone ? ` (${otherElement.zone})` : ''}`,
+          elementId: otherElement.id 
+        }
+      });
+    }
+    
+    // Right to left (adjacent)
+    if (Math.abs(draggedBounds.right - otherBounds.left) < threshold) {
+      snapX.push({
+        position: otherBounds.left - draggedBounds.width,
+        guide: { 
+          type: 'vertical', 
+          x: otherBounds.left,
+          y: Math.min(draggedBounds.top, otherBounds.top),
+          label: `Adjacent${otherElement.zone !== zone ? ` (${otherElement.zone})` : ''}`,
+          elementId: otherElement.id 
+        }
+      });
+    }
+    
+    // Center to center (horizontal)
+    if (Math.abs(draggedBounds.centerX - otherBounds.centerX) < threshold) {
+      snapX.push({
+        position: otherBounds.centerX - draggedBounds.width / 2,
+        guide: { 
+          type: 'vertical', 
+          x: otherBounds.centerX,
+          y: Math.min(draggedBounds.top, otherBounds.top),
+          label: `Center${otherElement.zone !== zone ? ` (${otherElement.zone})` : ''}`,
+          elementId: otherElement.id 
+        }
+      });
+    }
+    
+    // Vertical snapping (Y-axis alignment)
+    // Top to top
+    if (Math.abs(draggedBounds.top - otherBounds.top) < threshold) {
+      snapY.push({
+        position: otherBounds.top,
+        guide: { 
+          type: 'horizontal', 
+          y: otherBounds.top,
+          x: Math.min(draggedBounds.left, otherBounds.left),
+          label: `Align Top${otherElement.zone !== zone ? ` (${otherElement.zone})` : ''}`,
+          elementId: otherElement.id 
+        }
+      });
+    }
+    
+    // Bottom to bottom
+    if (Math.abs(draggedBounds.bottom - otherBounds.bottom) < threshold) {
+      snapY.push({
+        position: otherBounds.bottom - draggedBounds.height,
+        guide: { 
+          type: 'horizontal', 
+          y: otherBounds.bottom,
+          x: Math.min(draggedBounds.left, otherBounds.left),
+          label: `Align Bottom${otherElement.zone !== zone ? ` (${otherElement.zone})` : ''}`,
+          elementId: otherElement.id 
+        }
+      });
+    }
+    
+    // Top to bottom (adjacent)
+    if (Math.abs(draggedBounds.top - otherBounds.bottom) < threshold) {
+      snapY.push({
+        position: otherBounds.bottom,
+        guide: { 
+          type: 'horizontal', 
+          y: otherBounds.bottom,
+          x: Math.min(draggedBounds.left, otherBounds.left),
+          label: `Adjacent${otherElement.zone !== zone ? ` (${otherElement.zone})` : ''}`,
+          elementId: otherElement.id 
+        }
+      });
+    }
+    
+    // Bottom to top (adjacent)
+    if (Math.abs(draggedBounds.bottom - otherBounds.top) < threshold) {
+      snapY.push({
+        position: otherBounds.top - draggedBounds.height,
+        guide: { 
+          type: 'horizontal', 
+          y: otherBounds.top,
+          x: Math.min(draggedBounds.left, otherBounds.left),
+          label: `Adjacent${otherElement.zone !== zone ? ` (${otherElement.zone})` : ''}`,
+          elementId: otherElement.id 
+        }
+      });
+    }
+    
+    // Center to center (vertical)
+    if (Math.abs(draggedBounds.centerY - otherBounds.centerY) < threshold) {
+      snapY.push({
+        position: otherBounds.centerY - draggedBounds.height / 2,
+        guide: { 
+          type: 'horizontal', 
+          y: otherBounds.centerY,
+          x: Math.min(draggedBounds.left, otherBounds.left),
+          label: `Center${otherElement.zone !== zone ? ` (${otherElement.zone})` : ''}`,
+          elementId: otherElement.id 
+        }
+      });
+    }
+  });
+  
+  // Apply snapping - use the closest snap point
+  if (snapX.length > 0) {
+    const closest = snapX.reduce((prev, curr) => 
+      Math.abs(curr.position - absolutePos.x) < Math.abs(prev.position - absolutePos.x) ? curr : prev
+    );
+    snappedX = closest.position;
+    guides.push(closest.guide);
+  }
+  
+  if (snapY.length > 0) {
+    const closest = snapY.reduce((prev, curr) => 
+      Math.abs(curr.position - absolutePos.y) < Math.abs(prev.position - absolutePos.y) ? curr : prev
+    );
+    snappedY = closest.position;
+    guides.push(closest.guide);
+  }
+  
+  // Convert back to zone-relative coordinates
+  const zoneRelative = absoluteToZoneCoords(snappedX, snappedY, zone, document, pageSize);
+  
+  return {
+    x: zoneRelative.x,
+    y: zoneRelative.y,
+    guides
+  };
+}
+
+/**
  * Calculate snap position and guides
  * Returns { x, y, guides } where guides is an array of snap guide lines
  */
@@ -334,6 +580,101 @@ export function getAllElementsInZone(document, currentPage, zone) {
   } else {
     return currentPage?.elements || [];
   }
+}
+
+/**
+ * Get all elements from all zones with absolute page coordinates
+ * This allows snapping across different zones
+ */
+export function getAllElementsWithAbsoluteCoords(document, currentPage) {
+  const headerHeight = document.header?.height || 120;
+  const footerHeight = document.footer?.height || 120;
+  const elements = [];
+  
+  // Header elements (already at top, no offset needed)
+  const headerElements = (document.header?.elements || []).map(el => ({
+    ...el,
+    absoluteX: el.x,
+    absoluteY: el.y,
+    zone: 'header'
+  }));
+  
+  // Content elements (offset by header height)
+  const contentElements = (currentPage?.elements || []).map(el => ({
+    ...el,
+    absoluteX: el.x,
+    absoluteY: el.y + headerHeight,
+    zone: 'content'
+  }));
+  
+  // Footer elements (offset by page height minus footer height)
+  const footerY = document.header ? headerHeight : 0;
+  const contentHeight = currentPage?.height || 0;
+  const footerOffset = headerHeight + contentHeight;
+  
+  const footerElements = (document.footer?.elements || []).map(el => ({
+    ...el,
+    absoluteX: el.x,
+    absoluteY: el.y + footerOffset,
+    zone: 'footer'
+  }));
+  
+  return [...headerElements, ...contentElements, ...footerElements];
+}
+
+/**
+ * Convert zone-relative coordinates to absolute page coordinates
+ */
+export function zoneToAbsoluteCoords(x, y, zone, document, pageSize) {
+  const headerHeight = document.header?.height || 120;
+  
+  if (zone === 'header') {
+    return { x, y };
+  } else if (zone === 'content') {
+    return { x, y: y + headerHeight };
+  } else if (zone === 'footer') {
+    const contentHeight = pageSize.height - headerHeight - (document.footer?.height || 120);
+    return { x, y: y + headerHeight + contentHeight };
+  }
+  
+  return { x, y };
+}
+
+/**
+ * Convert absolute page coordinates to zone-relative coordinates
+ */
+export function absoluteToZoneCoords(x, y, zone, document, pageSize) {
+  const headerHeight = document.header?.height || 120;
+  
+  if (zone === 'header') {
+    return { x, y };
+  } else if (zone === 'content') {
+    return { x, y: y - headerHeight };
+  } else if (zone === 'footer') {
+    const contentHeight = pageSize.height - headerHeight - (document.footer?.height || 120);
+    return { x, y: y - headerHeight - contentHeight };
+  }
+  
+  return { x, y };
+}
+
+/**
+ * Calculate element bounds with absolute coordinates
+ */
+export function getElementBoundsAbsolute(element) {
+  const bounds = getElementBounds(element);
+  const absoluteX = element.absoluteX !== undefined ? element.absoluteX : element.x;
+  const absoluteY = element.absoluteY !== undefined ? element.absoluteY : element.y;
+  
+  return {
+    ...bounds,
+    left: absoluteX,
+    right: absoluteX + bounds.width,
+    top: absoluteY,
+    bottom: absoluteY + bounds.height,
+    centerX: absoluteX + bounds.width / 2,
+    centerY: absoluteY + bounds.height / 2
+  };
 }
 
 /**
