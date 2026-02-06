@@ -150,7 +150,7 @@ export default function TemplateRenderer({ template, syllabus }) {
           key={element.id}
           style={{
             ...baseStyle,
-            borderCollapse: 'separate',
+            borderCollapse: 'collapse',
             borderSpacing: '0',
           }}
         >
