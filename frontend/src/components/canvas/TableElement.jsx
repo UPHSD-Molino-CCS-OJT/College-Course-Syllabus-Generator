@@ -65,7 +65,7 @@ export default function TableElement({
       }}
     >
       {isSelected && <ElementDragHandle onMouseDown={(e) => onMouseDown(e, element, zone)} />}
-      <table style={{ borderCollapse: 'separate', borderSpacing: '0' }}>
+      <table style={{ borderCollapse: 'collapse', borderSpacing: '0' }}>
         <tbody>
           {element.data.map((row, rowIndex) => (
             <tr key={rowIndex}>

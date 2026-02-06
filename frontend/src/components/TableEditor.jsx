@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import BorderPresets from './table-editor/BorderPresets';
 import CellGridSelector from './table-editor/CellGridSelector';
 import CellEditorModal from './table-editor/CellEditorModal';
@@ -19,6 +19,69 @@ export default function TableEditor({ table, onUpdate }) {
     vertical: false,
     inner: false
   });
+
+  // Derive active border toggles from current table data
+  useEffect(() => {
+    if (!table?.data) return;
+
+    const rows = table.rows;
+    const cols = table.cols;
+    let hasAllBorders = true;
+    let hasOuterBorders = true;
+    let hasHorizontalBorders = true;
+    let hasVerticalBorders = true;
+    let hasInnerBorders = true;
+
+    table.data.forEach((row, i) => {
+      row.forEach((cell, j) => {
+        const isOuterEdge = i === 0 || j === cols - 1 || i === rows - 1 || j === 0;
+        
+        // Check full grid
+        if (!cell.showBorderTop || !cell.showBorderRight || 
+            !cell.showBorderBottom || !cell.showBorderLeft) {
+          hasAllBorders = false;
+        }
+
+        // Check outer borders
+        if (isOuterEdge) {
+          if ((i === 0 && !cell.showBorderTop) ||
+              (j === cols - 1 && !cell.showBorderRight) ||
+              (i === rows - 1 && !cell.showBorderBottom) ||
+              (j === 0 && !cell.showBorderLeft)) {
+            hasOuterBorders = false;
+          }
+        }
+
+        // Check horizontal
+        if (!cell.showBorderTop || !cell.showBorderBottom) {
+          hasHorizontalBorders = false;
+        }
+
+        // Check vertical
+        if (!cell.showBorderLeft || !cell.showBorderRight) {
+          hasVerticalBorders = false;
+        }
+
+        // Check inner borders
+        if (!isOuterEdge || (i !== 0 && i !== rows - 1 && j !== 0 && j !== cols - 1)) {
+          if ((i !== 0 && !cell.showBorderTop) ||
+              (j !== cols - 1 && !cell.showBorderRight) ||
+              (i !== rows - 1 && !cell.showBorderBottom) ||
+              (j !== 0 && !cell.showBorderLeft)) {
+            hasInnerBorders = false;
+          }
+        }
+      });
+    });
+
+    setActiveBorderToggles({
+      fullGrid: hasAllBorders,
+      outer: hasOuterBorders,
+      horizontal: hasHorizontalBorders,
+      vertical: hasVerticalBorders,
+      inner: hasInnerBorders
+    });
+  }, [table?.data, table?.rows, table?.cols]);
 
   const toggleSection = (section) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -98,12 +161,8 @@ export default function TableEditor({ table, onUpdate }) {
 
   // Toggle border styles - can be mixed and matched
   const toggleBorderStyle = (toggle) => {
-    // Update active state
-    const newActiveState = {
-      ...activeBorderToggles,
-      [toggle]: !activeBorderToggles[toggle]
-    };
-    setActiveBorderToggles(newActiveState);
+    // Check current state from data
+    const isCurrentlyActive = activeBorderToggles[toggle];
 
     const newData = table.data.map((row, i) =>
       row.map((cell, j) => {
@@ -111,7 +170,7 @@ export default function TableEditor({ table, onUpdate }) {
 
         switch(toggle) {
           case 'fullGrid':
-            if (newActiveState.fullGrid) {
+            if (!isCurrentlyActive) {
               updatedCell = {
                 ...updatedCell,
                 showBorderTop: true,
@@ -133,29 +192,29 @@ export default function TableEditor({ table, onUpdate }) {
           case 'outer':
             const isOuterEdge = i === 0 || j === table.cols - 1 || i === table.rows - 1 || j === 0;
             if (isOuterEdge) {
-              if (i === 0) updatedCell.showBorderTop = newActiveState.outer;
-              if (j === table.cols - 1) updatedCell.showBorderRight = newActiveState.outer;
-              if (i === table.rows - 1) updatedCell.showBorderBottom = newActiveState.outer;
-              if (j === 0) updatedCell.showBorderLeft = newActiveState.outer;
+              if (i === 0) updatedCell.showBorderTop = !isCurrentlyActive;
+              if (j === table.cols - 1) updatedCell.showBorderRight = !isCurrentlyActive;
+              if (i === table.rows - 1) updatedCell.showBorderBottom = !isCurrentlyActive;
+              if (j === 0) updatedCell.showBorderLeft = !isCurrentlyActive;
             }
             break;
           
           case 'horizontal':
-            updatedCell.showBorderTop = newActiveState.horizontal;
-            updatedCell.showBorderBottom = newActiveState.horizontal;
+            updatedCell.showBorderTop = !isCurrentlyActive;
+            updatedCell.showBorderBottom = !isCurrentlyActive;
             break;
           
           case 'vertical':
-            updatedCell.showBorderRight = newActiveState.vertical;
-            updatedCell.showBorderLeft = newActiveState.vertical;
+            updatedCell.showBorderRight = !isCurrentlyActive;
+            updatedCell.showBorderLeft = !isCurrentlyActive;
             break;
           
           case 'inner':
             // Inner borders are all borders except outer edges
-            if (i !== 0) updatedCell.showBorderTop = newActiveState.inner;
-            if (j !== table.cols - 1) updatedCell.showBorderRight = newActiveState.inner;
-            if (i !== table.rows - 1) updatedCell.showBorderBottom = newActiveState.inner;
-            if (j !== 0) updatedCell.showBorderLeft = newActiveState.inner;
+            if (i !== 0) updatedCell.showBorderTop = !isCurrentlyActive;
+            if (j !== table.cols - 1) updatedCell.showBorderRight = !isCurrentlyActive;
+            if (i !== table.rows - 1) updatedCell.showBorderBottom = !isCurrentlyActive;
+            if (j !== 0) updatedCell.showBorderLeft = !isCurrentlyActive;
             break;
         }
 
@@ -167,14 +226,6 @@ export default function TableEditor({ table, onUpdate }) {
 
   // Clear all borders
   const clearAllBorders = () => {
-    setActiveBorderToggles({
-      fullGrid: false,
-      outer: false,
-      horizontal: false,
-      vertical: false,
-      inner: false
-    });
-    
     const newData = table.data.map(row =>
       row.map(cell => ({
         ...cell,
