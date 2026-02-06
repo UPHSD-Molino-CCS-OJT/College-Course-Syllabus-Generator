@@ -629,43 +629,73 @@ export default function CanvasEditor({ template, onClose, onSave }) {
 
         {/* Right Panel - Properties */}
         {selectedElement && (
-          <div className="w-80 bg-gray-800 border-l border-gray-700 overflow-y-auto">
-            {selectedElement.type === 'text' && (
-              <TextStylePanel
-                element={selectedElement}
-                onUpdate={(updates) => {
-                  const zone = editingZone || findElementZone(selectedElement.id);
-                  handleUpdateElement(zone, selectedElement.id, updates);
-                }}
-              />
-            )}
-            {selectedElement.type === 'table' && (
-              <TableEditor
-                table={selectedElement}
-                onUpdate={(updates) => {
-                  const zone = editingZone || findElementZone(selectedElement.id);
-                  handleUpdateElement(zone, selectedElement.id, updates);
-                }}
-              />
-            )}
-            {selectedElement.type === 'image' && (
-              <ImageStylePanel
-                element={selectedElement}
-                onUpdate={(updates) => {
-                  const zone = editingZone || findElementZone(selectedElement.id);
-                  handleUpdateElement(zone, selectedElement.id, updates);
-                }}
-              />
-            )}
-            {selectedElement.type === 'line' && (
-              <LineStylePanel
-                element={selectedElement}
-                onUpdate={(updates) => {
-                  const zone = editingZone || findElementZone(selectedElement.id);
-                  handleUpdateElement(zone, selectedElement.id, updates);
-                }}
-              />
-            )}
+          <div className="w-80 bg-gray-800 border-l border-gray-700 overflow-y-auto flex flex-col">
+            {/* Panel Header with Delete Button */}
+            <div className="p-4 bg-gray-900 border-b border-gray-700 flex-shrink-0">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-white font-semibold text-lg">
+                  {selectedElement.type === 'text' && '📝 Text Properties'}
+                  {selectedElement.type === 'table' && '📊 Table Properties'}
+                  {selectedElement.type === 'image' && '🖼️ Image Properties'}
+                  {selectedElement.type === 'line' && '➖ Line Properties'}
+                </h3>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400 text-xs">
+                  ID: {selectedElement.id.substring(0, 8)}...
+                </span>
+                <button
+                  onClick={() => {
+                    const zone = editingZone || findElementZone(selectedElement.id);
+                    handleDeleteElement(zone, selectedElement.id);
+                  }}
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded text-sm font-medium transition-colors shadow-sm flex items-center gap-1"
+                  title="Delete this element"
+                >
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+
+            {/* Panel Content */}
+            <div className="flex-1 overflow-y-auto">
+              {selectedElement.type === 'text' && (
+                <TextStylePanel
+                  element={selectedElement}
+                  onUpdate={(updates) => {
+                    const zone = editingZone || findElementZone(selectedElement.id);
+                    handleUpdateElement(zone, selectedElement.id, updates);
+                  }}
+                />
+              )}
+              {selectedElement.type === 'table' && (
+                <TableEditor
+                  table={selectedElement}
+                  onUpdate={(updates) => {
+                    const zone = editingZone || findElementZone(selectedElement.id);
+                    handleUpdateElement(zone, selectedElement.id, updates);
+                  }}
+                />
+              )}
+              {selectedElement.type === 'image' && (
+                <ImageStylePanel
+                  element={selectedElement}
+                  onUpdate={(updates) => {
+                    const zone = editingZone || findElementZone(selectedElement.id);
+                    handleUpdateElement(zone, selectedElement.id, updates);
+                  }}
+                />
+              )}
+              {selectedElement.type === 'line' && (
+                <LineStylePanel
+                  element={selectedElement}
+                  onUpdate={(updates) => {
+                    const zone = editingZone || findElementZone(selectedElement.id);
+                    handleUpdateElement(zone, selectedElement.id, updates);
+                  }}
+                />
+              )}
+            </div>
           </div>
         )}
       </div>
