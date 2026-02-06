@@ -157,31 +157,49 @@ export default function TemplateRenderer({ template, syllabus }) {
           <tbody>
             {element.data.map((row, rowIndex) => (
               <tr key={rowIndex}>
-                {Array.isArray(row) && row.map((cell, colIndex) => (
-                  <td
-                    key={colIndex}
-                    style={{
-                      width: cell.width ? `${cell.width}px` : (element.cellWidth ? `${element.cellWidth}px` : 'auto'),
-                      height: cell.height ? `${cell.height}px` : (element.cellHeight ? `${element.cellHeight}px` : 'auto'),
-                      borderTop: (cell.showBorderTop !== undefined ? cell.showBorderTop : element.showBorderTop !== false) ? `${element.borderWidth || 1}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000'}` : 'none',
-                      borderRight: (cell.showBorderRight !== undefined ? cell.showBorderRight : element.showBorderRight !== false) ? `${element.borderWidth || 1}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000'}` : 'none',
-                      borderBottom: (cell.showBorderBottom !== undefined ? cell.showBorderBottom : element.showBorderBottom !== false) ? `${element.borderWidth || 1}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000'}` : 'none',
-                      borderLeft: (cell.showBorderLeft !== undefined ? cell.showBorderLeft : element.showBorderLeft !== false) ? `${element.borderWidth || 1}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000'}` : 'none',
-                      padding: '8px',
-                      backgroundColor: cell.bg || '#fff',
-                      fontSize: `${cell.fontSize || 12}px`,
-                      fontFamily: cell.fontFamily || 'Arial',
-                      fontWeight: cell.fontWeight || 'normal',
-                      color: cell.color || '#000',
-                      textAlign: cell.align || 'left',
-                      whiteSpace: 'pre-wrap',
-                      wordWrap: 'break-word',
-                      verticalAlign: cell.verticalAlign || 'top',
-                    }}
-                  >
-                    {cell.content}
-                  </td>
-                ))}
+                {Array.isArray(row) && row.map((cell, colIndex) => {
+                  // Smart border rendering to prevent double borders in PDFs
+                  // Only render borders that won't be duplicated by adjacent cells
+                  const isFirstRow = rowIndex === 0;
+                  const isLastRow = rowIndex === element.data.length - 1;
+                  const isFirstCol = colIndex === 0;
+                  const isLastCol = colIndex === row.length - 1;
+
+                  // Determine which borders to render based on cell settings
+                  const showTop = (cell.showBorderTop !== undefined ? cell.showBorderTop : element.showBorderTop !== false) && isFirstRow;
+                  const showBottom = (cell.showBorderBottom !== undefined ? cell.showBorderBottom : element.showBorderBottom !== false);
+                  const showLeft = (cell.showBorderLeft !== undefined ? cell.showBorderLeft : element.showBorderLeft !== false) && isFirstCol;
+                  const showRight = (cell.showBorderRight !== undefined ? cell.showBorderRight : element.showBorderRight !== false);
+
+                  // For internal borders, check if the cell wants it
+                  const showTopInternal = !isFirstRow && (cell.showBorderTop !== undefined ? cell.showBorderTop : element.showBorderTop !== false);
+
+                  return (
+                    <td
+                      key={colIndex}
+                      style={{
+                        width: cell.width ? `${cell.width}px` : (element.cellWidth ? `${element.cellWidth}px` : 'auto'),
+                        height: cell.height ? `${cell.height}px` : (element.cellHeight ? `${element.cellHeight}px` : 'auto'),
+                        borderTop: (showTop || showTopInternal) ? `${element.borderWidth || 1}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000'}` : 'none',
+                        borderRight: showRight ? `${element.borderWidth || 1}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000'}` : 'none',
+                        borderBottom: showBottom ? `${element.borderWidth || 1}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000'}` : 'none',
+                        borderLeft: showLeft ? `${element.borderWidth || 1}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000'}` : 'none',
+                        padding: '8px',
+                        backgroundColor: cell.bg || '#fff',
+                        fontSize: `${cell.fontSize || 12}px`,
+                        fontFamily: cell.fontFamily || 'Arial',
+                        fontWeight: cell.fontWeight || 'normal',
+                        color: cell.color || '#000',
+                        textAlign: cell.align || 'left',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word',
+                        verticalAlign: cell.verticalAlign || 'top',
+                      }}
+                    >
+                      {cell.content}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
