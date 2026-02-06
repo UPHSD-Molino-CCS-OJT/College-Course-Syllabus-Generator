@@ -43,8 +43,21 @@ export function useAutoSave(saveFunction, data, options = {}) {
     setSaveStatus('saving');
     setError(null);
 
+    // Ensure "Saving..." is visible for at least 500ms
+    const startTime = Date.now();
+    const minDisplayTime = 500;
+
     try {
       await saveFunction(data);
+      
+      // Calculate remaining time to reach minimum display time
+      const elapsed = Date.now() - startTime;
+      const remainingTime = Math.max(0, minDisplayTime - elapsed);
+      
+      // Wait for remaining time if save completed too quickly
+      if (remainingTime > 0) {
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      }
       
       if (mountedRef.current) {
         setSaveStatus('saved');
@@ -59,6 +72,14 @@ export function useAutoSave(saveFunction, data, options = {}) {
         }, 3000);
       }
     } catch (err) {
+      // Calculate remaining time for error state too
+      const elapsed = Date.now() - startTime;
+      const remainingTime = Math.max(0, minDisplayTime - elapsed);
+      
+      if (remainingTime > 0) {
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      }
+      
       if (mountedRef.current) {
         setSaveStatus('error');
         setError(err.message || 'Failed to save');
@@ -124,10 +145,6 @@ export function useAutoSave(saveFunction, data, options = {}) {
  * Auto-save status indicator component
  */
 export function AutoSaveIndicator({ saveStatus, lastSaved, error }) {
-  if (saveStatus === 'idle' && !lastSaved) {
-    return null;
-  }
-
   const getStatusContent = () => {
     switch (saveStatus) {
       case 'saving':
@@ -163,14 +180,33 @@ export function AutoSaveIndicator({ saveStatus, lastSaved, error }) {
           </div>
         );
       
+      case 'idle':
+        // Show idle state only if we've saved before
+        if (lastSaved) {
+          return (
+            <div className="flex items-center gap-2 text-gray-500">
+              <span className="text-sm">
+                Last saved {formatTimeSince(lastSaved)}
+              </span>
+            </div>
+          );
+        }
+        return null;
+      
       default:
         return null;
     }
   };
 
+  const content = getStatusContent();
+  
+  if (!content) {
+    return null;
+  }
+
   return (
     <div className="flex items-center">
-      {getStatusContent()}
+      {content}
     </div>
   );
 }
