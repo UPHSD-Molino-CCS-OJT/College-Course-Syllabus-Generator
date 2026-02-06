@@ -16,10 +16,9 @@ export default function TableElement({
 
   const handleCellClick = (e, rowIndex, colIndex) => {
     e.stopPropagation();
-    // Single click enters edit mode immediately
-    if (isSelected) {
-      setEditingCell({ rowIndex, colIndex });
-    }
+    // Select table and enter edit mode immediately
+    onSelect(element);
+    setEditingCell({ rowIndex, colIndex });
   };
 
   const handleCellChange = (newContent, rowIndex, colIndex) => {
