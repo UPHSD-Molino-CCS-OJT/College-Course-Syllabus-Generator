@@ -714,8 +714,8 @@ export default function CanvasEditor({ template, onClose, onSave }) {
         handleDuplicateElement();
       }
 
-      // Delete: Delete or Backspace
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElement) {
+      // Delete: Delete key only
+      if (e.key === 'Delete' && selectedElement) {
         e.preventDefault();
         const zone = findElementZone(selectedElement.id);
         handleDeleteElement(zone, selectedElement.id);

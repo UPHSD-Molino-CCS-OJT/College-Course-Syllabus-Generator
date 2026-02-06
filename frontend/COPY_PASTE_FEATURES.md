@@ -31,7 +31,7 @@ Implemented Figma/Canva-style element manipulation with keyboard shortcuts, visu
 - Maintains exact position (elements will overlap)
 - Automatically selects the new duplicate
 
-### 5. Delete Element (Delete / Backspace)
+### 5. Delete Element (Delete key)
 - Keyboard shortcut for quick deletion
 - Also available via button in properties panel
 
@@ -88,7 +88,7 @@ Undo | Ctrl+Z | Cmd+Z | Undo last change |
 | Copy | Ctrl+C | Cmd+C | Copy selected element |
 | Paste | Ctrl+V | Cmd+V | Paste from clipboard |
 | Duplicate | Ctrl+D | Cmd+D | Duplicate selected element |
-| Delete | Delete/Backspace | Delete/Backspace | Remove selected element |
+| Delete | Delete | Delete | Remove selected element |
 
 ## UUndo a mistake
 1. Make a change (e.g., delete an element)
