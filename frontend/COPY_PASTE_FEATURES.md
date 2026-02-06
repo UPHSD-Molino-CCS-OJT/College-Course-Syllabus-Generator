@@ -13,14 +13,14 @@ Implemented Figma/Canva-style element manipulation with keyboard shortcuts and v
 ### 2. Paste Element (Ctrl+V / Cmd+V)
 - Pastes copied element to current page/zone
 - Automatically generates new unique ID
-- Applies 20px offset to avoid overlap with original
+- Maintains exact position from copied element
 - Paste button appears in properties panel when clipboard has data (animated)
 - Automatically selects the newly pasted element
 
 ### 3. Duplicate Element (Ctrl+D / Cmd+D)
 - Combines copy + paste in one action
 - Creates duplicate on same page/zone as original
-- Applies 20px offset for visibility
+- Maintains exact position (elements will overlap)
 - Automatically selects the new duplicate
 
 ### 4. Delete Element (Delete / Backspace)
@@ -63,8 +63,8 @@ When an element is selected, the panel header shows:
 ### ID Generation
 New elements get unique IDs: `${type}-${timestamp}-${random9chars}`
 
-### Position Offset
-Duplicates/pastes appear at `original + 20px` in both X and Y directions
+### Position Behavior
+Duplicates/pastes maintain exact X and Y coordinates from the original element
 
 ## Keyboard Shortcuts
 
@@ -80,14 +80,14 @@ Duplicates/pastes appear at `original + 20px` in both X and Y directions
 ### Duplicate element on same page
 1. Select element
 2. Press `Ctrl+D` or click "Duplicate" button
-3. New element appears offset by 20px
+3. New element appears at exact same position (will overlap)
 
 ### Copy element to another page
 1. Select element on page 1
 2. Press `Ctrl+C` or click "Copy" button
 3. Navigate to page 2
 4. Press `Ctrl+V` or click "Paste" button
-5. Element appears on page 2 at offset position
+5. Element appears on page 2 at exact same coordinates
 
 ### Copy from header to content
 1. Select element in header zone

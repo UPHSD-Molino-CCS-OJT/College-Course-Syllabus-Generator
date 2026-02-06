@@ -522,12 +522,12 @@ export default function CanvasEditor({ template, onClose, onSave }) {
     const { element } = clipboard;
     const targetZone = editingZone || 'content';
     
-    // Create new element with offset position and new ID
+    // Create new element at exact position with new ID
     const newElement = {
       ...element,
       id: `${element.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      x: element.x + 20, // Offset by 20px
-      y: element.y + 20
+      x: element.x,
+      y: element.y
     };
 
     // Add to appropriate zone
@@ -561,8 +561,8 @@ export default function CanvasEditor({ template, onClose, onSave }) {
     const newElement = {
       ...selectedElement,
       id: `${selectedElement.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      x: selectedElement.x + 20,
-      y: selectedElement.y + 20
+      x: selectedElement.x,
+      y: selectedElement.y
     };
 
     if (zone === 'header' || zone === 'footer') {
