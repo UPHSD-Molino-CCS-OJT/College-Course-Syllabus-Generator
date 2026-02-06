@@ -6,6 +6,7 @@ import TableEditor from './TableEditor';
 import ImageStylePanel from './ImageStylePanel';
 import LineStylePanel from './LineStylePanel';
 import { useAutoSave, AutoSaveIndicator } from '../utils/useAutoSave.jsx';
+import { templateAPI } from '../services/api';
 
 // Page size configurations (in pixels, 96 DPI)
 const PAGE_SIZES = {
@@ -64,17 +65,24 @@ export default function CanvasEditor({ template, onClose, onSave }) {
 
   const canvasRef = useRef(null);
 
-  // Auto-save function for canvas editor
+  // Auto-save function for canvas editor (saves without closing)
   const autoSaveFunction = useCallback(async () => {
-    if (onSave && template) {
-      onSave({
+    if (template && template._id) {
+      const updatedTemplate = {
         ...template,
         canvasDocument: canvasDocument,
         pageSize,
         orientation
-      });
+      };
+      // Save directly via API without triggering onSave callback
+      try {
+        await templateAPI.updateTemplate(template._id, updatedTemplate);
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+        throw error;
+      }
     }
-  }, [onSave, template, canvasDocument, pageSize, orientation]);
+  }, [template, canvasDocument, pageSize, orientation]);
 
   // Set up auto-save
   const { saveStatus, lastSaved, error: autoSaveError } = useAutoSave(
