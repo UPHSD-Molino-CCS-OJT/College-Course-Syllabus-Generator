@@ -65,19 +65,12 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
     setExporting(true);
     try {
       const element = printRef.current;
-      
-      // Check if template has multiple pages
-      const hasMultiplePages = template?.canvasDocument?.pages && template.canvasDocument.pages.length > 1;
-      
-      // Determine page size based on template or default to legal landscape
-      let orientation = 'landscape';
+
+      // Determine page size / orientation
+      let orientation = template?.orientation || 'landscape';
       let format = 'legal';
-      
       if (template) {
-        orientation = template.orientation || 'landscape';
-        // Map page sizes to jsPDF formats or custom dimensions
         if (template.pageSize === 'longBond') {
-          // Long bond in mm: 215.9 x 355.6
           format = orientation === 'landscape' ? [355.6, 215.9] : [215.9, 355.6];
         } else if (template.pageSize === 'a4') {
           format = 'a4';
@@ -87,79 +80,48 @@ export default function SyllabusPrintView({ syllabus, onClose }) {
           format = 'legal';
         }
       }
-      
-      const pdf = new jsPDF({
-        orientation: orientation,
-        unit: 'mm',
-        format: format,
-      });
 
+      const pdf = new jsPDF({ orientation, unit: 'mm', format });
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
 
-      if (hasMultiplePages) {
-        // Render each page separately
-        const pageElements = element.querySelectorAll('.mx-auto.bg-white.rounded-lg.shadow-lg');
-        
-        for (let i = 0; i < pageElements.length; i++) {
-          const pageElement = pageElements[i];
-          
-          const canvas = await html2canvas(pageElement, {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-          });
+      // Always capture individual page elements for pixel-perfect output
+      const pageElements = element.querySelectorAll('.mx-auto.bg-white.rounded-lg.shadow-lg');
+      const targets = pageElements.length > 0 ? Array.from(pageElements) : [element];
 
-          const imgData = canvas.toDataURL('image/png');
-          
-          // Convert pixels to mm (assuming 96 DPI: 1 inch = 25.4mm, 96px = 25.4mm)
-          const imgWidthMM = (canvas.width * 25.4) / (96 * 2); // Divide by 2 because of scale:2
-          const imgHeightMM = (canvas.height * 25.4) / (96 * 2);
-          
-          // Scale to fit page while maintaining aspect ratio
-          const ratio = Math.min(pdfWidth / imgWidthMM, pdfHeight / imgHeightMM);
-          const finalWidth = imgWidthMM * ratio;
-          const finalHeight = imgHeightMM * ratio;
-          
-          // Center the image
-          const x = (pdfWidth - finalWidth) / 2;
-          const y = (pdfHeight - finalHeight) / 2;
+      for (let i = 0; i < targets.length; i++) {
+        const pageEl = targets[i];
 
-          if (i > 0) {
-            pdf.addPage();
-          }
-          pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
-        }
-      } else {
-        // Single page rendering
-        const elementWidth = element.scrollWidth;
-        const elementHeight = element.scrollHeight;
-        
-        const canvas = await html2canvas(element, {
+        const canvas = await html2canvas(pageEl, {
           scale: 2,
           useCORS: true,
+          allowTaint: true,
           logging: false,
-          width: elementWidth,
-          height: elementHeight,
-          windowWidth: elementWidth,
-          windowHeight: elementHeight,
+          // Capture the full element even if parts are off-screen
+          scrollX: 0,
+          scrollY: 0,
+          width: pageEl.offsetWidth,
+          height: pageEl.offsetHeight,
+          windowWidth: pageEl.offsetWidth,
+          windowHeight: pageEl.offsetHeight,
         });
 
         const imgData = canvas.toDataURL('image/png');
-        
-        // Convert pixels to mm (assuming 96 DPI: 1 inch = 25.4mm, 96px = 25.4mm)
-        const imgWidthMM = (canvas.width * 25.4) / (96 * 2); // Divide by 2 because of scale:2
+
+        // Convert canvas pixels → mm (scale:2 doubles pixel count, 96 DPI base)
+        const imgWidthMM  = (canvas.width  * 25.4) / (96 * 2);
         const imgHeightMM = (canvas.height * 25.4) / (96 * 2);
-        
-        // Scale to fit page while maintaining aspect ratio
+
+        // Fit to PDF page preserving aspect ratio
         const ratio = Math.min(pdfWidth / imgWidthMM, pdfHeight / imgHeightMM);
-        const finalWidth = imgWidthMM * ratio;
+        const finalWidth  = imgWidthMM  * ratio;
         const finalHeight = imgHeightMM * ratio;
-        
-        // Center the image
-        const x = (pdfWidth - finalWidth) / 2;
+
+        // Centre on page
+        const x = (pdfWidth  - finalWidth)  / 2;
         const y = (pdfHeight - finalHeight) / 2;
 
+        if (i > 0) pdf.addPage();
         pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
       }
 
