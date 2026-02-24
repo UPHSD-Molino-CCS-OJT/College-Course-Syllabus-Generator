@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ElementDragHandle from './ElementDragHandle';
 import RichTextEditor from '../RichTextEditor';
 
@@ -13,6 +13,14 @@ export default function TableElement({
 }) {
   const [editingCell, setEditingCell] = useState(null);
   const [hoveredCell, setHoveredCell] = useState(null);
+
+  // Clear cell focus whenever this table loses selection
+  useEffect(() => {
+    if (!isSelected) {
+      setEditingCell(null);
+      setHoveredCell(null);
+    }
+  }, [isSelected]);
 
   const handleCellClick = (e, rowIndex, colIndex) => {
     e.stopPropagation();
