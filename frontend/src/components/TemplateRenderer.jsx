@@ -25,6 +25,26 @@ const PAGE_SIZES = {
   }
 };
 
+/** Compute the set of cell positions hidden by colspan/rowspan ancestors */
+function computeCoveredCells(data) {
+  const covered = new Set();
+  data.forEach((row, rIdx) => {
+    row.forEach((cell, cIdx) => {
+      const cs = cell.colspan || 1;
+      const rs = cell.rowspan || 1;
+      if (cs > 1 || rs > 1) {
+        for (let dr = 0; dr < rs; dr++) {
+          for (let dc = 0; dc < cs; dc++) {
+            if (dr === 0 && dc === 0) continue;
+            covered.add(`${rIdx + dr}-${cIdx + dc}`);
+          }
+        }
+      }
+    });
+  });
+  return covered;
+}
+
 /**
  * Render a template with syllabus data for print/export
  */
@@ -123,10 +143,7 @@ export default function TemplateRenderer({ template, syllabus }) {
 
     if (element.type === 'line') {
       return (
-        <div
-          key={element.id}
-          style={baseStyle}
-        >
+        <div key={element.id} style={baseStyle}>
           <svg width={element.width || 300} height={Math.max(element.strokeWidth || 2, 10)}>
             <line
               x1="0"
@@ -146,65 +163,75 @@ export default function TemplateRenderer({ template, syllabus }) {
     }
 
     if (element.type === 'table' && element.data && Array.isArray(element.data)) {
+      const coveredCells = computeCoveredCells(element.data);
+      const bw = element.borderWidth || 1;
+      const bs = element.borderStyle || 'solid';
+      const bc = element.borderColor || '#000000';
+
       return (
-        <table
-          key={element.id}
-          style={{
-            ...baseStyle,
-            borderCollapse: 'collapse',
-            borderSpacing: '0',
-          }}
-        >
-          <tbody>
-            {element.data.map((row, rowIndex) => (
-              <tr key={rowIndex}>
-                {Array.isArray(row) && row.map((cell, colIndex) => {
-                  // Smart border rendering to prevent double borders in PDFs
-                  // Only render borders that won't be duplicated by adjacent cells
-                  const isFirstRow = rowIndex === 0;
-                  const isLastRow = rowIndex === element.data.length - 1;
-                  const isFirstCol = colIndex === 0;
-                  const isLastCol = colIndex === row.length - 1;
+        <div key={element.id} style={baseStyle}>
+          <table
+            style={{
+              borderCollapse: 'collapse',
+              borderSpacing: '0',
+              tableLayout: 'fixed',
+            }}
+          >
+            <tbody>
+              {element.data.map((row, rowIndex) => (
+                <tr key={rowIndex}>
+                  {Array.isArray(row) && row.map((cell, colIndex) => {
+                    if (coveredCells.has(`${rowIndex}-${colIndex}`)) return null;
 
-                  // Determine which borders to render based on cell settings
-                  const showTop = (cell.showBorderTop !== undefined ? cell.showBorderTop : element.showBorderTop !== false) && isFirstRow;
-                  const showBottom = (cell.showBorderBottom !== undefined ? cell.showBorderBottom : element.showBorderBottom !== false);
-                  const showLeft = (cell.showBorderLeft !== undefined ? cell.showBorderLeft : element.showBorderLeft !== false) && isFirstCol;
-                  const showRight = (cell.showBorderRight !== undefined ? cell.showBorderRight : element.showBorderRight !== false);
+                    const cellWidth = cell.width || element.cellWidth || 150;
+                    const cellHeight = cell.height || element.cellHeight || 40;
 
-                  // For internal borders, check if the cell wants it
-                  const showTopInternal = !isFirstRow && (cell.showBorderTop !== undefined ? cell.showBorderTop : element.showBorderTop !== false);
+                    const showBorderTop    = cell.showBorderTop    !== undefined ? cell.showBorderTop    : element.showBorderTop    !== false;
+                    const showBorderRight  = cell.showBorderRight  !== undefined ? cell.showBorderRight  : element.showBorderRight  !== false;
+                    const showBorderBottom = cell.showBorderBottom !== undefined ? cell.showBorderBottom : element.showBorderBottom !== false;
+                    const showBorderLeft   = cell.showBorderLeft   !== undefined ? cell.showBorderLeft   : element.showBorderLeft   !== false;
 
-                  return (
-                    <td
-                      key={colIndex}
-                      style={{
-                        width: cell.width ? `${cell.width}px` : (element.cellWidth ? `${element.cellWidth}px` : 'auto'),
-                        height: cell.height ? `${cell.height}px` : (element.cellHeight ? `${element.cellHeight}px` : 'auto'),
-                        borderTop: (showTop || showTopInternal) ? `${element.borderWidth || 1}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000'}` : 'none',
-                        borderRight: showRight ? `${element.borderWidth || 1}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000'}` : 'none',
-                        borderBottom: showBottom ? `${element.borderWidth || 1}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000'}` : 'none',
-                        borderLeft: showLeft ? `${element.borderWidth || 1}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000'}` : 'none',
-                        padding: '8px',
-                        backgroundColor: cell.bg || '#fff',
-                        fontSize: `${cell.fontSize || 12}px`,
-                        fontFamily: cell.fontFamily || 'Arial',
-                        fontWeight: cell.fontWeight || 'normal',
-                        color: cell.color || '#000',
-                        textAlign: cell.align || 'left',
-                        whiteSpace: 'pre-wrap',
-                        wordWrap: 'break-word',
-                        verticalAlign: cell.verticalAlign || 'top',
-                      }}
-                      dangerouslySetInnerHTML={{ __html: cell.content || '' }}
-                    >
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    return (
+                      <td
+                        key={colIndex}
+                        colSpan={cell.colspan || 1}
+                        rowSpan={cell.rowspan || 1}
+                        style={{
+                          width: `${cellWidth}px`,
+                          maxWidth: `${cellWidth}px`,
+                          height: `${cellHeight}px`,
+                          maxHeight: `${cellHeight}px`,
+                          overflow: 'hidden',
+                          borderTop:    showBorderTop    ? `${bw}px ${bs} ${bc}` : 'none',
+                          borderRight:  showBorderRight  ? `${bw}px ${bs} ${bc}` : 'none',
+                          borderBottom: showBorderBottom ? `${bw}px ${bs} ${bc}` : 'none',
+                          borderLeft:   showBorderLeft   ? `${bw}px ${bs} ${bc}` : 'none',
+                          backgroundColor: cell.bg || 'transparent',
+                          fontSize: `${cell.fontSize || element.fontSize || 12}px`,
+                          fontFamily: cell.fontFamily || element.fontFamily || 'Arial',
+                          fontWeight: cell.fontWeight || 'normal',
+                          color: cell.color || '#000000',
+                          textAlign: cell.align || 'left',
+                          verticalAlign: cell.verticalAlign || 'top',
+                          padding: '0',
+                          margin: '0',
+                          whiteSpace: 'pre-wrap',
+                          wordWrap: 'break-word',
+                        }}
+                      >
+                        <div
+                          className="table-cell-content"
+                          style={{ margin: '0', padding: '0' }}
+                          dangerouslySetInnerHTML={{ __html: cell.content || '' }}
+                        />
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       );
     }
 
@@ -246,7 +273,7 @@ export default function TemplateRenderer({ template, syllabus }) {
             style={{
               position: 'relative',
               height: `${contentHeight}px`,
-              overflow: 'auto',
+              overflow: 'hidden',
             }}
           >
             {page.elements?.map(renderElement)}
