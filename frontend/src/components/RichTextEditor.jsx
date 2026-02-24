@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 
-export default function RichTextEditor({ content, onUpdate, style, className, onBlur, contentAttributes = {} }) {
+export default function RichTextEditor({ content, onUpdate, style, className, onBlur, contentAttributes = {}, wrapperStyle = {} }) {
   const editorRef = useRef(null);
   const toolbarRef = useRef(null);
   const savedSelectionRef = useRef(null);
@@ -102,7 +102,7 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
   };
 
   return (
-    <div className="relative">
+    <div className="relative" style={wrapperStyle}>
       {showToolbar && (
         <div
           ref={toolbarRef}

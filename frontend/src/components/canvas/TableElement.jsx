@@ -122,7 +122,8 @@ export default function TableElement({
                       color: cell.color,
                       textAlign: cell.align,
                       verticalAlign: cell.verticalAlign || 'top',
-                      padding: '2px 4px',
+                      padding: '0',
+                      margin: '0',
                       whiteSpace: 'pre-wrap',
                       wordWrap: 'break-word',
                       position: 'relative',
@@ -149,6 +150,7 @@ export default function TableElement({
                       <RichTextEditor
                         content={cell.content}
                         onUpdate={(newContent) => handleCellChange(newContent, rowIndex, colIndex)}
+                        wrapperStyle={{ width: '100%', height: '100%', margin: '0', padding: '0' }}
                         style={{
                           fontSize: cell.fontSize,
                           fontFamily: cell.fontFamily,
@@ -157,6 +159,7 @@ export default function TableElement({
                           textAlign: cell.align,
                           width: '100%',
                           height: '100%',
+                          margin: '0',
                           padding: '0'
                         }}
                         contentAttributes={{ 'data-cell-editor': 'true' }}
@@ -166,7 +169,7 @@ export default function TableElement({
                       <div
                         dangerouslySetInnerHTML={{ __html: cell.content || '' }}
                         className="table-cell-content"
-                        style={{ pointerEvents: 'none' }}
+                        style={{ pointerEvents: 'none', margin: '0', padding: '0' }}
                       />
                     )}
                     {isSelected && !isCellEditing && (
