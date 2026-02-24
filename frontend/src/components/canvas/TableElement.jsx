@@ -12,40 +12,55 @@ export default function TableElement({
   onCellResizeStart
 }) {
   const [editingCell, setEditingCell] = useState(null);
-  const [selectedCell, setSelectedCell] = useState(null);
+  const [anchorCell, setAnchorCell] = useState(null);     // first corner of selection
+  const [selectionEnd, setSelectionEnd] = useState(null); // second corner of selection
   const [hoveredCell, setHoveredCell] = useState(null);
-  const [copiedCell, setCopiedCell] = useState(null); // { content, styles }
-  const [copiedCellPos, setCopiedCellPos] = useState(null); // { rowIndex, colIndex }
+  const [copiedCell, setCopiedCell] = useState(null);
+  const [copiedCellPos, setCopiedCellPos] = useState(null);
+
+  // Derive the rectangular set of selected cells from anchor + end
+  const getSelectedRange = () => {
+    if (!anchorCell || !selectionEnd) return new Set();
+    const minR = Math.min(anchorCell.rowIndex, selectionEnd.rowIndex);
+    const maxR = Math.max(anchorCell.rowIndex, selectionEnd.rowIndex);
+    const minC = Math.min(anchorCell.colIndex, selectionEnd.colIndex);
+    const maxC = Math.max(anchorCell.colIndex, selectionEnd.colIndex);
+    const set = new Set();
+    for (let r = minR; r <= maxR; r++)
+      for (let c = minC; c <= maxC; c++)
+        set.add(`${r}-${c}`);
+    return set;
+  };
+  const selectedRange = getSelectedRange();
+  const hasMultiSelection = selectedRange.size > 1;
 
   // Clear cell focus whenever this table loses selection
   useEffect(() => {
     if (!isSelected) {
       setEditingCell(null);
-      setSelectedCell(null);
+      setAnchorCell(null);
+      setSelectionEnd(null);
       setHoveredCell(null);
     }
   }, [isSelected]);
 
-  // Keyboard copy/paste when a cell is selected but not in edit mode
+  // Keyboard copy/paste when cells are selected but not in edit mode
   useEffect(() => {
     if (!isSelected) return;
 
     const handleKeyDown = (e) => {
-      // Don't intercept if actively editing (contenteditable handles it)
       if (editingCell) return;
-      if (!selectedCell) return;
+      if (!anchorCell) return;
 
       const isCopy = (e.ctrlKey || e.metaKey) && e.key === 'c';
       const isPaste = (e.ctrlKey || e.metaKey) && e.key === 'v';
 
       if (isCopy) {
         e.preventDefault();
-        const cell = element.data[selectedCell.rowIndex]?.[selectedCell.colIndex];
+        const cell = element.data[anchorCell.rowIndex]?.[anchorCell.colIndex];
         if (cell) {
-          // Store full cell data (content + all style properties)
           setCopiedCell({ ...cell });
-          setCopiedCellPos({ rowIndex: selectedCell.rowIndex, colIndex: selectedCell.colIndex });
-          // Also put plain text on the system clipboard for external paste
+          setCopiedCellPos({ rowIndex: anchorCell.rowIndex, colIndex: anchorCell.colIndex });
           const plainText = cell.content?.replace(/<[^>]+>/g, '') || '';
           navigator.clipboard?.writeText(plainText).catch(() => {});
         }
@@ -53,13 +68,12 @@ export default function TableElement({
 
       if (isPaste && copiedCell) {
         e.preventDefault();
-        const { rowIndex, colIndex } = selectedCell;
+        const range = getSelectedRange();
         const newData = element.data.map((row, rIdx) =>
           row.map((cell, cIdx) =>
-            rIdx === rowIndex && cIdx === colIndex
+            range.has(`${rIdx}-${cIdx}`)
               ? {
                   ...cell,
-                  // Paste content only; preserve the target cell's dimensions & borders
                   content: copiedCell.content,
                   fontSize: copiedCell.fontSize,
                   fontFamily: copiedCell.fontFamily,
@@ -78,24 +92,29 @@ export default function TableElement({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSelected, editingCell, selectedCell, copiedCell, element, zone, onUpdate]);
-
+  }, [isSelected, editingCell, anchorCell, selectionEnd, copiedCell, element, zone, onUpdate]);
 
   const handleCellClick = (e, rowIndex, colIndex) => {
     e.stopPropagation();
     onSelect(element);
-    if (editingCell?.rowIndex === rowIndex && editingCell?.colIndex === colIndex) {
-      // Already editing this cell — do nothing
+
+    if (editingCell?.rowIndex === rowIndex && editingCell?.colIndex === colIndex) return;
+
+    if (e.shiftKey && anchorCell) {
+      // Extend selection range — do NOT enter edit mode
+      setSelectionEnd({ rowIndex, colIndex });
+      setEditingCell(null);
       return;
     }
-    const isAlreadySelected =
-      selectedCell?.rowIndex === rowIndex && selectedCell?.colIndex === colIndex;
-    if (isAlreadySelected) {
-      // Second click on same cell → enter edit mode
+
+    const isAlreadyAnchor =
+      anchorCell?.rowIndex === rowIndex && anchorCell?.colIndex === colIndex && !hasMultiSelection;
+
+    if (isAlreadyAnchor) {
       setEditingCell({ rowIndex, colIndex });
     } else {
-      // First click → select cell, leave edit mode
-      setSelectedCell({ rowIndex, colIndex });
+      setAnchorCell({ rowIndex, colIndex });
+      setSelectionEnd({ rowIndex, colIndex });
       setEditingCell(null);
     }
   };
@@ -136,8 +155,8 @@ export default function TableElement({
   return (
     <div
       key={element.id}
-      className={`absolute ${isSelected && !selectedCell && !editingCell ? 'ring-2 ring-blue-500' : ''}`}
-      data-cell-selected={!!(selectedCell || editingCell)}
+      className={`absolute ${isSelected && !anchorCell && !editingCell ? 'ring-2 ring-blue-500' : ''}`}
+      data-cell-selected={!!(anchorCell || editingCell)}
       style={{
         left: element.x,
         top: element.y
@@ -147,7 +166,8 @@ export default function TableElement({
         onSelect(element);
         // Click on table background (not a cell) — clear cell selection
         if (e.target === e.currentTarget) {
-          setSelectedCell(null);
+          setAnchorCell(null);
+          setSelectionEnd(null);
           setEditingCell(null);
         }
       }}
@@ -163,13 +183,12 @@ export default function TableElement({
 
                 const isCellEditing = editingCell?.rowIndex === rowIndex &&
                                      editingCell?.colIndex === colIndex;
-                const isCellSelected = !isCellEditing &&
-                                     selectedCell?.rowIndex === rowIndex &&
-                                     selectedCell?.colIndex === colIndex;
+                const isCellInRange = !isCellEditing && selectedRange.has(`${rowIndex}-${colIndex}`);
+                const isAnchor = !isCellEditing && anchorCell?.rowIndex === rowIndex && anchorCell?.colIndex === colIndex;
                 const isCellCopied = !isCellEditing &&
                                      copiedCellPos?.rowIndex === rowIndex &&
                                      copiedCellPos?.colIndex === colIndex;
-                const isHovered = isSelected && !isCellSelected && !isCellEditing &&
+                const isHovered = isSelected && !isCellInRange && !isCellEditing &&
                                  hoveredCell?.rowIndex === rowIndex &&
                                  hoveredCell?.colIndex === colIndex;
 
@@ -179,9 +198,10 @@ export default function TableElement({
                     colSpan={cell.colspan || 1}
                     rowSpan={cell.rowspan || 1}
                     className={`relative group ${
-                      isCellEditing ? 'ring-2 ring-blue-500 ring-inset' :
-                      isCellSelected ? 'ring-2 ring-blue-400 ring-inset' :
-                      isHovered ? 'ring-1 ring-blue-300 ring-inset' : ''
+                      isCellEditing  ? 'ring-2 ring-blue-500 ring-inset' :
+                      isAnchor       ? 'ring-2 ring-blue-400 ring-inset' :
+                      isCellInRange  ? 'ring-1 ring-blue-300 ring-inset' :
+                      isHovered      ? 'ring-1 ring-blue-200 ring-inset' : ''
                     }`}
                     style={{
                       outline: isCellCopied ? '2px dashed #f59e0b' : undefined,
@@ -195,7 +215,7 @@ export default function TableElement({
                       borderRight: (cell.showBorderRight !== undefined ? cell.showBorderRight : element.showBorderRight !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
                       borderBottom: (cell.showBorderBottom !== undefined ? cell.showBorderBottom : element.showBorderBottom !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
                       borderLeft: (cell.showBorderLeft !== undefined ? cell.showBorderLeft : element.showBorderLeft !== false) ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor}` : 'none',
-                      backgroundColor: isHovered ? '#dbeafe' : cell.bg,
+                      backgroundColor: isCellInRange && !isCellEditing ? '#dbeafe' : isHovered ? '#eff6ff' : cell.bg,
                       fontSize: cell.fontSize,
                       fontFamily: cell.fontFamily,
                       fontWeight: cell.fontWeight,
@@ -252,7 +272,7 @@ export default function TableElement({
                         style={{ pointerEvents: 'none', margin: '0', padding: '0' }}
                       />
                     )}
-                    {isCellSelected && !isCellEditing && (
+                    {isAnchor && !isCellEditing && (
                       <>
                         {/* Right edge handle for column width */}
                         <div
