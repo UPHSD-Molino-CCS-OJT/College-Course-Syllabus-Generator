@@ -67,6 +67,61 @@ export default function TableElement({
       if (editingCell) return;
       if (!anchorCell) return;
 
+      const numRows = element.data.length;
+      const numCols = element.data[0]?.length || 0;
+
+      // Arrow key navigation (Shift extends range)
+      const arrowDeltas = {
+        ArrowUp:    { dr: -1, dc: 0 },
+        ArrowDown:  { dr:  1, dc: 0 },
+        ArrowLeft:  { dr:  0, dc: -1 },
+        ArrowRight: { dr:  0, dc:  1 },
+      };
+      if (arrowDeltas[e.key]) {
+        e.preventDefault();
+        const { dr, dc } = arrowDeltas[e.key];
+        const base = e.shiftKey ? (selectionEnd || anchorCell) : anchorCell;
+        let nr = Math.max(0, Math.min(numRows - 1, base.rowIndex + dr));
+        let nc = Math.max(0, Math.min(numCols - 1, base.colIndex + dc));
+        // Skip covered cells
+        while (coveredCells.has(`${nr}-${nc}`) && (nr > 0 || nc > 0)) {
+          nr = Math.max(0, Math.min(numRows - 1, nr + dr));
+          nc = Math.max(0, Math.min(numCols - 1, nc + dc));
+        }
+        if (e.shiftKey) {
+          setSelectionEnd({ rowIndex: nr, colIndex: nc });
+        } else {
+          setAnchorCell({ rowIndex: nr, colIndex: nc });
+          setSelectionEnd({ rowIndex: nr, colIndex: nc });
+        }
+        return;
+      }
+
+      // Tab: move to next cell (Shift+Tab: previous), wrap to next/prev row
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const flat = [];
+        for (let r = 0; r < numRows; r++)
+          for (let c = 0; c < numCols; c++)
+            if (!coveredCells.has(`${r}-${c}`)) flat.push({ r, c });
+        const cur = flat.findIndex(p => p.r === anchorCell.rowIndex && p.c === anchorCell.colIndex);
+        const next = e.shiftKey
+          ? flat[(cur - 1 + flat.length) % flat.length]
+          : flat[(cur + 1) % flat.length];
+        if (next) {
+          setAnchorCell({ rowIndex: next.r, colIndex: next.c });
+          setSelectionEnd({ rowIndex: next.r, colIndex: next.c });
+        }
+        return;
+      }
+
+      // Enter: enter edit mode on anchor cell
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        setEditingCell({ ...anchorCell });
+        return;
+      }
+
       const isCopy = (e.ctrlKey || e.metaKey) && e.key === 'c';
       const isPaste = (e.ctrlKey || e.metaKey) && e.key === 'v';
       const isDelete = e.key === 'Backspace' || e.key === 'Delete';
