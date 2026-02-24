@@ -12,23 +12,34 @@ export default function TableElement({
   onCellResizeStart
 }) {
   const [editingCell, setEditingCell] = useState(null);
+  const [selectedCell, setSelectedCell] = useState(null);
   const [hoveredCell, setHoveredCell] = useState(null);
 
   // Clear cell focus whenever this table loses selection
   useEffect(() => {
     if (!isSelected) {
       setEditingCell(null);
+      setSelectedCell(null);
       setHoveredCell(null);
     }
   }, [isSelected]);
 
   const handleCellClick = (e, rowIndex, colIndex) => {
     e.stopPropagation();
-    // Select table and enter edit mode immediately
     onSelect(element);
-    // Only change editing cell if clicking a different cell
-    if (!editingCell || editingCell.rowIndex !== rowIndex || editingCell.colIndex !== colIndex) {
+    if (editingCell?.rowIndex === rowIndex && editingCell?.colIndex === colIndex) {
+      // Already editing this cell — do nothing
+      return;
+    }
+    const isAlreadySelected =
+      selectedCell?.rowIndex === rowIndex && selectedCell?.colIndex === colIndex;
+    if (isAlreadySelected) {
+      // Second click on same cell → enter edit mode
       setEditingCell({ rowIndex, colIndex });
+    } else {
+      // First click → select cell, leave edit mode
+      setSelectedCell({ rowIndex, colIndex });
+      setEditingCell(null);
     }
   };
 
@@ -68,7 +79,7 @@ export default function TableElement({
   return (
     <div
       key={element.id}
-      className={`absolute ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
+      className={`absolute ${isSelected && !selectedCell && !editingCell ? 'ring-2 ring-blue-500' : ''}`}
       style={{
         left: element.x,
         top: element.y
@@ -76,8 +87,9 @@ export default function TableElement({
       onClick={(e) => {
         e.stopPropagation();
         onSelect(element);
-        // Close editor if clicking on table background (not a cell)
+        // Click on table background (not a cell) — clear cell selection
         if (e.target === e.currentTarget) {
+          setSelectedCell(null);
           setEditingCell(null);
         }
       }}
@@ -91,11 +103,15 @@ export default function TableElement({
                 // Skip cells covered by a spanning ancestor
                 if (coveredCells.has(`${rowIndex}-${colIndex}`)) return null;
 
-                const isCellEditing = editingCell?.rowIndex === rowIndex && 
+                const isCellEditing = editingCell?.rowIndex === rowIndex &&
                                      editingCell?.colIndex === colIndex;
-                const isHovered = isSelected && hoveredCell?.rowIndex === rowIndex && 
+                const isCellSelected = !isCellEditing &&
+                                     selectedCell?.rowIndex === rowIndex &&
+                                     selectedCell?.colIndex === colIndex;
+                const isHovered = isSelected && !isCellSelected && !isCellEditing &&
+                                 hoveredCell?.rowIndex === rowIndex &&
                                  hoveredCell?.colIndex === colIndex;
-                
+
                 return (
                   <td
                     key={colIndex}
@@ -103,7 +119,8 @@ export default function TableElement({
                     rowSpan={cell.rowspan || 1}
                     className={`relative group ${
                       isCellEditing ? 'ring-2 ring-blue-500 ring-inset' :
-                      isSelected && !isCellEditing ? 'hover:ring-1 hover:ring-blue-400 hover:ring-inset hover:bg-blue-50' : ''
+                      isCellSelected ? 'ring-2 ring-blue-400 ring-inset' :
+                      isHovered ? 'ring-1 ring-blue-300 ring-inset' : ''
                     }`}
                     style={{
                       width: cell.width || element.cellWidth,
@@ -130,7 +147,7 @@ export default function TableElement({
                       userSelect: isCellEditing ? 'text' : 'none',
                       cursor: isSelected ? 'pointer' : 'default'
                     }}
-                    onMouseEnter={() => setHoveredCell({ rowIndex, colIndex })}
+                    onMouseEnter={() => isSelected && setHoveredCell({ rowIndex, colIndex })}
                     onMouseLeave={() => setHoveredCell(null)}
                     onMouseDown={(e) => {
                       if (e.target.classList.contains('resize-handle') || isCellEditing) {
@@ -172,7 +189,7 @@ export default function TableElement({
                         style={{ pointerEvents: 'none', margin: '0', padding: '0' }}
                       />
                     )}
-                    {isSelected && !isCellEditing && (
+                    {isCellSelected && !isCellEditing && (
                       <>
                         {/* Right edge handle for column width */}
                         <div
