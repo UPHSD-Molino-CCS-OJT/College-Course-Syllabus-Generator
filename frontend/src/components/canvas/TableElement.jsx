@@ -122,7 +122,7 @@ export default function TableElement({
                       color: cell.color,
                       textAlign: cell.align,
                       verticalAlign: cell.verticalAlign || 'top',
-                      padding: isCellEditing ? '0' : '8px',
+                      padding: '2px 4px',
                       whiteSpace: 'pre-wrap',
                       wordWrap: 'break-word',
                       position: 'relative',
@@ -157,13 +157,15 @@ export default function TableElement({
                           textAlign: cell.align,
                           width: '100%',
                           height: '100%',
-                          padding: '8px'
+                          padding: '0'
                         }}
+                        contentAttributes={{ 'data-cell-editor': 'true' }}
                         className="bg-white border-2 border-blue-500"
                       />
                     ) : (
                       <div
                         dangerouslySetInnerHTML={{ __html: cell.content || '' }}
+                        className="table-cell-content"
                         style={{ pointerEvents: 'none' }}
                       />
                     )}

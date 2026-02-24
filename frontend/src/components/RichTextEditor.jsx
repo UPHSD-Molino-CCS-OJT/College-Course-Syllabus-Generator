@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 
-export default function RichTextEditor({ content, onUpdate, style, className, onBlur }) {
+export default function RichTextEditor({ content, onUpdate, style, className, onBlur, contentAttributes = {} }) {
   const editorRef = useRef(null);
   const toolbarRef = useRef(null);
   const savedSelectionRef = useRef(null);
@@ -240,8 +240,9 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
         style={{
           ...style,
           outline: 'none',
-          minHeight: '20px'
+          minHeight: '1em'
         }}
+        {...contentAttributes}
         suppressContentEditableWarning
       />
     </div>
