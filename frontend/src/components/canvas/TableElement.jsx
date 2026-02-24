@@ -122,8 +122,9 @@ export default function TableElement({
         return;
       }
 
-      const isCopy = (e.ctrlKey || e.metaKey) && e.key === 'c';
-      const isPaste = (e.ctrlKey || e.metaKey) && e.key === 'v';
+      const isCopy = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c';
+      const isPaste = (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'v';
+      const isPastePlain = (e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'v';
       const isDelete = e.key === 'Backspace' || e.key === 'Delete';
 
       if (isDelete) {
@@ -149,6 +150,7 @@ export default function TableElement({
         }
       }
 
+      // Ctrl+V — paste with full formatting from copied cell
       if (isPaste && copiedCellRef.current) {
         e.preventDefault();
         const range = getSelectedRange();
@@ -166,6 +168,22 @@ export default function TableElement({
                   verticalAlign: copiedCellRef.current.verticalAlign,
                   bg: copiedCellRef.current.bg,
                 }
+              : cell
+          )
+        );
+        onUpdate(zone, element.id, { data: newData });
+      }
+
+      // Ctrl+Shift+V — paste content only, keep each target cell's existing styles
+      if (isPastePlain && copiedCellRef.current) {
+        e.preventDefault();
+        const range = getSelectedRange();
+        // Strip all HTML tags so inline formatting from the source is removed
+        const plainContent = copiedCellRef.current.content?.replace(/<[^>]+>/g, '') || '';
+        const newData = element.data.map((row, rIdx) =>
+          row.map((cell, cIdx) =>
+            range.has(`${rIdx}-${cIdx}`)
+              ? { ...cell, content: plainContent }
               : cell
           )
         );
