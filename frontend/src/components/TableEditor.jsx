@@ -97,21 +97,31 @@ export default function TableEditor({ table, onUpdate }) {
     // Keep selectedCell for highlighting but close modal
   };
 
-  // Returns the effective rendered width for a column (first explicit value found, else table default)
+  // Returns the effective rendered width for a column — scans all rows, prefers the last explicit value set
   const getColWidth = (colIndex) => {
+    let found = null;
     for (const row of table.data) {
       const w = row[colIndex]?.width;
-      if (w != null) return w;
+      if (w != null) found = w;
     }
-    return table.cellWidth;
+    return found ?? table.cellWidth;
   };
 
-  // Returns the effective rendered height for a row (first explicit value found, else table default)
+  // Returns the effective rendered height for a row — scans all cells in that row, prefers the last explicit value
   const getRowHeight = (rowIndex) => {
+    let found = null;
     for (const cell of (table.data[rowIndex] || [])) {
-      if (cell?.height != null) return cell.height;
+      if (cell?.height != null) found = cell.height;
     }
-    return table.cellHeight;
+    // If the target row has no explicit height, walk up from the last row to find the nearest one
+    if (found == null) {
+      for (let r = table.data.length - 1; r >= 0; r--) {
+        for (const cell of (table.data[r] || [])) {
+          if (cell?.height != null) return cell.height;
+        }
+      }
+    }
+    return found ?? table.cellHeight;
   };
 
   const handleAddRow = () => {
