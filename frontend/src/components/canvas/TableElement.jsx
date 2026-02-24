@@ -35,6 +35,28 @@ export default function TableElement({
     onUpdate(zone, element.id, { data: newData });
   };
 
+  // Compute which cells are hidden because they're covered by a spanning cell
+  const computeCoveredCells = (data) => {
+    const covered = new Set();
+    data.forEach((row, rIdx) => {
+      row.forEach((cell, cIdx) => {
+        const cs = cell.colspan || 1;
+        const rs = cell.rowspan || 1;
+        if (cs > 1 || rs > 1) {
+          for (let dr = 0; dr < rs; dr++) {
+            for (let dc = 0; dc < cs; dc++) {
+              if (dr === 0 && dc === 0) continue;
+              covered.add(`${rIdx + dr}-${cIdx + dc}`);
+            }
+          }
+        }
+      });
+    });
+    return covered;
+  };
+
+  const coveredCells = computeCoveredCells(element.data);
+
   return (
     <div
       key={element.id}
@@ -58,6 +80,9 @@ export default function TableElement({
           {element.data.map((row, rowIndex) => (
             <tr key={rowIndex}>
               {row.map((cell, colIndex) => {
+                // Skip cells covered by a spanning ancestor
+                if (coveredCells.has(`${rowIndex}-${colIndex}`)) return null;
+
                 const isCellEditing = editingCell?.rowIndex === rowIndex && 
                                      editingCell?.colIndex === colIndex;
                 const isHovered = isSelected && hoveredCell?.rowIndex === rowIndex && 
@@ -66,6 +91,8 @@ export default function TableElement({
                 return (
                   <td
                     key={colIndex}
+                    colSpan={cell.colspan || 1}
+                    rowSpan={cell.rowspan || 1}
                     className={`relative group ${
                       isCellEditing ? 'ring-2 ring-blue-500 ring-inset' :
                       isSelected && !isCellEditing ? 'hover:ring-1 hover:ring-blue-400 hover:ring-inset hover:bg-blue-50' : ''
