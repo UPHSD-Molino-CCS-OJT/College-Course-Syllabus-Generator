@@ -706,12 +706,15 @@ export default function CanvasEditor({ template, onClose, onSave }) {
 
       // Copy: Cmd/Ctrl + C
       if (cmdOrCtrl && e.key === 'c' && selectedElement) {
+        // Let table cell copy/paste handle it when a cell is focused
+        if (document.querySelector('[data-cell-selected="true"]')) return;
         e.preventDefault();
         handleCopyElement();
       }
 
       // Paste: Cmd/Ctrl + V
       if (cmdOrCtrl && e.key === 'v' && clipboard) {
+        if (document.querySelector('[data-cell-selected="true"]')) return;
         e.preventDefault();
         handlePasteElement();
       }

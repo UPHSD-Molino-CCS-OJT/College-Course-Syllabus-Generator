@@ -137,6 +137,7 @@ export default function TableElement({
     <div
       key={element.id}
       className={`absolute ${isSelected && !selectedCell && !editingCell ? 'ring-2 ring-blue-500' : ''}`}
+      data-cell-selected={!!(selectedCell || editingCell)}
       style={{
         left: element.x,
         top: element.y
