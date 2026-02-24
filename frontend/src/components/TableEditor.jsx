@@ -107,21 +107,13 @@ export default function TableEditor({ table, onUpdate }) {
     return found ?? table.cellWidth;
   };
 
-  // Returns the effective rendered height for a row — scans all cells in that row, prefers the last explicit value
+  // Returns the effective rendered height for a given row index.
+  // Scans every cell in that row; if none have an explicit height, falls back to table.cellHeight.
   const getRowHeight = (rowIndex) => {
-    let found = null;
     for (const cell of (table.data[rowIndex] || [])) {
-      if (cell?.height != null) found = cell.height;
+      if (cell?.height != null) return cell.height;
     }
-    // If the target row has no explicit height, walk up from the last row to find the nearest one
-    if (found == null) {
-      for (let r = table.data.length - 1; r >= 0; r--) {
-        for (const cell of (table.data[r] || [])) {
-          if (cell?.height != null) return cell.height;
-        }
-      }
-    }
-    return found ?? table.cellHeight;
+    return table.cellHeight;
   };
 
   const handleAddRow = () => {
