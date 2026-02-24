@@ -122,7 +122,7 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
               zIndex: 99999,
               top: `${toolbarPosition.top}px`,
               left: `${toolbarPosition.left}px`,
-              minWidth: '300px'
+              minWidth: '400px'
             }}
             onMouseDown={(e) => {
               e.stopPropagation();
@@ -179,6 +179,43 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
             title="Strikethrough"
           >
             S
+          </button>
+          <div className="w-px bg-gray-600"></div>
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); applyStyle('justifyLeft'); }}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs"
+            title="Align Left"
+          >
+            ≡←
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); applyStyle('justifyCenter'); }}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs"
+            title="Align Center"
+          >
+            ≡↔
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); applyStyle('justifyRight'); }}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs"
+            title="Align Right"
+          >
+            ≡→
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); applyStyle('justifyFull'); }}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs"
+            title="Justify"
+          >
+            ☰
           </button>
           <div className="w-px bg-gray-600"></div>
           <select
