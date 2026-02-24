@@ -152,9 +152,14 @@ export default function TableEditor({ table, onUpdate }) {
 
   const handleCellUpdate = (rowIndex, colIndex, updates) => {
     const newData = table.data.map((row, i) =>
-      row.map((cell, j) =>
-        i === rowIndex && j === colIndex ? { ...cell, ...updates } : cell
-      )
+      row.map((cell, j) => {
+        if (i === rowIndex && j === colIndex) return { ...cell, ...updates };
+        // Propagate column width to every cell in the same column
+        if ('width' in updates && j === colIndex) return { ...cell, width: updates.width };
+        // Propagate row height to every cell in the same row
+        if ('height' in updates && i === rowIndex) return { ...cell, height: updates.height };
+        return cell;
+      })
     );
     onUpdate({ data: newData });
   };
