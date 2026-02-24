@@ -14,6 +14,8 @@ export default function TableElement({
   const [editingCell, setEditingCell] = useState(null);
   const [selectedCell, setSelectedCell] = useState(null);
   const [hoveredCell, setHoveredCell] = useState(null);
+  const [copiedCell, setCopiedCell] = useState(null); // { content, styles }
+  const [copiedCellPos, setCopiedCellPos] = useState(null); // { rowIndex, colIndex }
 
   // Clear cell focus whenever this table loses selection
   useEffect(() => {
@@ -23,6 +25,61 @@ export default function TableElement({
       setHoveredCell(null);
     }
   }, [isSelected]);
+
+  // Keyboard copy/paste when a cell is selected but not in edit mode
+  useEffect(() => {
+    if (!isSelected) return;
+
+    const handleKeyDown = (e) => {
+      // Don't intercept if actively editing (contenteditable handles it)
+      if (editingCell) return;
+      if (!selectedCell) return;
+
+      const isCopy = (e.ctrlKey || e.metaKey) && e.key === 'c';
+      const isPaste = (e.ctrlKey || e.metaKey) && e.key === 'v';
+
+      if (isCopy) {
+        e.preventDefault();
+        const cell = element.data[selectedCell.rowIndex]?.[selectedCell.colIndex];
+        if (cell) {
+          // Store full cell data (content + all style properties)
+          setCopiedCell({ ...cell });
+          setCopiedCellPos({ rowIndex: selectedCell.rowIndex, colIndex: selectedCell.colIndex });
+          // Also put plain text on the system clipboard for external paste
+          const plainText = cell.content?.replace(/<[^>]+>/g, '') || '';
+          navigator.clipboard?.writeText(plainText).catch(() => {});
+        }
+      }
+
+      if (isPaste && copiedCell) {
+        e.preventDefault();
+        const { rowIndex, colIndex } = selectedCell;
+        const newData = element.data.map((row, rIdx) =>
+          row.map((cell, cIdx) =>
+            rIdx === rowIndex && cIdx === colIndex
+              ? {
+                  ...cell,
+                  // Paste content only; preserve the target cell's dimensions & borders
+                  content: copiedCell.content,
+                  fontSize: copiedCell.fontSize,
+                  fontFamily: copiedCell.fontFamily,
+                  fontWeight: copiedCell.fontWeight,
+                  color: copiedCell.color,
+                  align: copiedCell.align,
+                  verticalAlign: copiedCell.verticalAlign,
+                  bg: copiedCell.bg,
+                }
+              : cell
+          )
+        );
+        onUpdate(zone, element.id, { data: newData });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSelected, editingCell, selectedCell, copiedCell, element, zone, onUpdate]);
+
 
   const handleCellClick = (e, rowIndex, colIndex) => {
     e.stopPropagation();
@@ -108,6 +165,9 @@ export default function TableElement({
                 const isCellSelected = !isCellEditing &&
                                      selectedCell?.rowIndex === rowIndex &&
                                      selectedCell?.colIndex === colIndex;
+                const isCellCopied = !isCellEditing &&
+                                     copiedCellPos?.rowIndex === rowIndex &&
+                                     copiedCellPos?.colIndex === colIndex;
                 const isHovered = isSelected && !isCellSelected && !isCellEditing &&
                                  hoveredCell?.rowIndex === rowIndex &&
                                  hoveredCell?.colIndex === colIndex;
@@ -123,6 +183,8 @@ export default function TableElement({
                       isHovered ? 'ring-1 ring-blue-300 ring-inset' : ''
                     }`}
                     style={{
+                      outline: isCellCopied ? '2px dashed #f59e0b' : undefined,
+                      outlineOffset: '-2px',
                       width: cell.width || element.cellWidth,
                       maxWidth: cell.width || element.cellWidth,
                       height: cell.height || element.cellHeight,
