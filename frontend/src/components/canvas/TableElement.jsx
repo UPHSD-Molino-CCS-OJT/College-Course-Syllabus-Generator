@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ElementDragHandle from './ElementDragHandle';
 import RichTextEditor from '../RichTextEditor';
 
@@ -15,7 +15,7 @@ export default function TableElement({
   const [anchorCell, setAnchorCell] = useState(null);     // first corner of selection
   const [selectionEnd, setSelectionEnd] = useState(null); // second corner of selection
   const [hoveredCell, setHoveredCell] = useState(null);
-  const [copiedCell, setCopiedCell] = useState(null);
+  const copiedCellRef = useRef(null);  // useRef so paste handler always sees latest value
   const [copiedCellPos, setCopiedCellPos] = useState(null);
 
   // Derive the rectangular set of selected cells from anchor + end
@@ -142,14 +142,14 @@ export default function TableElement({
         e.preventDefault();
         const cell = element.data[anchorCell.rowIndex]?.[anchorCell.colIndex];
         if (cell) {
-          setCopiedCell({ ...cell });
+          copiedCellRef.current = { ...cell };
           setCopiedCellPos({ rowIndex: anchorCell.rowIndex, colIndex: anchorCell.colIndex });
           const plainText = cell.content?.replace(/<[^>]+>/g, '') || '';
           navigator.clipboard?.writeText(plainText).catch(() => {});
         }
       }
 
-      if (isPaste && copiedCell) {
+      if (isPaste && copiedCellRef.current) {
         e.preventDefault();
         const range = getSelectedRange();
         const newData = element.data.map((row, rIdx) =>
@@ -157,14 +157,14 @@ export default function TableElement({
             range.has(`${rIdx}-${cIdx}`)
               ? {
                   ...cell,
-                  content: copiedCell.content,
-                  fontSize: copiedCell.fontSize,
-                  fontFamily: copiedCell.fontFamily,
-                  fontWeight: copiedCell.fontWeight,
-                  color: copiedCell.color,
-                  align: copiedCell.align,
-                  verticalAlign: copiedCell.verticalAlign,
-                  bg: copiedCell.bg,
+                  content: copiedCellRef.current.content,
+                  fontSize: copiedCellRef.current.fontSize,
+                  fontFamily: copiedCellRef.current.fontFamily,
+                  fontWeight: copiedCellRef.current.fontWeight,
+                  color: copiedCellRef.current.color,
+                  align: copiedCellRef.current.align,
+                  verticalAlign: copiedCellRef.current.verticalAlign,
+                  bg: copiedCellRef.current.bg,
                 }
               : cell
           )
@@ -175,7 +175,7 @@ export default function TableElement({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSelected, editingCell, anchorCell, selectionEnd, copiedCell, element, zone, onUpdate]);
+  }, [isSelected, editingCell, anchorCell, selectionEnd, element, zone, onUpdate]);
 
   const handleCellClick = (e, rowIndex, colIndex) => {
     e.stopPropagation();
