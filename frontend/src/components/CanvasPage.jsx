@@ -146,8 +146,11 @@ export default function CanvasPage({
       elementHeight = element.height || 100;
       elementWidth = element.width || 100;
     } else if (element.type === 'table') {
-      elementHeight = (element.rows || 3) * (element.cellHeight || 40);
-      elementWidth = (element.cols || 3) * (element.cellWidth || 150);
+      // Sum actual column widths from row 0, fall back to cellWidth default
+      const firstRow = element.data?.[0] || [];
+      elementWidth = firstRow.reduce((sum, cell) => sum + (cell.width || element.cellWidth || 150), 0) || (element.cols || 3) * (element.cellWidth || 150);
+      // Sum actual row heights from col 0, fall back to cellHeight default
+      elementHeight = (element.data || []).reduce((sum, row) => sum + (row[0]?.height || element.cellHeight || 40), 0) || (element.rows || 3) * (element.cellHeight || 40);
     } else if (element.type === 'line') {
       elementHeight = element.strokeWidth || 2;
       elementWidth = element.length || 100;
@@ -158,9 +161,9 @@ export default function CanvasPage({
     
     // Apply boundary constraints
     const minX = 0;
-    const maxX = zoneDimensions.width - elementWidth;
+    const maxX = Math.max(0, zoneDimensions.width - elementWidth);
     const minY = 0;
-    const maxY = zoneDimensions.height - elementHeight;
+    const maxY = Math.max(0, zoneDimensions.height - elementHeight);
     
     x = Math.max(minX, Math.min(x, maxX));
     y = Math.max(minY, Math.min(y, maxY));
