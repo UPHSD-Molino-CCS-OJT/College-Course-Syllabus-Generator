@@ -49,6 +49,21 @@ export default function TableElement({
     if (!isSelected) return;
 
     const handleKeyDown = (e) => {
+      // Escape: exit edit mode → then clear cell selection (two-step)
+      if (e.key === 'Escape') {
+        if (editingCell) {
+          e.preventDefault();
+          setEditingCell(null); // exit edit, keep cell selected
+          return;
+        }
+        if (anchorCell) {
+          e.preventDefault();
+          setAnchorCell(null); // clear cell selection, table stays selected
+          setSelectionEnd(null);
+          return;
+        }
+      }
+
       if (editingCell) return;
       if (!anchorCell) return;
 
