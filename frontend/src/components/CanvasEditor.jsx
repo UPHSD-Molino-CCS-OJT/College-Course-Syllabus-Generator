@@ -421,7 +421,9 @@ export default function CanvasEditor({ template, onClose, onSave }) {
           fontWeight: i === 0 ? 'bold' : 'normal',
           color: '#000000',
           align: 'left',
-          bg: i === 0 ? '#f3f4f6' : '#ffffff'
+          bg: i === 0 ? '#f3f4f6' : '#ffffff',
+          width: 150,
+          height: 40
         }))
       )
     };

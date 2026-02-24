@@ -97,26 +97,38 @@ export default function TableEditor({ table, onUpdate }) {
     // Keep selectedCell for highlighting but close modal
   };
 
-  const handleAddRow = () => {
-    // Use the last row's height; fall back to table default
-    const lastRow = table.data[table.data.length - 1] || [];
-    const rowHeight = lastRow[0]?.height || table.cellHeight;
+  // Returns the effective rendered width for a column (first explicit value found, else table default)
+  const getColWidth = (colIndex) => {
+    for (const row of table.data) {
+      const w = row[colIndex]?.width;
+      if (w != null) return w;
+    }
+    return table.cellWidth;
+  };
 
-    const newRow = Array(table.cols).fill(null).map((_, j) => {
-      // Inherit column width from the same column in the existing data
-      const colWidth = table.data[0]?.[j]?.width || table.cellWidth;
-      return {
-        content: '',
-        fontSize: 12,
-        fontFamily: 'Arial',
-        fontWeight: 'normal',
-        color: '#000000',
-        align: 'left',
-        bg: '#ffffff',
-        width: colWidth,
-        height: rowHeight
-      };
-    });
+  // Returns the effective rendered height for a row (first explicit value found, else table default)
+  const getRowHeight = (rowIndex) => {
+    for (const cell of (table.data[rowIndex] || [])) {
+      if (cell?.height != null) return cell.height;
+    }
+    return table.cellHeight;
+  };
+
+  const handleAddRow = () => {
+    const lastRowIndex = table.data.length - 1;
+    const rowHeight = getRowHeight(lastRowIndex);
+
+    const newRow = Array(table.cols).fill(null).map((_, j) => ({
+      content: '',
+      fontSize: 12,
+      fontFamily: 'Arial',
+      fontWeight: 'normal',
+      color: '#000000',
+      align: 'left',
+      bg: '#ffffff',
+      width: getColWidth(j),
+      height: rowHeight
+    }));
 
     onUpdate({
       rows: table.rows + 1,
@@ -125,27 +137,23 @@ export default function TableEditor({ table, onUpdate }) {
   };
 
   const handleAddColumn = () => {
-    // Use the last column's width; fall back to table default
-    const lastColWidth = table.data[0]?.[table.data[0].length - 1]?.width || table.cellWidth;
+    const lastColIndex = (table.data[0]?.length ?? 1) - 1;
+    const colWidth = getColWidth(lastColIndex);
 
-    const newData = table.data.map((row, i) => {
-      // Inherit row height from the same row's first cell
-      const rowHeight = row[0]?.height || table.cellHeight;
-      return [
-        ...row,
-        {
-          content: '',
-          fontSize: 12,
-          fontFamily: 'Arial',
-          fontWeight: i === 0 ? 'bold' : 'normal',
-          color: '#000000',
-          align: 'left',
-          bg: i === 0 ? '#f3f4f6' : '#ffffff',
-          width: lastColWidth,
-          height: rowHeight
-        }
-      ];
-    });
+    const newData = table.data.map((row, i) => [
+      ...row,
+      {
+        content: '',
+        fontSize: 12,
+        fontFamily: 'Arial',
+        fontWeight: i === 0 ? 'bold' : 'normal',
+        color: '#000000',
+        align: 'left',
+        bg: i === 0 ? '#f3f4f6' : '#ffffff',
+        width: colWidth,
+        height: getRowHeight(i)
+      }
+    ]);
 
     onUpdate({
       cols: table.cols + 1,
@@ -353,7 +361,7 @@ export default function TableEditor({ table, onUpdate }) {
               </div>
 
               <div className="pt-2 border-t border-gray-700">
-                <label className="block text-xs font-medium text-gray-400 mb-2">Default Cell Size</label>
+                <label className="block text-xs font-medium text-gray-400 mb-2">Resize All Cells</label>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-xs text-gray-400 mb-1 block">Width (px)</label>
@@ -361,7 +369,11 @@ export default function TableEditor({ table, onUpdate }) {
                       type="number"
                       min="1"
                       value={table.cellWidth}
-                      onChange={(e) => onUpdate({ cellWidth: parseInt(e.target.value) })}
+                      onChange={(e) => {
+                        const w = parseInt(e.target.value) || 1;
+                        const newData = table.data.map(row => row.map(cell => ({ ...cell, width: w })));
+                        onUpdate({ cellWidth: w, data: newData });
+                      }}
                       className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -371,7 +383,11 @@ export default function TableEditor({ table, onUpdate }) {
                       type="number"
                       min="1"
                       value={table.cellHeight}
-                      onChange={(e) => onUpdate({ cellHeight: parseInt(e.target.value) })}
+                      onChange={(e) => {
+                        const h = parseInt(e.target.value) || 1;
+                        const newData = table.data.map(row => row.map(cell => ({ ...cell, height: h })));
+                        onUpdate({ cellHeight: h, data: newData });
+                      }}
                       className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
