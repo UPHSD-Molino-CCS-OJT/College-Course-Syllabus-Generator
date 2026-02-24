@@ -359,8 +359,7 @@ export default function TableEditor({ table, onUpdate }) {
                     <label className="text-xs text-gray-400 mb-1 block">Width (px)</label>
                     <input
                       type="number"
-                      min="50"
-                      max="500"
+                      min="1"
                       value={table.cellWidth}
                       onChange={(e) => onUpdate({ cellWidth: parseInt(e.target.value) })}
                       className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -370,8 +369,7 @@ export default function TableEditor({ table, onUpdate }) {
                     <label className="text-xs text-gray-400 mb-1 block">Height (px)</label>
                     <input
                       type="number"
-                      min="20"
-                      max="200"
+                      min="1"
                       value={table.cellHeight}
                       onChange={(e) => onUpdate({ cellHeight: parseInt(e.target.value) })}
                       className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"

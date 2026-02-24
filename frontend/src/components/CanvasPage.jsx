@@ -85,13 +85,13 @@ export default function CanvasPage({
           
           // Width adjustment affects entire column
           if ((direction === 'width' || direction === 'both') && cIdx === colIndex) {
-            updates.width = Math.max(50, startWidth + deltaX);
+            updates.width = Math.max(1, startWidth + deltaX);
             shouldUpdate = true;
           }
           
           // Height adjustment affects entire row
           if ((direction === 'height' || direction === 'both') && rIdx === rowIndex) {
-            updates.height = Math.max(20, startHeight + deltaY);
+            updates.height = Math.max(1, startHeight + deltaY);
             shouldUpdate = true;
           }
           
