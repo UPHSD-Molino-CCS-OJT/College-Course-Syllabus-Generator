@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
-export default function RichTextEditor({ content, onUpdate, style, className, onBlur, contentAttributes = {}, wrapperStyle = {} }) {
+export default function RichTextEditor({ content, onUpdate, style, className, onBlur, contentAttributes = {}, wrapperStyle = {}, portalToolbar = false }) {
   const editorRef = useRef(null);
   const toolbarRef = useRef(null);
   const savedSelectionRef = useRef(null);
@@ -27,12 +28,20 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
       savedSelectionRef.current = range.cloneRange();
       
       const rect = range.getBoundingClientRect();
-      const editorRect = editorRef.current.getBoundingClientRect();
-      
-      setToolbarPosition({
-        top: rect.top - editorRect.top - 45,
-        left: rect.left - editorRect.left + (rect.width / 2) - 150
-      });
+
+      if (portalToolbar) {
+        // Use fixed viewport coordinates so the toolbar escapes overflow:hidden containers
+        setToolbarPosition({
+          top: rect.top - 48 + window.scrollY,
+          left: Math.max(4, rect.left + rect.width / 2 - 150 + window.scrollX)
+        });
+      } else {
+        const editorRect = editorRef.current.getBoundingClientRect();
+        setToolbarPosition({
+          top: rect.top - editorRect.top - 45,
+          left: rect.left - editorRect.left + (rect.width / 2) - 150
+        });
+      }
       setShowToolbar(true);
     } else {
       setShowToolbar(false);
@@ -103,25 +112,26 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
 
   return (
     <div className="relative" style={wrapperStyle}>
-      {showToolbar && (
-        <div
-          ref={toolbarRef}
-          className="absolute z-50 bg-gray-800 border border-gray-600 rounded shadow-lg p-1 flex gap-1"
-          style={{
-            top: `${toolbarPosition.top}px`,
-            left: `${toolbarPosition.left}px`,
-            minWidth: '300px'
-          }}
-          onMouseDown={(e) => {
-            // Prevent event from bubbling to cell/table handlers
-            e.stopPropagation();
-            e.preventDefault();
-          }}
-          onClick={(e) => {
-            // Prevent event from bubbling to cell/table handlers
-            e.stopPropagation();
-          }}
-        >
+      {showToolbar && (() => {
+        const toolbarEl = (
+          <div
+            ref={toolbarRef}
+            className="bg-gray-800 border border-gray-600 rounded shadow-lg p-1 flex gap-1"
+            style={{
+              position: portalToolbar ? 'fixed' : 'absolute',
+              zIndex: 99999,
+              top: `${toolbarPosition.top}px`,
+              left: `${toolbarPosition.left}px`,
+              minWidth: '300px'
+            }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
           <button
             type="button"
             onMouseDown={(e) => e.stopPropagation()}
@@ -220,7 +230,9 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
             ✕
           </button>
         </div>
-      )}
+        );
+        return portalToolbar ? createPortal(toolbarEl, document.body) : toolbarEl;
+      })()}
       <div
         ref={editorRef}
         contentEditable

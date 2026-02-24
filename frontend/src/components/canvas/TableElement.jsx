@@ -279,6 +279,7 @@ export default function TableElement({
                         }}
                         contentAttributes={{ 'data-cell-editor': 'true' }}
                         className="bg-white border-2 border-blue-500"
+                        portalToolbar={true}
                       />
                     ) : (
                       <div
