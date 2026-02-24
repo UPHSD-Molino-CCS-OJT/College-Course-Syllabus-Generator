@@ -98,15 +98,25 @@ export default function TableEditor({ table, onUpdate }) {
   };
 
   const handleAddRow = () => {
-    const newRow = Array(table.cols).fill(null).map((_, j) => ({
-      content: `Cell ${table.rows}-${j}`,
-      fontSize: 12,
-      fontFamily: 'Arial',
-      fontWeight: 'normal',
-      color: '#000000',
-      align: 'left',
-      bg: '#ffffff'
-    }));
+    // Use the last row's height; fall back to table default
+    const lastRow = table.data[table.data.length - 1] || [];
+    const rowHeight = lastRow[0]?.height || table.cellHeight;
+
+    const newRow = Array(table.cols).fill(null).map((_, j) => {
+      // Inherit column width from the same column in the existing data
+      const colWidth = table.data[0]?.[j]?.width || table.cellWidth;
+      return {
+        content: '',
+        fontSize: 12,
+        fontFamily: 'Arial',
+        fontWeight: 'normal',
+        color: '#000000',
+        align: 'left',
+        bg: '#ffffff',
+        width: colWidth,
+        height: rowHeight
+      };
+    });
 
     onUpdate({
       rows: table.rows + 1,
@@ -115,18 +125,27 @@ export default function TableEditor({ table, onUpdate }) {
   };
 
   const handleAddColumn = () => {
-    const newData = table.data.map((row, i) => [
-      ...row,
-      {
-        content: i === 0 ? `Header ${table.cols}` : `Cell ${i}-${table.cols}`,
-        fontSize: 12,
-        fontFamily: 'Arial',
-        fontWeight: i === 0 ? 'bold' : 'normal',
-        color: '#000000',
-        align: 'left',
-        bg: i === 0 ? '#f3f4f6' : '#ffffff'
-      }
-    ]);
+    // Use the last column's width; fall back to table default
+    const lastColWidth = table.data[0]?.[table.data[0].length - 1]?.width || table.cellWidth;
+
+    const newData = table.data.map((row, i) => {
+      // Inherit row height from the same row's first cell
+      const rowHeight = row[0]?.height || table.cellHeight;
+      return [
+        ...row,
+        {
+          content: '',
+          fontSize: 12,
+          fontFamily: 'Arial',
+          fontWeight: i === 0 ? 'bold' : 'normal',
+          color: '#000000',
+          align: 'left',
+          bg: i === 0 ? '#f3f4f6' : '#ffffff',
+          width: lastColWidth,
+          height: rowHeight
+        }
+      ];
+    });
 
     onUpdate({
       cols: table.cols + 1,
