@@ -69,6 +69,19 @@ export default function TableElement({
 
       const isCopy = (e.ctrlKey || e.metaKey) && e.key === 'c';
       const isPaste = (e.ctrlKey || e.metaKey) && e.key === 'v';
+      const isDelete = e.key === 'Backspace' || e.key === 'Delete';
+
+      if (isDelete) {
+        e.preventDefault();
+        const range = getSelectedRange();
+        const newData = element.data.map((row, rIdx) =>
+          row.map((cell, cIdx) =>
+            range.has(`${rIdx}-${cIdx}`) ? { ...cell, content: '' } : cell
+          )
+        );
+        onUpdate(zone, element.id, { data: newData });
+        return;
+      }
 
       if (isCopy) {
         e.preventDefault();

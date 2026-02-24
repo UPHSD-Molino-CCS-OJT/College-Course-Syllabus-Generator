@@ -727,6 +727,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
 
       // Delete: Delete key only
       if (e.key === 'Delete' && selectedElement) {
+        if (document.querySelector('[data-cell-selected="true"]')) return;
         e.preventDefault();
         const zone = findElementZone(selectedElement.id);
         handleDeleteElement(zone, selectedElement.id);
