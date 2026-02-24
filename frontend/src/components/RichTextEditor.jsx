@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-export default function RichTextEditor({ content, onUpdate, style, className, onBlur, contentAttributes = {}, wrapperStyle = {}, portalToolbar = false }) {
+export default function RichTextEditor({ content, onUpdate, style, className, onBlur, contentAttributes = {}, wrapperStyle = {}, portalToolbar = false, autoFocus = false }) {
   const editorRef = useRef(null);
   const toolbarRef = useRef(null);
   const savedSelectionRef = useRef(null);
@@ -11,6 +11,16 @@ export default function RichTextEditor({ content, onUpdate, style, className, on
   useEffect(() => {
     if (editorRef.current && content !== undefined) {
       editorRef.current.innerHTML = content || '';
+    }
+    if (autoFocus && editorRef.current) {
+      editorRef.current.focus();
+      // Place cursor at end of content
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(editorRef.current);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
     }
   }, []);
 
