@@ -192,13 +192,26 @@ export function renderElement(element, syllabus, auxData = {}) {
       rebuilt = buildCLOPLOMatrix(clos, plos, pos);
     }
     if (rebuilt) {
-      // ── CLO-PLO: always fully replace — headers + data rebuild every time ──
+      // ── CLO-PLO: rebuild structure from DB but preserve the two constant header
+      //    cells (row 0 col 0 = CLO title, row 0 col 1 = PLO title) so any user
+      //    edits to their text / styling survive a re-render. ──────────────────
       if (element.matrixType === 'clo-plo') {
+        const mergedData = rebuilt.data.map((row, r) =>
+          row.map((cell, c) => {
+            // Preserve stored content+styles for the two constant header cells
+            if (r === 0 && (c === 0 || c === 1)) {
+              const stored = element.data?.[r]?.[c];
+              if (stored) return { ...cell, ...stored, rowspan: cell.rowspan, colspan: cell.colspan };
+            }
+            return cell;
+          })
+        );
         rendered = {
           ...rebuilt,
           id:          element.id,
           x:           element.x,
           y:           element.y,
+          data:        mergedData,
           borderColor: element.borderColor ?? rebuilt.borderColor,
           borderWidth: element.borderWidth ?? rebuilt.borderWidth,
           borderStyle: element.borderStyle ?? rebuilt.borderStyle,
