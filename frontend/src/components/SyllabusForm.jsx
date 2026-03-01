@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { syllabusAPI, templateAPI, cloAPI, ploAPI } from '../services/api';
+import { syllabusAPI, templateAPI, cloAPI, ploAPI, peoAPI, graduateAttributeAPI, missionKeywordAPI } from '../services/api';
 import { useAutoSave, AutoSaveIndicator } from '../utils/useAutoSave.jsx';
 
 const INITIAL_FORM_DATA = {
@@ -56,9 +56,32 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
   const [availableCLOs, setAvailableCLOs] = useState([]);
   const [cloLoading, setCloLoading] = useState(false);
 
+  // Graduate Attributes management
+  const [gaList, setGaList] = useState([]);
+  const [mkList, setMkList] = useState([]);
+  const [gaListLoading, setGaListLoading] = useState(false);
+  const [gaForm, setGaForm] = useState(null);
+  const [gaSubmitting, setGaSubmitting] = useState(false);
+
+  // PEOs management
+  const [peoList, setPeoList] = useState([]);
+  const [peoListLoading, setPeoListLoading] = useState(false);
+  const [peoForm, setPeoForm] = useState(null);
+  const [peoSubmitting, setPeoSubmitting] = useState(false);
+
+  // PLOs management
+  const [ploList, setPloList] = useState([]);
+  const [ploListLoading, setPloListLoading] = useState(false);
+  const [ploForm, setPloForm] = useState(null);
+  const [ploSubmitting, setPloSubmitting] = useState(false);
+
   useEffect(() => {
     fetchTemplates();
     fetchCLOs();
+    fetchMKList();
+    fetchGAList();
+    fetchPEOList();
+    fetchPLOList();
   }, []);
 
   const fetchTemplates = async () => {
@@ -92,6 +115,165 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
     } finally {
       setCloLoading(false);
     }
+  };
+
+  const fetchMKList = async () => {
+    try {
+      const res = await missionKeywordAPI.getAll({ limit: 100 });
+      setMkList(res.data?.missionKeywords || []);
+    } catch (err) {
+      console.error('Error fetching mission keywords:', err);
+    }
+  };
+
+  const fetchGAList = async () => {
+    setGaListLoading(true);
+    try {
+      const res = await graduateAttributeAPI.getAll({ limit: 100 });
+      setGaList(res.data?.graduateAttributes || []);
+    } catch (err) {
+      console.error('Error fetching graduate attributes:', err);
+    } finally {
+      setGaListLoading(false);
+    }
+  };
+
+  const fetchPEOList = async () => {
+    setPeoListLoading(true);
+    try {
+      const res = await peoAPI.getAll({ limit: 100 });
+      setPeoList(res.data?.peos || []);
+    } catch (err) {
+      console.error('Error fetching PEOs:', err);
+    } finally {
+      setPeoListLoading(false);
+    }
+  };
+
+  const fetchPLOList = async () => {
+    setPloListLoading(true);
+    try {
+      const res = await ploAPI.getAll({ limit: 100 });
+      setPloList(res.data?.plos || []);
+    } catch (err) {
+      console.error('Error fetching PLOs:', err);
+    } finally {
+      setPloListLoading(false);
+    }
+  };
+
+  // --- Graduate Attributes CRUD ---
+  const GA_BLANK = { number: '', category: 'CHARACTER', title: '', description: '', missionKeywords: [] };
+  const saveGA = async () => {
+    setGaSubmitting(true);
+    try {
+      if (gaForm._id) {
+        await graduateAttributeAPI.update(gaForm._id, {
+          number: gaForm.number, category: gaForm.category,
+          title: gaForm.title, description: gaForm.description,
+          missionKeywords: gaForm.missionKeywords,
+        });
+      } else {
+        await graduateAttributeAPI.create(gaForm);
+      }
+      setGaForm(null);
+      await fetchGAList();
+    } catch (err) {
+      console.error('Error saving GA:', err);
+    } finally {
+      setGaSubmitting(false);
+    }
+  };
+  const deleteGA = async (id) => {
+    if (!window.confirm('Delete this Graduate Attribute?')) return;
+    try { await graduateAttributeAPI.delete(id); await fetchGAList(); }
+    catch (err) { console.error('Error deleting GA:', err); }
+  };
+  const editGA = (ga) => setGaForm({
+    _id: ga._id, number: ga.number, category: ga.category,
+    title: ga.title, description: ga.description || '',
+    missionKeywords: (ga.missionKeywords || []).map((m) => typeof m === 'object' ? String(m._id) : String(m)),
+  });
+  const toggleGAMK = (mkId) => {
+    const id = String(mkId);
+    const already = gaForm.missionKeywords.includes(id);
+    setGaForm({ ...gaForm, missionKeywords: already ? gaForm.missionKeywords.filter((m) => m !== id) : [...gaForm.missionKeywords, id] });
+  };
+
+  // --- PEOs CRUD ---
+  const PEO_BLANK = { number: '', title: '', description: '', graduateAttributes: [] };
+  const savePEO = async () => {
+    setPeoSubmitting(true);
+    try {
+      if (peoForm._id) {
+        await peoAPI.update(peoForm._id, {
+          number: peoForm.number, title: peoForm.title,
+          description: peoForm.description, graduateAttributes: peoForm.graduateAttributes,
+        });
+      } else {
+        await peoAPI.create(peoForm);
+      }
+      setPeoForm(null);
+      await fetchPEOList();
+    } catch (err) {
+      console.error('Error saving PEO:', err);
+    } finally {
+      setPeoSubmitting(false);
+    }
+  };
+  const deletePEO = async (id) => {
+    if (!window.confirm('Delete this Program Educational Objective?')) return;
+    try { await peoAPI.delete(id); await fetchPEOList(); }
+    catch (err) { console.error('Error deleting PEO:', err); }
+  };
+  const editPEO = (peo) => setPeoForm({
+    _id: peo._id, number: peo.number, title: peo.title,
+    description: peo.description || '',
+    graduateAttributes: (peo.graduateAttributes || []).map((g) => typeof g === 'object' ? String(g._id) : String(g)),
+  });
+  const togglePEOGA = (gaId) => {
+    const id = String(gaId);
+    const already = peoForm.graduateAttributes.includes(id);
+    setPeoForm({ ...peoForm, graduateAttributes: already ? peoForm.graduateAttributes.filter((g) => g !== id) : [...peoForm.graduateAttributes, id] });
+  };
+
+  // --- PLOs CRUD ---
+  const PLO_BLANK = { number: '', title: '', description: '', programEducationalObjectives: [] };
+  const savePLO = async () => {
+    setPloSubmitting(true);
+    try {
+      if (ploForm._id) {
+        await ploAPI.update(ploForm._id, {
+          number: ploForm.number, title: ploForm.title,
+          description: ploForm.description, programEducationalObjectives: ploForm.programEducationalObjectives,
+        });
+      } else {
+        await ploAPI.create(ploForm);
+      }
+      setPloForm(null);
+      await fetchPLOList();
+      // Also refresh the PLO list used in the CLO picker
+      await fetchCLOs();
+    } catch (err) {
+      console.error('Error saving PLO:', err);
+    } finally {
+      setPloSubmitting(false);
+    }
+  };
+  const deletePLO = async (id) => {
+    if (!window.confirm('Delete this Program Learning Outcome?')) return;
+    try { await ploAPI.delete(id); await fetchPLOList(); await fetchCLOs(); }
+    catch (err) { console.error('Error deleting PLO:', err); }
+  };
+  const editPLO = (plo) => setPloForm({
+    _id: plo._id, number: plo.number, title: plo.title,
+    description: plo.description || '',
+    programEducationalObjectives: (plo.programEducationalObjectives || []).map((p) => typeof p === 'object' ? String(p._id) : String(p)),
+  });
+  const togglePLOPEO = (peoId) => {
+    const id = String(peoId);
+    const already = ploForm.programEducationalObjectives.includes(id);
+    setPloForm({ ...ploForm, programEducationalObjectives: already ? ploForm.programEducationalObjectives.filter((p) => p !== id) : [...ploForm.programEducationalObjectives, id] });
   };
 
   // Auto-save function
@@ -226,6 +408,9 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
     { id: 'instructor', name: 'Instructor' },
     { id: 'course', name: 'Course Details' },
     { id: 'outcomes', name: 'Outcomes' },
+    { id: 'grad-attrs', name: 'Graduate Attrs' },
+    { id: 'peos', name: 'PEOs' },
+    { id: 'plos', name: 'PLOs' },
     { id: 'grading', name: 'Grading' },
     { id: 'schedule', name: 'Schedule' },
     { id: 'policies', name: 'Policies' },
@@ -649,6 +834,496 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
                   })}
                 </div>
               </>
+            )}
+          </div>
+        )}
+
+        {/* Graduate Attributes Tab */}
+        {activeTab === 'grad-attrs' && (
+          <div className="space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex-1">
+                <h3 className="text-sm font-semibold text-green-800 mb-1">Graduate Attributes (GAs)</h3>
+                <p className="text-xs text-green-600">
+                  Manage Graduate Attributes and their relationships to Mission Keywords.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setGaForm({ ...GA_BLANK }); }}
+                className="shrink-0 px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+              >
+                + Add Graduate Attribute
+              </button>
+            </div>
+
+            {gaForm && (
+              <div className="border-2 border-green-400 rounded-lg p-5 bg-green-50 space-y-3">
+                <h4 className="font-semibold text-green-800 text-sm">
+                  {gaForm._id ? 'Edit Graduate Attribute' : 'New Graduate Attribute'}
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Number</label>
+                    <input
+                      type="number"
+                      value={gaForm.number}
+                      onChange={(e) => setGaForm({ ...gaForm, number: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="1"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Category</label>
+                    <select
+                      value={gaForm.category}
+                      onChange={(e) => setGaForm({ ...gaForm, category: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      <option value="CHARACTER">Character</option>
+                      <option value="COMPETENCE">Competence</option>
+                      <option value="COMMITMENT TO SERVICE">Commitment to Service</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Title *</label>
+                  <input
+                    type="text"
+                    value={gaForm.title}
+                    onChange={(e) => setGaForm({ ...gaForm, title: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="e.g. Ethical Conduct"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    value={gaForm.description}
+                    onChange={(e) => setGaForm({ ...gaForm, description: e.target.value })}
+                    rows="2"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Brief description…"
+                  />
+                </div>
+                {mkList.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">Linked Mission Keywords</label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-36 overflow-y-auto border border-gray-200 rounded-md p-2 bg-white">
+                      {mkList.map((mk) => {
+                        const id = String(mk._id);
+                        const checked = gaForm.missionKeywords.includes(id);
+                        return (
+                          <label key={id} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleGAMK(id)}
+                              className="h-3 w-3 rounded text-green-600"
+                            />
+                            <span className={checked ? 'font-semibold text-green-700' : 'text-gray-600'}>
+                              {mk.code} – {mk.label}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={saveGA}
+                    disabled={gaSubmitting || !gaForm.title}
+                    className="px-4 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors"
+                  >
+                    {gaSubmitting ? 'Saving…' : 'Save'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGaForm(null)}
+                    className="px-4 py-1.5 border border-gray-300 text-sm rounded-md hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {gaListLoading ? (
+              <div className="flex items-center justify-center py-10 text-gray-400">
+                <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                Loading…
+              </div>
+            ) : gaList.length === 0 ? (
+              <div className="text-center py-10 text-gray-400">
+                <p className="text-4xl mb-2">🎓</p>
+                <p className="font-medium">No Graduate Attributes yet.</p>
+                <p className="text-sm mt-1">Click &quot;Add Graduate Attribute&quot; to create the first one.</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
+                {gaList.map((ga) => {
+                  const catColor = ga.category === 'CHARACTER'
+                    ? 'bg-blue-100 text-blue-700'
+                    : ga.category === 'COMPETENCE'
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-amber-100 text-amber-700';
+                  return (
+                    <div key={ga._id} className="flex items-start gap-3 p-4 border border-gray-200 rounded-lg bg-white hover:border-gray-300 transition-colors">
+                      <span className="shrink-0 text-xs font-bold bg-gray-200 text-gray-700 px-2 py-0.5 rounded mt-0.5">GA {ga.number}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-sm text-gray-800">{ga.title}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${catColor}`}>{ga.category}</span>
+                        </div>
+                        {ga.description && <p className="text-xs text-gray-500 mt-0.5">{ga.description}</p>}
+                        {(ga.missionKeywords || []).length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {(ga.missionKeywords || []).map((m, i) => {
+                              const mk = typeof m === 'object' ? m : mkList.find((k) => String(k._id) === String(m));
+                              return (
+                                <span key={i} className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 border border-indigo-200">
+                                  {mk ? mk.code : '?'}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => { editGA(ga); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                          className="px-3 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50 transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteGA(ga._id)}
+                          className="px-3 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50 transition-colors"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* PEOs Tab */}
+        {activeTab === 'peos' && (
+          <div className="space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 flex-1">
+                <h3 className="text-sm font-semibold text-purple-800 mb-1">Program Educational Objectives (PEOs)</h3>
+                <p className="text-xs text-purple-600">
+                  Manage PEOs and their relationships to Graduate Attributes.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPeoForm({ ...PEO_BLANK })}
+                className="shrink-0 px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                + Add PEO
+              </button>
+            </div>
+
+            {peoForm && (
+              <div className="border-2 border-purple-400 rounded-lg p-5 bg-purple-50 space-y-3">
+                <h4 className="font-semibold text-purple-800 text-sm">
+                  {peoForm._id ? 'Edit Program Educational Objective' : 'New Program Educational Objective'}
+                </h4>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Number</label>
+                  <input
+                    type="number"
+                    value={peoForm.number}
+                    onChange={(e) => setPeoForm({ ...peoForm, number: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Title *</label>
+                  <input
+                    type="text"
+                    value={peoForm.title}
+                    onChange={(e) => setPeoForm({ ...peoForm, title: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="e.g. Apply technical knowledge effectively"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    value={peoForm.description}
+                    onChange={(e) => setPeoForm({ ...peoForm, description: e.target.value })}
+                    rows="2"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Brief description…"
+                  />
+                </div>
+                {gaList.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">Linked Graduate Attributes</label>
+                    <div className="space-y-1 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-white">
+                      {gaList.map((ga) => {
+                        const id = String(ga._id);
+                        const checked = peoForm.graduateAttributes.includes(id);
+                        return (
+                          <label key={id} className="flex items-center gap-2 text-xs cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => togglePEOGA(id)}
+                              className="h-3 w-3 rounded text-purple-600"
+                            />
+                            <span className={`shrink-0 px-1.5 py-0.5 rounded text-xs font-bold ${checked ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-600'}`}>GA {ga.number}</span>
+                            <span className={checked ? 'font-semibold text-purple-700' : 'text-gray-600'}>{ga.title}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={savePEO}
+                    disabled={peoSubmitting || !peoForm.title}
+                    className="px-4 py-1.5 bg-purple-600 text-white text-sm rounded-md hover:bg-purple-700 disabled:opacity-50 transition-colors"
+                  >
+                    {peoSubmitting ? 'Saving…' : 'Save'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPeoForm(null)}
+                    className="px-4 py-1.5 border border-gray-300 text-sm rounded-md hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {peoListLoading ? (
+              <div className="flex items-center justify-center py-10 text-gray-400">
+                <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                Loading…
+              </div>
+            ) : peoList.length === 0 ? (
+              <div className="text-center py-10 text-gray-400">
+                <p className="text-4xl mb-2">🎯</p>
+                <p className="font-medium">No Program Educational Objectives yet.</p>
+                <p className="text-sm mt-1">Click &quot;Add PEO&quot; to create the first one.</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
+                {peoList.map((peo) => (
+                  <div key={peo._id} className="flex items-start gap-3 p-4 border border-gray-200 rounded-lg bg-white hover:border-gray-300 transition-colors">
+                    <span className="shrink-0 text-xs font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded mt-0.5">PEO {peo.number}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm text-gray-800">{peo.title}</p>
+                      {peo.description && <p className="text-xs text-gray-500 mt-0.5">{peo.description}</p>}
+                      {(peo.graduateAttributes || []).length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {(peo.graduateAttributes || []).map((g, i) => {
+                            const ga = typeof g === 'object' ? g : gaList.find((a) => String(a._id) === String(g));
+                            return (
+                              <span key={i} className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700 border border-green-200">
+                                GA {ga ? ga.number : '?'}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => editPEO(peo)}
+                        className="px-3 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50 transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deletePEO(peo._id)}
+                        className="px-3 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50 transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* PLOs Tab */}
+        {activeTab === 'plos' && (
+          <div className="space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex-1">
+                <h3 className="text-sm font-semibold text-orange-800 mb-1">Program Learning Outcomes (PLOs)</h3>
+                <p className="text-xs text-orange-600">
+                  Manage PLOs and their relationships to Program Educational Objectives. Changes here also refresh the Outcomes tab.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPloForm({ ...PLO_BLANK })}
+                className="shrink-0 px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                + Add PLO
+              </button>
+            </div>
+
+            {ploForm && (
+              <div className="border-2 border-orange-400 rounded-lg p-5 bg-orange-50 space-y-3">
+                <h4 className="font-semibold text-orange-800 text-sm">
+                  {ploForm._id ? 'Edit Program Learning Outcome' : 'New Program Learning Outcome'}
+                </h4>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Number</label>
+                  <input
+                    type="number"
+                    value={ploForm.number}
+                    onChange={(e) => setPloForm({ ...ploForm, number: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Title *</label>
+                  <input
+                    type="text"
+                    value={ploForm.title}
+                    onChange={(e) => setPloForm({ ...ploForm, title: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="e.g. Demonstrate problem-solving skills"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    value={ploForm.description}
+                    onChange={(e) => setPloForm({ ...ploForm, description: e.target.value })}
+                    rows="2"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="Brief description…"
+                  />
+                </div>
+                {peoList.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">Linked Program Educational Objectives</label>
+                    <div className="space-y-1 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-white">
+                      {peoList.map((peo) => {
+                        const id = String(peo._id);
+                        const checked = ploForm.programEducationalObjectives.includes(id);
+                        return (
+                          <label key={id} className="flex items-center gap-2 text-xs cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => togglePLOPEO(id)}
+                              className="h-3 w-3 rounded text-orange-600"
+                            />
+                            <span className={`shrink-0 px-1.5 py-0.5 rounded text-xs font-bold ${checked ? 'bg-orange-600 text-white' : 'bg-gray-200 text-gray-600'}`}>PEO {peo.number}</span>
+                            <span className={checked ? 'font-semibold text-orange-700' : 'text-gray-600'}>{peo.title}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={savePLO}
+                    disabled={ploSubmitting || !ploForm.title}
+                    className="px-4 py-1.5 bg-orange-600 text-white text-sm rounded-md hover:bg-orange-700 disabled:opacity-50 transition-colors"
+                  >
+                    {ploSubmitting ? 'Saving…' : 'Save'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPloForm(null)}
+                    className="px-4 py-1.5 border border-gray-300 text-sm rounded-md hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {ploListLoading ? (
+              <div className="flex items-center justify-center py-10 text-gray-400">
+                <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                Loading…
+              </div>
+            ) : ploList.length === 0 ? (
+              <div className="text-center py-10 text-gray-400">
+                <p className="text-4xl mb-2">📋</p>
+                <p className="font-medium">No Program Learning Outcomes yet.</p>
+                <p className="text-sm mt-1">Click &quot;Add PLO&quot; to create the first one.</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
+                {ploList.map((plo) => (
+                  <div key={plo._id} className="flex items-start gap-3 p-4 border border-gray-200 rounded-lg bg-white hover:border-gray-300 transition-colors">
+                    <span className="shrink-0 text-xs font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded mt-0.5">PLO {plo.number}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm text-gray-800">{plo.title}</p>
+                      {plo.description && <p className="text-xs text-gray-500 mt-0.5">{plo.description}</p>}
+                      {(plo.programEducationalObjectives || []).length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {(plo.programEducationalObjectives || []).map((p, i) => {
+                            const peo = typeof p === 'object' ? p : peoList.find((e) => String(e._id) === String(p));
+                            return (
+                              <span key={i} className="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 border border-purple-200">
+                                PEO {peo ? peo.number : '?'}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => editPLO(plo)}
+                        className="px-3 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50 transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deletePLO(plo._id)}
+                        className="px-3 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50 transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}
