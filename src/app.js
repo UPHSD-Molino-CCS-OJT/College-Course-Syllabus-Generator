@@ -21,6 +21,11 @@ app.use(limiter);
 app.use("/api/v1/syllabi", require("./modules/syllabi/index"));
 app.use("/api/v1/settings", require("./modules/settings/index"));
 app.use("/api/v1/templates", require("./modules/templates/index"));
+app.use("/api/v1/mission-keywords", require("./modules/missionKeywords/index"));
+app.use("/api/v1/graduate-attributes", require("./modules/graduateAttributes/index"));
+app.use("/api/v1/peos", require("./modules/peos/index"));
+app.use("/api/v1/plos", require("./modules/plos/index"));
+app.use("/api/v1/clos", require("./modules/clos/index"));
 
 // changes added from remote
 
