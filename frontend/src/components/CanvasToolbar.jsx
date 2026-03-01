@@ -1,4 +1,4 @@
-export default function CanvasToolbar({ editingZone, onAddText, onAddTable, onAddImage, onAddLine, onZoneChange }) {
+export default function CanvasToolbar({ editingZone, onAddText, onAddTable, onAddImage, onAddLine, onAddMatrix, onZoneChange }) {
   const zones = [
     { id: 'header', label: 'Header', icon: '📄' },
     { id: 'content', label: 'Content', icon: '📝' },
@@ -55,6 +55,26 @@ export default function CanvasToolbar({ editingZone, onAddText, onAddTable, onAd
             <span className="text-xs">{tool.label}</span>
           </button>
         ))}
+      </div>
+
+      <div className="h-px w-12 bg-gray-600"></div>
+
+      {/* Relationship Matrix */}
+      <div className="space-y-2">
+        <div className="text-gray-400 text-xs text-center mb-2">Data</div>
+        <button
+          onClick={onAddMatrix}
+          disabled={!editingZone}
+          className={`w-14 h-14 rounded-lg flex flex-col items-center justify-center gap-1 transition-colors ${
+            editingZone
+              ? 'bg-amber-700 text-amber-100 hover:bg-amber-600 hover:text-white'
+              : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+          }`}
+          title="Insert Relationship Matrix (GA/PEO/PLO/CLO)"
+        >
+          <span className="text-xl">📊</span>
+          <span className="text-xs leading-tight text-center">Matrix</span>
+        </button>
       </div>
     </div>
   );
