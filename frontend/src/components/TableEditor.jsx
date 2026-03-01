@@ -556,22 +556,27 @@ export default function TableEditor({ table, onUpdate }) {
                 {table.data.map((row, rowIndex) => (
                   <div key={rowIndex}>
                     <div className="text-xs font-medium text-gray-500 mt-2 mb-1 px-1">Row {rowIndex + 1}</div>
-                    <div className="grid grid-cols-2 gap-1">
-                      {row.map((cell, colIndex) => (
+                    <div className="grid grid-cols-2 gap-1 min-w-0">
+                      {row.map((cell, colIndex) => {
+                        const plainText = String(cell?.content ?? '').replace(/<[^>]+>/g, '').trim();
+                        return (
                         <button
                           key={colIndex}
                           onClick={() => openCellEditor(rowIndex, colIndex)}
-                          className={`text-xs text-left px-2 py-2 rounded border transition-colors ${
+                          className={`text-xs text-left px-2 py-2 rounded border transition-colors overflow-hidden min-w-0 ${
                             selectedCell?.row === rowIndex && selectedCell?.col === colIndex
                               ? 'bg-blue-600 border-blue-400 text-white'
                               : 'bg-gray-700 border-gray-600 hover:bg-gray-600 hover:border-gray-500'
                           }`}
-                          title="Click to edit"
+                          title={plainText || `[${rowIndex},${colIndex}] (empty)`}
                         >
-                          <div className="font-medium">[{rowIndex},{colIndex}]</div>
-                          <div className="truncate text-gray-300">{cell.content || '(empty)'}</div>
+                          <div className="font-medium text-[10px] text-gray-400">[{rowIndex},{colIndex}]</div>
+                          <span className="block truncate leading-tight whitespace-nowrap text-gray-300">
+                            {plainText || '(empty)'}
+                          </span>
                         </button>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
