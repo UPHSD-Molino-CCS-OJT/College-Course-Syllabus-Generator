@@ -897,19 +897,23 @@ export default function CanvasEditor({ template, onClose, onSave }) {
     
     // Then update the document
     if (zone === 'header' || zone === 'footer') {
-      setCanvasDocument(prev => ({
-        ...prev,
-        [zone]: {
-          ...prev[zone],
-          elements: prev[zone].elements.map(el =>
-            el.id === elementId ? { ...el, ...updates } : el
-          )
-        }
-      }));
+      setCanvasDocument(prev => {
+        const nextElements = (prev[zone]?.elements || []).map(el =>
+          el.id === elementId ? { ...el, ...updates } : el
+        );
+        // If content didn't change, return prev to avoid unnecessary re-renders
+        if (JSON.stringify(nextElements) === JSON.stringify(prev[zone]?.elements)) return prev;
+        return {
+          ...prev,
+          [zone]: {
+            ...prev[zone],
+            elements: nextElements
+          }
+        };
+      });
     } else {
-      setCanvasDocument(prev => ({
-        ...prev,
-        pages: (prev.pages || []).map((page, idx) =>
+      setCanvasDocument(prev => {
+        const nextPages = (prev.pages || []).map((page, idx) =>
           idx === currentPageIndex
             ? {
                 ...page,
@@ -918,8 +922,14 @@ export default function CanvasEditor({ template, onClose, onSave }) {
                 )
               }
             : page
-        )
-      }));
+        );
+        // Deep compare check to avoid loop
+        if (JSON.stringify(nextPages) === JSON.stringify(prev.pages)) return prev;
+        return {
+          ...prev,
+          pages: nextPages
+        };
+      });
     }
   };
 
