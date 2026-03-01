@@ -201,6 +201,25 @@ export function renderElement(element, syllabus, auxData = {}) {
           lloData = rebuilt.data.map((row, r) =>
             row.map((cell, c) => {
               const oldCell = element.data[r]?.[c];
+              // Row 0, Col 0 = "LESSON LEARNING OUTCOMES" section title –
+              // it carries _header:true for rowspan purposes but the user can
+              // freely edit its text / styling, so treat it as an editable cell.
+              if (r === 0 && c === 0 && oldCell) {
+                return {
+                  ...cell,
+                  content:       oldCell.content       ?? cell.content,
+                  width:         oldCell.width         ?? cell.width,
+                  height:        oldCell.height        ?? cell.height,
+                  fontSize:      oldCell.fontSize      ?? cell.fontSize,
+                  fontFamily:    oldCell.fontFamily    ?? cell.fontFamily,
+                  fontWeight:    oldCell.fontWeight    ?? cell.fontWeight,
+                  fontStyle:     oldCell.fontStyle     ?? cell.fontStyle,
+                  color:         oldCell.color         ?? cell.color,
+                  align:         oldCell.align         ?? cell.align,
+                  verticalAlign: oldCell.verticalAlign ?? cell.verticalAlign,
+                  bg:            oldCell.bg            ?? cell.bg,
+                };
+              }
               // Always use canonical header cells (period/week dividers, CLO number row)
               if (cell._header) {
                 return {
