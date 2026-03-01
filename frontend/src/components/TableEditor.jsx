@@ -3,6 +3,26 @@ import BorderPresets from './table-editor/BorderPresets';
 import CellGridSelector from './table-editor/CellGridSelector';
 import CellEditorModal from './table-editor/CellEditorModal';
 
+/** Returns a Set of "row-col" keys for cells hidden by a colspan/rowspan ancestor. */
+function computeCoveredCells(data) {
+  const covered = new Set();
+  data.forEach((row, rIdx) => {
+    row.forEach((cell, cIdx) => {
+      const cs = cell.colspan || 1;
+      const rs = cell.rowspan || 1;
+      if (cs > 1 || rs > 1) {
+        for (let dr = 0; dr < rs; dr++) {
+          for (let dc = 0; dc < cs; dc++) {
+            if (dr === 0 && dc === 0) continue;
+            covered.add(`${rIdx + dr}-${cIdx + dc}`);
+          }
+        }
+      }
+    });
+  });
+  return covered;
+}
+
 export default function TableEditor({ table, onUpdate }) {
   const isMatrix = !!table.matrixType;
 
@@ -628,33 +648,41 @@ export default function TableEditor({ table, onUpdate }) {
                 </div>
               )}
               <div className="space-y-1 max-h-96 overflow-y-auto">
-                {table.data.map((row, rowIndex) => (
-                  <div key={rowIndex}>
-                    <div className="text-xs font-medium text-gray-500 mt-2 mb-1 px-1">Row {rowIndex + 1}</div>
-                    <div className="grid grid-cols-2 gap-1 min-w-0">
-                      {row.map((cell, colIndex) => {
-                        const plainText = String(cell?.content ?? '').replace(/<[^>]+>/g, '').trim();
-                        return (
-                        <button
-                          key={colIndex}
-                          onClick={() => openCellEditor(rowIndex, colIndex)}
-                          className={`text-xs text-left px-2 py-2 rounded border transition-colors overflow-hidden min-w-0 ${
-                            selectedCell?.row === rowIndex && selectedCell?.col === colIndex
-                              ? 'bg-blue-600 border-blue-400 text-white'
-                              : 'bg-gray-700 border-gray-600 hover:bg-gray-600 hover:border-gray-500'
-                          }`}
-                          title={plainText || `[${rowIndex},${colIndex}] (empty)`}
-                        >
-                          <div className="font-medium text-[10px] text-gray-400">[{rowIndex},{colIndex}]</div>
-                          <span className="block truncate leading-tight whitespace-nowrap text-gray-300">
-                            {plainText || '(empty)'}
-                          </span>
-                        </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
+                {(() => {
+                  const coveredCells = computeCoveredCells(table.data);
+                  return table.data.map((row, rowIndex) => {
+                    const visibleCells = row.filter((_, colIndex) => !coveredCells.has(`${rowIndex}-${colIndex}`));
+                    if (visibleCells.length === 0) return null;
+                    return (
+                      <div key={rowIndex}>
+                        <div className="text-xs font-medium text-gray-500 mt-2 mb-1 px-1">Row {rowIndex + 1}</div>
+                        <div className="grid grid-cols-2 gap-1 min-w-0">
+                          {row.map((cell, colIndex) => {
+                            if (coveredCells.has(`${rowIndex}-${colIndex}`)) return null;
+                            const plainText = String(cell?.content ?? '').replace(/<[^>]+>/g, '').trim();
+                            return (
+                              <button
+                                key={colIndex}
+                                onClick={() => openCellEditor(rowIndex, colIndex)}
+                                className={`text-xs text-left px-2 py-2 rounded border transition-colors overflow-hidden min-w-0 ${
+                                  selectedCell?.row === rowIndex && selectedCell?.col === colIndex
+                                    ? 'bg-blue-600 border-blue-400 text-white'
+                                    : 'bg-gray-700 border-gray-600 hover:bg-gray-600 hover:border-gray-500'
+                                }`}
+                                title={plainText || `[${rowIndex},${colIndex}] (empty)`}
+                              >
+                                <div className="font-medium text-[10px] text-gray-400">[{rowIndex},{colIndex}]</div>
+                                <span className="block truncate leading-tight whitespace-nowrap text-gray-300">
+                                  {plainText || '(empty)'}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           )}
