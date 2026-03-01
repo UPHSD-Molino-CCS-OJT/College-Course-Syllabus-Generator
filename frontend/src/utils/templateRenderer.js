@@ -668,7 +668,7 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
     const n = idx + 1;
     const rowH = getStoredRowHeight(idx + 2) ?? ROW_H;
     rows.push([
-      makeCell(`{{clo_${n}_label}}`, { align: 'left', bg: 'transparent', width: LABEL_W, height: rowH, fontSize: 12, verticalAlign: 'middle' }),
+      makeCell(`{{clo_${n}_label}}`, { align: 'left', bg: 'transparent', width: LABEL_W, height: rowH, fontSize: 12, verticalAlign: 'top' }),
       ...sortedPLOs.map((_plo, pi) =>
         makeCell(`{{clo_${n}_plo_${pi + 1}}}`, { align: 'center', bg: 'transparent', width: checkWidths[pi] ?? DEFAULT_CHECK_W, height: rowH, verticalAlign: 'middle' })
       ),
