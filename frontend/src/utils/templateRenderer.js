@@ -160,6 +160,224 @@ export function getFormattedGradingComponents(syllabus) {
     .join('\n');
 }
 
+// ─── Relationship Matrix Table Builders ───────────────────────────────────────
+
+const CHECK = '✓';
+
+/** Shared cell factory */
+function makeCell(content, { bold = false, bg = '#ffffff', align = 'center', width = 120, height = 40, fontSize = 11, color = '#000000', italic = false } = {}) {
+  return {
+    content,
+    fontSize,
+    fontFamily: 'Arial',
+    fontWeight: bold ? 'bold' : 'normal',
+    fontStyle: italic ? 'italic' : 'normal',
+    color,
+    align,
+    bg,
+    width,
+    height,
+  };
+}
+
+/** Build a canvas table element from a 2-D array of cell descriptors */
+function buildTableElement(rows2d, { x = 60, y = 100 } = {}) {
+  const numRows = rows2d.length;
+  const numCols = rows2d[0]?.length || 0;
+  return {
+    id: `table-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    type: 'table',
+    x,
+    y,
+    rows: numRows,
+    cols: numCols,
+    cellWidth: rows2d[0]?.[0]?.width || 120,
+    cellHeight: rows2d[0]?.[0]?.height || 40,
+    borderColor: '#000000',
+    borderWidth: 1,
+    borderStyle: 'solid',
+    showBorderTop: true,
+    showBorderRight: true,
+    showBorderBottom: true,
+    showBorderLeft: true,
+    headerBg: '#f3f4f6',
+    data: rows2d,
+  };
+}
+
+const HEADER_BG  = '#f0c060'; // warm gold — matches the tables in the screenshots
+const SUBHDR_BG  = '#fef3c7'; // light amber for sub-headers
+const CATEG_BG   = '#f8f0d0'; // very light for category rows
+
+/**
+ * Build a Graduate Attributes × Mission Keywords matrix table element.
+ * @param {object[]} graduateAttributes  – populated from GET /graduate-attributes
+ * @param {object[]} missionKeywords     – populated from GET /mission-keywords
+ */
+export function buildGAMissionKeywordMatrix(graduateAttributes, missionKeywords, pos) {
+  const mkCodes  = missionKeywords.map(mk => mk.code);
+  const mkIds    = missionKeywords.map(mk => String(mk._id));
+
+  const LABEL_W   = 420;
+  const CHECK_W   = 60;
+  const ROW_H     = 38;
+  const HEADER_H  = 44;
+
+  // Header row
+  const headerRow = [
+    makeCell('GRADUATE ATTRIBUTES', { bold: true, bg: HEADER_BG, align: 'center', width: LABEL_W, height: HEADER_H }),
+    ...mkCodes.map(c => makeCell(c, { bold: true, bg: HEADER_BG, align: 'center', width: CHECK_W, height: HEADER_H, color: '#b45309' })),
+  ];
+
+  const rows = [headerRow];
+
+  const categories = ['CHARACTER', 'COMPETENCE', 'COMMITMENT TO SERVICE'];
+  categories.forEach(cat => {
+    const gaInCat = graduateAttributes.filter(ga => ga.category === cat);
+    if (gaInCat.length === 0) return;
+
+    // Category row
+    const totalW = LABEL_W + CHECK_W * mkCodes.length;
+    rows.push([
+      makeCell(cat, { bold: true, bg: CATEG_BG, align: 'left', width: totalW, height: 32, fontSize: 11 }),
+      ...mkCodes.map(() => makeCell('', { bg: CATEG_BG, width: CHECK_W, height: 32 })),
+    ]);
+
+    gaInCat.forEach((ga, idx) => {
+      const label = `${idx + 1}. ${ga.title}${ga.description ? ' ' + ga.description : ''}`;
+      const gaLinkedIds = (ga.missionKeywords || []).map(mk =>
+        typeof mk === 'object' ? String(mk._id) : String(mk)
+      );
+      rows.push([
+        makeCell(label, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+        ...mkIds.map(id => makeCell(gaLinkedIds.includes(id) ? CHECK : '', { align: 'center', width: CHECK_W, height: ROW_H })),
+      ]);
+    });
+  });
+
+  return buildTableElement(rows, pos);
+}
+
+/**
+ * Build a PEO × Graduate Attributes matrix table element.
+ * @param {object[]} peos              – populated from GET /peos
+ * @param {object[]} graduateAttributes – populated from GET /graduate-attributes
+ */
+export function buildPEOGAMatrix(peos, graduateAttributes, pos) {
+  const gaIds   = graduateAttributes.map(ga => String(ga._id));
+  const gaLabels = graduateAttributes.map((ga, i) => `GA${i + 1}`);
+
+  const LABEL_W  = 380;
+  const CHECK_W  = 55;
+  const ROW_H    = 60;
+  const HEADER_H = 44;
+
+  // Main header row
+  const headerRow = [
+    makeCell('PROGRAM EDUCATIONAL OBJECTIVES\n\nAfter five years of graduation, the graduates can:', {
+      bold: true, bg: HEADER_BG, align: 'center', width: LABEL_W, height: HEADER_H,
+    }),
+    ...gaLabels.map(lbl => makeCell(lbl, {
+      bold: true, bg: HEADER_BG, align: 'center', width: CHECK_W, height: HEADER_H, color: '#b45309',
+    })),
+  ];
+
+  const rows = [headerRow];
+
+  peos.forEach((peo, idx) => {
+    const label = `${idx + 1}. ${peo.title} ${peo.description || ''}`.trim();
+    const peoLinkedIds = (peo.graduateAttributes || []).map(ga =>
+      typeof ga === 'object' ? String(ga._id) : String(ga)
+    );
+    rows.push([
+      makeCell(label, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+      ...gaIds.map(id => makeCell(peoLinkedIds.includes(id) ? CHECK : '', { align: 'center', width: CHECK_W, height: ROW_H })),
+    ]);
+  });
+
+  return buildTableElement(rows, pos);
+}
+
+/**
+ * Build a PLO × PEO matrix table element.
+ * @param {object[]} plos – populated from GET /plos
+ * @param {object[]} peos – populated from GET /peos
+ */
+export function buildPLOPEOMatrix(plos, peos, pos) {
+  const peoIds    = peos.map(p => String(p._id));
+  const peoLabels = peos.map((_, i) => String(i + 1));
+
+  const LABEL_W  = 400;
+  const CHECK_W  = 65;
+  const ROW_H    = 60;
+  const HEADER_H = 44;
+
+  const headerRow = [
+    makeCell('PROGRAM LEARNING OUTCOMES (PLOs)\n\nGraduates of the program are:', {
+      bold: true, bg: HEADER_BG, align: 'center', width: LABEL_W, height: HEADER_H,
+    }),
+    ...peoLabels.map(lbl => makeCell(lbl, {
+      bold: true, bg: HEADER_BG, align: 'center', width: CHECK_W, height: HEADER_H, color: '#b45309',
+    })),
+  ];
+
+  const rows = [headerRow];
+
+  plos.forEach((plo, idx) => {
+    const label = `${idx + 1}. ${plo.title} ${plo.description || ''}`.trim();
+    const ploLinkedIds = (plo.programEducationalObjectives || []).map(p =>
+      typeof p === 'object' ? String(p._id) : String(p)
+    );
+    rows.push([
+      makeCell(label, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+      ...peoIds.map(id => makeCell(ploLinkedIds.includes(id) ? CHECK : '', { align: 'center', width: CHECK_W, height: ROW_H })),
+    ]);
+  });
+
+  return buildTableElement(rows, pos);
+}
+
+/**
+ * Build a CLO × PLO matrix table element.
+ * @param {object[]} clos – populated from GET /clos
+ * @param {object[]} plos – populated from GET /plos
+ */
+export function buildCLOPLOMatrix(clos, plos, pos) {
+  const ploIds    = plos.map(p => String(p._id));
+  const ploLabels = plos.map((_, i) => String(i + 1));
+
+  const LABEL_W  = 400;
+  const CHECK_W  = 65;
+  const ROW_H    = 60;
+  const HEADER_H = 44;
+
+  const headerRow = [
+    makeCell('COURSE LEARNING OUTCOMES (CLOs)\n\nAt the end of the course, the students can:', {
+      bold: true, bg: HEADER_BG, align: 'center', width: LABEL_W, height: HEADER_H,
+    }),
+    ...ploLabels.map(lbl => makeCell(lbl, {
+      bold: true, bg: HEADER_BG, align: 'center', width: CHECK_W, height: HEADER_H, color: '#b45309',
+    })),
+  ];
+
+  const rows = [headerRow];
+
+  clos.forEach((clo, idx) => {
+    const label = `${idx + 1}. ${clo.title} ${clo.description || ''}`.trim();
+    const cloLinkedIds = (clo.programLearningOutcomes || []).map(p =>
+      typeof p === 'object' ? String(p._id) : String(p)
+    );
+    rows.push([
+      makeCell(label, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+      ...ploIds.map(id => makeCell(cloLinkedIds.includes(id) ? CHECK : '', { align: 'center', width: CHECK_W, height: ROW_H })),
+    ]);
+  });
+
+  return buildTableElement(rows, pos);
+}
+
+// ─── End Relationship Matrix Builders ─────────────────────────────────────────
+
 /**
  * Get formatted weekly schedule as text
  * @param {object} syllabus - Syllabus data
