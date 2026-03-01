@@ -55,6 +55,8 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(!!editSyllabus);
   const [availableCLOs, setAvailableCLOs] = useState([]);
   const [cloLoading, setCloLoading] = useState(false);
+  const [cloForm, setCloForm] = useState(null);
+  const [cloSubmitting, setCloSubmitting] = useState(false);
 
   // Graduate Attributes management
   const [gaList, setGaList] = useState([]);
@@ -62,6 +64,9 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
   const [gaListLoading, setGaListLoading] = useState(false);
   const [gaForm, setGaForm] = useState(null);
   const [gaSubmitting, setGaSubmitting] = useState(false);
+  const [mkForm, setMkForm] = useState(null);
+  const [mkSubmitting, setMkSubmitting] = useState(false);
+  const [mkListLoading, setMkListLoading] = useState(false);
 
   // PEOs management
   const [peoList, setPeoList] = useState([]);
@@ -118,11 +123,14 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
   };
 
   const fetchMKList = async () => {
+    setMkListLoading(true);
     try {
       const res = await missionKeywordAPI.getAll({ limit: 100 });
       setMkList(res.data?.missionKeywords || []);
     } catch (err) {
       console.error('Error fetching mission keywords:', err);
+    } finally {
+      setMkListLoading(false);
     }
   };
 
@@ -160,6 +168,67 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
     } finally {
       setPloListLoading(false);
     }
+  };
+
+  // --- Mission Keywords CRUD ---
+  const MK_BLANK = { code: '', label: '', isActive: true };
+  const saveMK = async () => {
+    setMkSubmitting(true);
+    try {
+      if (mkForm._id) {
+        await missionKeywordAPI.update(mkForm._id, { code: mkForm.code, label: mkForm.label, isActive: mkForm.isActive });
+      } else {
+        await missionKeywordAPI.create({ code: mkForm.code, label: mkForm.label, isActive: mkForm.isActive });
+      }
+      setMkForm(null);
+      await fetchMKList();
+    } catch (err) {
+      console.error('Error saving MK:', err);
+    } finally {
+      setMkSubmitting(false);
+    }
+  };
+  const deleteMK = async (id) => {
+    if (!window.confirm('Delete this Mission Keyword?')) return;
+    try { await missionKeywordAPI.delete(id); await fetchMKList(); }
+    catch (err) { console.error('Error deleting MK:', err); }
+  };
+  const editMK = (mk) => setMkForm({ _id: mk._id, code: mk.code, label: mk.label, isActive: mk.isActive !== false });
+
+  // --- CLOs CRUD ---
+  const CLO_BLANK = { number: '', title: '', description: '', programLearningOutcomes: [] };
+  const saveCLO = async () => {
+    setCloSubmitting(true);
+    try {
+      if (cloForm._id) {
+        await cloAPI.update(cloForm._id, {
+          number: cloForm.number, title: cloForm.title,
+          description: cloForm.description, programLearningOutcomes: cloForm.programLearningOutcomes,
+        });
+      } else {
+        await cloAPI.create(cloForm);
+      }
+      setCloForm(null);
+      await fetchCLOs();
+    } catch (err) {
+      console.error('Error saving CLO:', err);
+    } finally {
+      setCloSubmitting(false);
+    }
+  };
+  const deleteCLO = async (id) => {
+    if (!window.confirm('Delete this Course Learning Outcome?')) return;
+    try { await cloAPI.delete(id); await fetchCLOs(); }
+    catch (err) { console.error('Error deleting CLO:', err); }
+  };
+  const editCLO = (clo) => setCloForm({
+    _id: clo._id, number: clo.number, title: clo.title, description: clo.description || '',
+    programLearningOutcomes: (clo.programLearningOutcomes || []).map((p) => typeof p === 'object' ? String(p._id) : String(p)),
+  });
+  const toggleCLOPLO = (ploId) => {
+    const id = String(ploId);
+    const already = cloForm.programLearningOutcomes.includes(id);
+    setCloForm({ ...cloForm, programLearningOutcomes: already ? cloForm.programLearningOutcomes.filter((p) => p !== id) : [...cloForm.programLearningOutcomes, id] });
   };
 
   // --- Graduate Attributes CRUD ---
@@ -736,285 +805,562 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
 
         {/* Outcomes Tab */}
         {activeTab === 'outcomes' && (
-          <div className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-blue-800 mb-1">Course Learning Outcomes (CLOs)</h3>
-              <p className="text-xs text-blue-600">
-                Select the CLOs that apply to this course. Each CLO shows its linked Program Learning Outcomes (PLOs) for context.
-              </p>
-            </div>
+          <div className="space-y-6">
 
-            {cloLoading ? (
-              <div className="flex items-center justify-center py-10 text-gray-400">
-                <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                </svg>
-                Loading outcomes…
+            {/* ── CLO Management section ── */}
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-4">
+                <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 flex-1">
+                  <h3 className="text-sm font-semibold text-teal-800 mb-1">Manage Course Learning Outcomes (CLOs)</h3>
+                  <p className="text-xs text-teal-600">
+                    Create, edit, and delete CLOs and map each one to Program Learning Outcomes (PLOs).
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCloForm({ ...CLO_BLANK })}
+                  className="shrink-0 px-4 py-2 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 transition-colors"
+                >
+                  + Add CLO
+                </button>
               </div>
-            ) : availableCLOs.length === 0 ? (
-              <div className="text-center py-10 text-gray-400">
-                <p className="text-4xl mb-2">📭</p>
-                <p className="font-medium">No Course Learning Outcomes found.</p>
-                <p className="text-sm mt-1">Add CLOs via the Outcomes management pages first.</p>
-              </div>
-            ) : (
-              <>
-                {/* Select / Clear all */}
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">
-                    {formData.courseLearningOutcomes.length} / {availableCLOs.length} selected
-                  </span>
-                  <div className="flex gap-2">
+
+              {cloForm && (
+                <div className="border-2 border-teal-400 rounded-lg p-5 bg-teal-50 space-y-3">
+                  <h4 className="font-semibold text-teal-800 text-sm">
+                    {cloForm._id ? 'Edit Course Learning Outcome' : 'New Course Learning Outcome'}
+                  </h4>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Number</label>
+                    <input
+                      type="number"
+                      value={cloForm.number}
+                      onChange={(e) => setCloForm({ ...cloForm, number: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      placeholder="1"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Title *</label>
+                    <input
+                      type="text"
+                      value={cloForm.title}
+                      onChange={(e) => setCloForm({ ...cloForm, title: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      placeholder="e.g. Apply fundamental programming concepts"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                    <textarea
+                      value={cloForm.description}
+                      onChange={(e) => setCloForm({ ...cloForm, description: e.target.value })}
+                      rows="2"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      placeholder="Brief description…"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">
+                      Map to Program Learning Outcomes (PLOs)
+                      {ploList.length === 0 && <span className="text-gray-400 font-normal"> — add PLOs in the PLOs tab first</span>}
+                    </label>
+                    {ploList.length > 0 && (
+                      <div className="space-y-1 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-white">
+                        {ploList.map((plo) => {
+                          const id = String(plo._id);
+                          const checked = cloForm.programLearningOutcomes.includes(id);
+                          return (
+                            <label key={id} className="flex items-center gap-2 text-xs cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleCLOPLO(id)}
+                                className="h-3 w-3 rounded text-teal-600"
+                              />
+                              <span className={`shrink-0 px-1.5 py-0.5 rounded text-xs font-bold ${checked ? 'bg-teal-600 text-white' : 'bg-gray-200 text-gray-600'}`}>PLO {plo.number}</span>
+                              <span className={checked ? 'font-semibold text-teal-700' : 'text-gray-600'}>{plo.title}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2 pt-1">
                     <button
                       type="button"
-                      onClick={selectAllCLOs}
-                      className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                      onClick={saveCLO}
+                      disabled={cloSubmitting || !cloForm.title}
+                      className="px-4 py-1.5 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700 disabled:opacity-50 transition-colors"
                     >
-                      Select All
+                      {cloSubmitting ? 'Saving…' : 'Save'}
                     </button>
                     <button
                       type="button"
-                      onClick={clearAllCLOs}
-                      className="text-xs px-3 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
+                      onClick={() => setCloForm(null)}
+                      className="px-4 py-1.5 border border-gray-300 text-sm rounded-md hover:bg-gray-100 transition-colors"
                     >
-                      Clear All
+                      Cancel
                     </button>
                   </div>
                 </div>
+              )}
 
-                {/* CLO checklist */}
-                <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+              {cloLoading ? (
+                <div className="flex items-center justify-center py-8 text-gray-400">
+                  <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                  Loading outcomes…
+                </div>
+              ) : availableCLOs.length === 0 ? (
+                <div className="text-center py-8 text-gray-400 border border-dashed border-gray-300 rounded-lg">
+                  <p className="font-medium text-sm">No CLOs defined yet.</p>
+                  <p className="text-xs mt-1">Click &quot;+ Add CLO&quot; above to create the first one.</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
                   {availableCLOs.map((clo) => {
                     const cloId = String(clo._id);
-                    const isChecked = formData.courseLearningOutcomes.map(String).includes(cloId);
                     return (
-                      <label
-                        key={cloId}
-                        className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
-                          isChecked
-                            ? 'border-blue-400 bg-blue-50'
-                            : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => toggleCLO(cloId)}
-                          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
+                      <div key={cloId} className="flex items-start gap-3 p-4 border border-gray-200 rounded-lg bg-white hover:border-gray-300 transition-colors">
+                        <span className="shrink-0 text-xs font-bold bg-teal-100 text-teal-700 px-2 py-0.5 rounded mt-0.5">CLO {clo.number}</span>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
-                              isChecked ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
-                            }`}>
-                              CLO {clo.number}
-                            </span>
-                            <span className="font-semibold text-sm text-gray-800">{clo.title}</span>
-                          </div>
-                          {clo.description && (
-                            <p className="text-xs text-gray-500 mt-1 leading-relaxed">{clo.description}</p>
-                          )}
+                          <p className="font-semibold text-sm text-gray-800">{clo.title}</p>
+                          {clo.description && <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{clo.description}</p>}
                           {clo._plos && clo._plos.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1">
+                            <div className="flex flex-wrap gap-1 mt-1.5">
                               {clo._plos.map((plo, pi) => (
-                                <span
-                                  key={pi}
-                                  className="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200"
-                                  title={typeof plo === 'object' ? plo.title : ''}
-                                >
+                                <span key={pi} className="text-xs px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-200" title={typeof plo === 'object' ? plo.title : ''}>
                                   PLO {typeof plo === 'object' ? plo.number : '?'}
                                 </span>
                               ))}
                             </div>
                           )}
                         </div>
-                      </label>
+                        <div className="flex gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => editCLO(clo)}
+                            className="px-3 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50 transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteCLO(clo._id)}
+                            className="px-3 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
-              </>
-            )}
+              )}
+            </div>
+
+            <div className="border-t border-gray-200 pt-4" />
+
+            {/* ── Select CLOs for this syllabus ── */}
+            <div className="space-y-3">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-blue-800 mb-1">Select CLOs for this Syllabus</h3>
+                <p className="text-xs text-blue-600">
+                  Check the CLOs that apply to this specific course. Selected CLOs will be linked to the syllabus record.
+                </p>
+              </div>
+
+              {availableCLOs.length === 0 ? (
+                <div className="text-center py-6 text-gray-400">
+                  <p className="text-sm">Add CLOs using the section above, then select them here.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">
+                      {formData.courseLearningOutcomes.length} / {availableCLOs.length} selected
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={selectAllCLOs}
+                        className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                      >
+                        Select All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={clearAllCLOs}
+                        className="text-xs px-3 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                    {availableCLOs.map((clo) => {
+                      const cloId = String(clo._id);
+                      const isChecked = formData.courseLearningOutcomes.map(String).includes(cloId);
+                      return (
+                        <label
+                          key={cloId}
+                          className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
+                            isChecked
+                              ? 'border-blue-400 bg-blue-50'
+                              : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleCLO(cloId)}
+                            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+                                isChecked ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+                              }`}>
+                                CLO {clo.number}
+                              </span>
+                              <span className="font-semibold text-sm text-gray-800">{clo.title}</span>
+                            </div>
+                            {clo.description && (
+                              <p className="text-xs text-gray-500 mt-1 leading-relaxed">{clo.description}</p>
+                            )}
+                            {clo._plos && clo._plos.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {clo._plos.map((plo, pi) => (
+                                  <span
+                                    key={pi}
+                                    className="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200"
+                                    title={typeof plo === 'object' ? plo.title : ''}
+                                  >
+                                    PLO {typeof plo === 'object' ? plo.number : '?'}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         )}
 
         {/* Graduate Attributes Tab */}
         {activeTab === 'grad-attrs' && (
-          <div className="space-y-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex-1">
-                <h3 className="text-sm font-semibold text-green-800 mb-1">Graduate Attributes (GAs)</h3>
-                <p className="text-xs text-green-600">
-                  Manage Graduate Attributes and their relationships to Mission Keywords.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => { setGaForm({ ...GA_BLANK }); }}
-                className="shrink-0 px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
-              >
-                + Add Graduate Attribute
-              </button>
-            </div>
+          <div className="space-y-6">
 
-            {gaForm && (
-              <div className="border-2 border-green-400 rounded-lg p-5 bg-green-50 space-y-3">
-                <h4 className="font-semibold text-green-800 text-sm">
-                  {gaForm._id ? 'Edit Graduate Attribute' : 'New Graduate Attribute'}
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Number</label>
-                    <input
-                      type="number"
-                      value={gaForm.number}
-                      onChange={(e) => setGaForm({ ...gaForm, number: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                      placeholder="1"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Category</label>
-                    <select
-                      value={gaForm.category}
-                      onChange={(e) => setGaForm({ ...gaForm, category: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                    >
-                      <option value="CHARACTER">Character</option>
-                      <option value="COMPETENCE">Competence</option>
-                      <option value="COMMITMENT TO SERVICE">Commitment to Service</option>
-                    </select>
-                  </div>
+            {/* ── Mission Keywords section ── */}
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-4">
+                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 flex-1">
+                  <h3 className="text-sm font-semibold text-indigo-800 mb-1">Mission Keywords</h3>
+                  <p className="text-xs text-indigo-600">
+                    Define Mission Keywords (e.g. A–F codes) first — Graduate Attributes are then mapped to them.
+                  </p>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Title *</label>
-                  <input
-                    type="text"
-                    value={gaForm.title}
-                    onChange={(e) => setGaForm({ ...gaForm, title: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                    placeholder="e.g. Ethical Conduct"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
-                  <textarea
-                    value={gaForm.description}
-                    onChange={(e) => setGaForm({ ...gaForm, description: e.target.value })}
-                    rows="2"
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                    placeholder="Brief description…"
-                  />
-                </div>
-                {mkList.length > 0 && (
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-2">Linked Mission Keywords</label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-36 overflow-y-auto border border-gray-200 rounded-md p-2 bg-white">
-                      {mkList.map((mk) => {
-                        const id = String(mk._id);
-                        const checked = gaForm.missionKeywords.includes(id);
-                        return (
-                          <label key={id} className="flex items-center gap-1.5 text-xs cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleGAMK(id)}
-                              className="h-3 w-3 rounded text-green-600"
-                            />
-                            <span className={checked ? 'font-semibold text-green-700' : 'text-gray-600'}>
-                              {mk.code} – {mk.label}
-                            </span>
-                          </label>
-                        );
-                      })}
+                <button
+                  type="button"
+                  onClick={() => { setMkForm({ ...MK_BLANK }); setGaForm(null); }}
+                  className="shrink-0 px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  + Add Mission Keyword
+                </button>
+              </div>
+
+              {mkForm && (
+                <div className="border-2 border-indigo-400 rounded-lg p-5 bg-indigo-50 space-y-3">
+                  <h4 className="font-semibold text-indigo-800 text-sm">
+                    {mkForm._id ? 'Edit Mission Keyword' : 'New Mission Keyword'}
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Code *</label>
+                      <input
+                        type="text"
+                        value={mkForm.code}
+                        onChange={(e) => setMkForm({ ...mkForm, code: e.target.value.toUpperCase() })}
+                        maxLength={10}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 uppercase"
+                        placeholder="A"
+                      />
+                    </div>
+                    <div className="flex items-end gap-4">
+                      <label className="flex items-center gap-2 text-xs cursor-pointer mt-5">
+                        <input
+                          type="checkbox"
+                          checked={mkForm.isActive}
+                          onChange={(e) => setMkForm({ ...mkForm, isActive: e.target.checked })}
+                          className="h-4 w-4 rounded text-indigo-600"
+                        />
+                        <span className="font-medium text-gray-700">Active</span>
+                      </label>
                     </div>
                   </div>
-                )}
-                <div className="flex gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={saveGA}
-                    disabled={gaSubmitting || !gaForm.title}
-                    className="px-4 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors"
-                  >
-                    {gaSubmitting ? 'Saving…' : 'Save'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setGaForm(null)}
-                    className="px-4 py-1.5 border border-gray-300 text-sm rounded-md hover:bg-gray-100 transition-colors"
-                  >
-                    Cancel
-                  </button>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Label *</label>
+                    <input
+                      type="text"
+                      value={mkForm.label}
+                      onChange={(e) => setMkForm({ ...mkForm, label: e.target.value })}
+                      maxLength={300}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      placeholder="e.g. Integrity and Professionalism"
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={saveMK}
+                      disabled={mkSubmitting || !mkForm.code || !mkForm.label}
+                      className="px-4 py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                    >
+                      {mkSubmitting ? 'Saving…' : 'Save'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMkForm(null)}
+                      className="px-4 py-1.5 border border-gray-300 text-sm rounded-md hover:bg-gray-100 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {gaListLoading ? (
-              <div className="flex items-center justify-center py-10 text-gray-400">
-                <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                </svg>
-                Loading…
-              </div>
-            ) : gaList.length === 0 ? (
-              <div className="text-center py-10 text-gray-400">
-                <p className="text-4xl mb-2">🎓</p>
-                <p className="font-medium">No Graduate Attributes yet.</p>
-                <p className="text-sm mt-1">Click &quot;Add Graduate Attribute&quot; to create the first one.</p>
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
-                {gaList.map((ga) => {
-                  const catColor = ga.category === 'CHARACTER'
-                    ? 'bg-blue-100 text-blue-700'
-                    : ga.category === 'COMPETENCE'
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-amber-100 text-amber-700';
-                  return (
-                    <div key={ga._id} className="flex items-start gap-3 p-4 border border-gray-200 rounded-lg bg-white hover:border-gray-300 transition-colors">
-                      <span className="shrink-0 text-xs font-bold bg-gray-200 text-gray-700 px-2 py-0.5 rounded mt-0.5">GA {ga.number}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-sm text-gray-800">{ga.title}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${catColor}`}>{ga.category}</span>
-                        </div>
-                        {ga.description && <p className="text-xs text-gray-500 mt-0.5">{ga.description}</p>}
-                        {(ga.missionKeywords || []).length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1.5">
-                            {(ga.missionKeywords || []).map((m, i) => {
-                              const mk = typeof m === 'object' ? m : mkList.find((k) => String(k._id) === String(m));
-                              return (
-                                <span key={i} className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 border border-indigo-200">
-                                  {mk ? mk.code : '?'}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex gap-1.5 shrink-0">
+              {mkListLoading ? (
+                <div className="flex items-center justify-center py-6 text-gray-400">
+                  <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                  Loading…
+                </div>
+              ) : mkList.length === 0 ? (
+                <div className="text-center py-6 text-gray-400 border border-dashed border-gray-300 rounded-lg">
+                  <p className="font-medium text-sm">No Mission Keywords yet.</p>
+                  <p className="text-xs mt-1">Add one above to start mapping Graduate Attributes.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                  {mkList.map((mk) => (
+                    <div key={mk._id} className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg bg-white hover:border-gray-300 transition-colors">
+                      <span className="shrink-0 text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">{mk.code}</span>
+                      <span className="flex-1 text-xs text-gray-700 min-w-0 truncate" title={mk.label}>{mk.label}</span>
+                      {!mk.isActive && <span className="text-xs text-gray-400 italic">inactive</span>}
+                      <div className="flex gap-1 shrink-0">
                         <button
                           type="button"
-                          onClick={() => { editGA(ga); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                          className="px-3 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50 transition-colors"
+                          onClick={() => { editMK(mk); setGaForm(null); }}
+                          className="px-2 py-0.5 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50 transition-colors"
                         >
                           Edit
                         </button>
                         <button
                           type="button"
-                          onClick={() => deleteGA(ga._id)}
-                          className="px-3 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50 transition-colors"
+                          onClick={() => deleteMK(mk._id)}
+                          className="px-2 py-0.5 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50 transition-colors"
                         >
-                          Delete
+                          Del
                         </button>
                       </div>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-gray-200 pt-4" />
+
+            {/* ── Graduate Attributes section ── */}
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex-1">
+                  <h3 className="text-sm font-semibold text-green-800 mb-1">Graduate Attributes (GAs)</h3>
+                  <p className="text-xs text-green-600">
+                    Manage Graduate Attributes and map each one to the Mission Keywords above.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setGaForm({ ...GA_BLANK }); setMkForm(null); }}
+                  className="shrink-0 px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  + Add Graduate Attribute
+                </button>
               </div>
-            )}
+
+              {gaForm && (
+                <div className="border-2 border-green-400 rounded-lg p-5 bg-green-50 space-y-3">
+                  <h4 className="font-semibold text-green-800 text-sm">
+                    {gaForm._id ? 'Edit Graduate Attribute' : 'New Graduate Attribute'}
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Number</label>
+                      <input
+                        type="number"
+                        value={gaForm.number}
+                        onChange={(e) => setGaForm({ ...gaForm, number: e.target.value })}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                        placeholder="1"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Category</label>
+                      <select
+                        value={gaForm.category}
+                        onChange={(e) => setGaForm({ ...gaForm, category: e.target.value })}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      >
+                        <option value="CHARACTER">Character</option>
+                        <option value="COMPETENCE">Competence</option>
+                        <option value="COMMITMENT TO SERVICE">Commitment to Service</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Title *</label>
+                    <input
+                      type="text"
+                      value={gaForm.title}
+                      onChange={(e) => setGaForm({ ...gaForm, title: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="e.g. Ethical Conduct"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                    <textarea
+                      value={gaForm.description}
+                      onChange={(e) => setGaForm({ ...gaForm, description: e.target.value })}
+                      rows="2"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="Brief description…"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2">
+                      Map to Mission Keywords
+                      {mkList.length === 0 && <span className="text-gray-400 font-normal"> (add Mission Keywords above first)</span>}
+                    </label>
+                    {mkList.length > 0 && (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-36 overflow-y-auto border border-gray-200 rounded-md p-2 bg-white">
+                        {mkList.map((mk) => {
+                          const id = String(mk._id);
+                          const checked = gaForm.missionKeywords.includes(id);
+                          return (
+                            <label key={id} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleGAMK(id)}
+                                className="h-3 w-3 rounded text-green-600"
+                              />
+                              <span className={`shrink-0 px-1.5 py-0.5 rounded font-bold text-xs ${checked ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-700'}`}>{mk.code}</span>
+                              <span className={checked ? 'font-semibold text-green-700' : 'text-gray-600'} title={mk.label}>{mk.label}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={saveGA}
+                      disabled={gaSubmitting || !gaForm.title}
+                      className="px-4 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors"
+                    >
+                      {gaSubmitting ? 'Saving…' : 'Save'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGaForm(null)}
+                      className="px-4 py-1.5 border border-gray-300 text-sm rounded-md hover:bg-gray-100 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {gaListLoading ? (
+                <div className="flex items-center justify-center py-10 text-gray-400">
+                  <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                  Loading…
+                </div>
+              ) : gaList.length === 0 ? (
+                <div className="text-center py-10 text-gray-400">
+                  <p className="text-4xl mb-2">🎓</p>
+                  <p className="font-medium">No Graduate Attributes yet.</p>
+                  <p className="text-sm mt-1">Click &quot;Add Graduate Attribute&quot; to create the first one.</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
+                  {gaList.map((ga) => {
+                    const catColor = ga.category === 'CHARACTER'
+                      ? 'bg-blue-100 text-blue-700'
+                      : ga.category === 'COMPETENCE'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-amber-100 text-amber-700';
+                    return (
+                      <div key={ga._id} className="flex items-start gap-3 p-4 border border-gray-200 rounded-lg bg-white hover:border-gray-300 transition-colors">
+                        <span className="shrink-0 text-xs font-bold bg-gray-200 text-gray-700 px-2 py-0.5 rounded mt-0.5">GA {ga.number}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-sm text-gray-800">{ga.title}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${catColor}`}>{ga.category}</span>
+                          </div>
+                          {ga.description && <p className="text-xs text-gray-500 mt-0.5">{ga.description}</p>}
+                          {(ga.missionKeywords || []).length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {(ga.missionKeywords || []).map((m, i) => {
+                                const mk = typeof m === 'object' ? m : mkList.find((k) => String(k._id) === String(m));
+                                return (
+                                  <span key={i} className="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 border border-indigo-200" title={mk ? mk.label : ''}>
+                                    {mk ? mk.code : '?'}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => { editGA(ga); setMkForm(null); }}
+                            className="px-3 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50 transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteGA(ga._id)}
+                            className="px-3 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
