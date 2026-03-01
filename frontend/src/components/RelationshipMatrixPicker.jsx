@@ -83,7 +83,9 @@ function mergeCells(existingData, matrixData, originRow, originCol) {
       const tr = originRow + r;
       const tc = originCol + c;
       if (tr < merged.length && tc < (merged[tr]?.length ?? 0)) {
-        merged[tr][tc] = { ...matrixData[r][c] };
+        // Only inject the content — preserve the existing cell's width, height,
+        // font, color, background, alignment and every other style property.
+        merged[tr][tc] = { ...merged[tr][tc], content: matrixData[r][c].content };
       }
     }
   }
