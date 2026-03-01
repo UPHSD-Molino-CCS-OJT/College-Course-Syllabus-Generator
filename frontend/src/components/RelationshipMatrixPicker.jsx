@@ -94,22 +94,66 @@ function computeCoveredCells(data) {
 
 /**
  * Paste the source matrix onto the target table starting at (anchorRow, anchorCol).
- * Only copies `content`; all target cell styles, colspan, rowspan are preserved.
- * Cells covered by a colspan/rowspan ancestor are skipped.
+ * Expands or trims rows and columns so the table exactly fits the matrix from the
+ * anchor point. Rows/cols before the anchor are kept intact. Existing cell styles
+ * (font, colour, bg, borders) are preserved; only `content` is overwritten from
+ * the matrix source.
+ *
+ * Returns { data, rows, cols } — the updated 2-D data array plus new dimensions.
  */
 function pasteAtAnchor(existingData, matrixData, anchorRow, anchorCol) {
-  const covered = computeCoveredCells(existingData);
-  const merged = existingData.map(row => row.map(cell => ({ ...cell })));
-  matrixData.forEach((srcRow, sr) => {
-    srcRow.forEach((srcCell, sc) => {
-      const tr = anchorRow + sr;
-      const tc = anchorCol + sc;
-      if (tr >= merged.length || tc >= (merged[tr]?.length ?? 0)) return;
-      if (covered.has(`${tr}-${tc}`)) return; // skip phantom cells
-      merged[tr][tc] = { ...merged[tr][tc], content: srcCell?.content ?? '' };
-    });
+  const matrixRows = matrixData.length;
+  const matrixCols = matrixData[0]?.length ?? 0;
+  const targetRowCount = anchorRow + matrixRows;
+  const targetColCount = anchorCol + matrixCols;
+
+  // ── Deep copy ──────────────────────────────────────────────────────────────
+  let merged = existingData.map(row => row.map(cell => ({ ...cell })));
+
+  // ── Expand rows if the matrix extends beyond the current bottom ────────────
+  while (merged.length < targetRowCount) {
+    const templateRow = merged[merged.length - 1] ?? [];
+    merged.push(templateRow.map(cell => ({ ...cell, content: '' })));
+  }
+
+  // ── Trim excess rows below the matrix extent ───────────────────────────────
+  if (merged.length > targetRowCount) {
+    merged = merged.slice(0, targetRowCount);
+  }
+
+  // ── Fix each row's column count and overwrite matrix cell content ──────────
+  merged = merged.map((row, r) => {
+    // Expand cols if needed (copy style from last col as template)
+    while (row.length < targetColCount) {
+      const tpl = row[row.length - 1] ?? {
+        content: '', fontSize: 12, fontFamily: 'Arial', fontWeight: 'normal',
+        color: '#000000', align: 'left', bg: '#ffffff', width: 120, height: 40,
+      };
+      row = [...row, { ...tpl, content: '' }];
+    }
+
+    // Trim excess cols beyond the matrix extent
+    if (row.length > targetColCount) {
+      row = row.slice(0, targetColCount);
+    }
+
+    // For rows inside the matrix zone: overwrite content from the source matrix
+    if (r >= anchorRow) {
+      const mr = r - anchorRow;
+      const matrixRow = matrixData[mr] ?? [];
+      row = [...row];
+      for (let c = 0; c < matrixCols; c++) {
+        const srcCell = matrixRow[c];
+        if (srcCell !== undefined) {
+          // Preserve existing cell style; only replace the placeholder content
+          row[anchorCol + c] = { ...row[anchorCol + c], content: srcCell.content ?? '' };
+        }
+      }
+    }
+    return row;
   });
-  return merged;
+
+  return { data: merged, rows: targetRowCount, cols: targetColCount };
 }
 
 /** Fetch matrix data from the API and return a built table element. Throws on empty data. */
@@ -177,6 +221,21 @@ export default function RelationshipMatrixPicker({ canvasDocument, onInsert, onU
     [selectedTarget]
   );
 
+  // How many rows/cols will be added or removed when the anchor paste runs
+  const dimensionDelta = useMemo(() => {
+    if (!anchor || !builtMatrixData || !selectedTarget) return null;
+    const existingRows = selectedTarget.element.data?.length ?? 0;
+    const existingCols = selectedTarget.element.data?.[0]?.length ?? 0;
+    const newRows = anchor.row + (builtMatrixData.length ?? 0);
+    const newCols = anchor.col + (builtMatrixData[0]?.length ?? 0);
+    return {
+      rowDelta: newRows - existingRows,
+      colDelta: newCols - existingCols,
+      newRows,
+      newCols,
+    };
+  }, [anchor, builtMatrixData, selectedTarget]);
+
   // ── Step 1 → Step 2 ──────────────────────────────────────────────────────────
   const handlePickMatrix = (id) => {
     setMatrixId(id);
@@ -209,8 +268,16 @@ export default function RelationshipMatrixPicker({ canvasDocument, onInsert, onU
   // ── Step 3: apply anchor paste ────────────────────────────────────────────────
   const handleApplyAnchor = () => {
     if (!anchor || !selectedTarget || !builtMatrixData) return;
-    const merged = pasteAtAnchor(selectedTarget.element.data, builtMatrixData, anchor.row, anchor.col);
-    onUpdate(selectedTarget.element.id, selectedTarget.zone, selectedTarget.pageIndex, merged);
+    const { data, rows, cols } = pasteAtAnchor(
+      selectedTarget.element.data, builtMatrixData, anchor.row, anchor.col
+    );
+    onUpdate(
+      selectedTarget.element.id,
+      selectedTarget.zone,
+      selectedTarget.pageIndex,
+      data,
+      { rows, cols },
+    );
   };
 
   // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -383,11 +450,27 @@ export default function RelationshipMatrixPicker({ canvasDocument, onInsert, onU
                 The entire source ({builtMatrixData?.length ?? 0} rows × {builtMatrixData?.[0]?.length ?? 0} cols) will be pasted from that position.
                 Cells covered by colspan/rowspan are automatically skipped.
               </p>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                 {anchor && (
                   <span className="text-xs bg-blue-900 text-blue-200 border border-blue-600 rounded px-2 py-1">
                     Anchor: R{anchor.row + 1}C{anchor.col + 1}
-                    {' '}— {overlaySet.size} cell{overlaySet.size !== 1 ? 's' : ''} will be updated
+                    {' '}— {overlaySet.size} cell{overlaySet.size !== 1 ? 's' : ''} updated
+                  </span>
+                )}
+                {dimensionDelta && (dimensionDelta.rowDelta !== 0 || dimensionDelta.colDelta !== 0) && (
+                  <span className="text-xs rounded px-2 py-1 border"
+                    style={{
+                      background: dimensionDelta.rowDelta > 0 || dimensionDelta.colDelta > 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+                      borderColor: dimensionDelta.rowDelta > 0 || dimensionDelta.colDelta > 0 ? '#10b981' : '#ef4444',
+                      color: dimensionDelta.rowDelta > 0 || dimensionDelta.colDelta > 0 ? '#6ee7b7' : '#fca5a5',
+                    }}
+                  >
+                    {[dimensionDelta.rowDelta > 0 && `+${dimensionDelta.rowDelta} row${dimensionDelta.rowDelta !== 1 ? 's' : ''}`,
+                      dimensionDelta.rowDelta < 0 && `${dimensionDelta.rowDelta} row${Math.abs(dimensionDelta.rowDelta) !== 1 ? 's' : ''}`,
+                      dimensionDelta.colDelta > 0 && `+${dimensionDelta.colDelta} col${dimensionDelta.colDelta !== 1 ? 's' : ''}`,
+                      dimensionDelta.colDelta < 0 && `${dimensionDelta.colDelta} col${Math.abs(dimensionDelta.colDelta) !== 1 ? 's' : ''}`,
+                    ].filter(Boolean).join(', ')}
+                    {' '}→ {dimensionDelta.newRows}×{dimensionDelta.newCols}
                   </span>
                 )}
               </div>
@@ -479,7 +562,12 @@ export default function RelationshipMatrixPicker({ canvasDocument, onInsert, onU
             <div className="px-5 py-3 border-t border-gray-700 flex items-center justify-between shrink-0">
               <span className="text-gray-400 text-xs">
                 {anchor
-                  ? `Pasting ${builtMatrixData?.length ?? 0}×${builtMatrixData?.[0]?.length ?? 0} matrix at R${anchor.row+1}C${anchor.col+1} — ${overlaySet.size} cells will be updated`
+                  ? [
+                      `Pasting ${builtMatrixData?.length ?? 0}×${builtMatrixData?.[0]?.length ?? 0} matrix at R${anchor.row+1}C${anchor.col+1}`,
+                      dimensionDelta && (dimensionDelta.rowDelta !== 0 || dimensionDelta.colDelta !== 0)
+                        ? `— table resized to ${dimensionDelta.newRows}×${dimensionDelta.newCols}`
+                        : `— ${overlaySet.size} cells will be updated`,
+                    ].filter(Boolean).join(' ')
                   : 'Click any cell above to set where the matrix content starts'}
               </span>
               <button

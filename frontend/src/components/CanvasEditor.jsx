@@ -699,15 +699,16 @@ export default function CanvasEditor({ template, onClose, onSave }) {
     setShowMatrixPicker(false);
   };
 
-  const handleUpdateExistingTable = (elementId, zone, pageIndex, newData) => {
+  const handleUpdateExistingTable = (elementId, zone, pageIndex, newData, extraUpdates = {}) => {
+    const applyUpdate = el =>
+      el.id === elementId ? { ...el, data: newData, ...extraUpdates } : el;
+
     if (zone === 'header' || zone === 'footer') {
       setCanvasDocument(prev => ({
         ...prev,
         [zone]: {
           ...prev[zone],
-          elements: prev[zone].elements.map(el =>
-            el.id === elementId ? { ...el, data: newData } : el
-          ),
+          elements: prev[zone].elements.map(applyUpdate),
         },
       }));
     } else {
@@ -715,9 +716,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
         ...prev,
         pages: (prev.pages || []).map((page, idx) =>
           idx === pageIndex
-            ? { ...page, elements: (page.elements || []).map(el =>
-                el.id === elementId ? { ...el, data: newData } : el
-              )}
+            ? { ...page, elements: (page.elements || []).map(applyUpdate) }
             : page
         ),
       }));
