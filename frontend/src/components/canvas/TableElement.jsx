@@ -293,6 +293,9 @@ export default function TableElement({
                                  hoveredCell?.rowIndex === rowIndex &&
                                  hoveredCell?.colIndex === colIndex;
 
+                const plainContent = String(cell.content || '').replace(/<[^>]+>/g, '').trim();
+                const isPlaceholder = /^\{\{.*\}\}$/.test(plainContent);
+
                 return (
                   <td
                     key={colIndex}
@@ -325,8 +328,10 @@ export default function TableElement({
                       verticalAlign: cell.verticalAlign || 'top',
                       padding: '0',
                       margin: '0',
-                      whiteSpace: 'pre-wrap',
-                      wordWrap: 'break-word',
+                      whiteSpace: isPlaceholder ? 'nowrap' : 'pre-wrap',
+                      wordWrap: isPlaceholder ? undefined : 'break-word',
+                      overflow: 'hidden',
+                      textOverflow: isPlaceholder ? 'ellipsis' : undefined,
                       position: 'relative',
                       userSelect: isCellEditing ? 'text' : 'none',
                       cursor: isSelected ? 'pointer' : 'default'
@@ -372,7 +377,17 @@ export default function TableElement({
                       <div
                         dangerouslySetInnerHTML={{ __html: cell.content || '' }}
                         className="table-cell-content"
-                        style={{ pointerEvents: 'none', margin: '0', padding: '0' }}
+                        style={{
+                          pointerEvents: 'none',
+                          margin: '0',
+                          padding: '0',
+                          ...(isPlaceholder ? {
+                            overflow: 'hidden',
+                            whiteSpace: 'nowrap',
+                            textOverflow: 'ellipsis',
+                            width: '100%',
+                          } : {}),
+                        }}
                       />
                     )}
                     {isAnchor && !isCellEditing && (
