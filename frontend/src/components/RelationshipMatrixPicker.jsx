@@ -73,20 +73,18 @@ function getTemplateTables(canvasDocument) {
 }
 
 /**
- * Overlay matrixData onto a deep-copy of existingData starting at cell (originRow, originCol).
- * Cells outside the existing table's bounds are silently clipped.
+ * Apply an explicit list of { srcRow, srcCol, tgtRow, tgtCol } mappings onto a deep-copy
+ * of existingData, writing only the `content` from the source cell into the target cell.
+ * All other target-cell style properties (width, height, font, color, bg…) are preserved.
  */
-function mergeCells(existingData, matrixData, originRow, originCol) {
+function mergeByMapping(existingData, matrixData, mappings) {
   const merged = existingData.map(row => row.map(cell => ({ ...cell })));
-  for (let r = 0; r < matrixData.length; r++) {
-    for (let c = 0; c < (matrixData[r]?.length ?? 0); c++) {
-      const tr = originRow + r;
-      const tc = originCol + c;
-      if (tr < merged.length && tc < (merged[tr]?.length ?? 0)) {
-        // Only inject the content — preserve the existing cell's width, height,
-        // font, color, background, alignment and every other style property.
-        merged[tr][tc] = { ...merged[tr][tc], content: matrixData[r][c].content };
-      }
+  for (const { srcRow, srcCol, tgtRow, tgtCol } of mappings) {
+    if (tgtRow < merged.length && tgtCol < (merged[tgtRow]?.length ?? 0)) {
+      merged[tgtRow][tgtCol] = {
+        ...merged[tgtRow][tgtCol],
+        content: matrixData[srcRow]?.[srcCol]?.content ?? '',
+      };
     }
   }
   return merged;
@@ -147,8 +145,8 @@ export default function RelationshipMatrixPicker({ canvasDocument, onInsert, onU
   // Step 3 state
   const [selectedTarget, setSelectedTarget]   = useState(null); // { element, zone, pageIndex, label }
   const [builtMatrixData, setBuiltMatrixData] = useState(null); // 2-D array from builder
-  const [originCell, setOriginCell]           = useState(null); // { row, col } — chosen top-left corner
-  const [hoverCell, setHoverCell]             = useState(null); // { row, col } — hover highlight
+  const [activeSrcCell, setActiveSrcCell]     = useState(null); // { row, col } — selected source cell
+  const [cellMappings, setCellMappings]       = useState([]);   // [{ srcRow, srcCol, tgtRow, tgtCol }]
 
   const templateTables = useMemo(() => getTemplateTables(canvasDocument), [canvasDocument]);
 
@@ -172,8 +170,8 @@ export default function RelationshipMatrixPicker({ canvasDocument, onInsert, onU
       } else {
         setBuiltMatrixData(element.data);
         setSelectedTarget(target);
-        setOriginCell(null);
-        setHoverCell(null);
+        setActiveSrcCell(null);
+        setCellMappings([]);
         setStep('cell');
       }
     } catch (err) {
@@ -184,68 +182,67 @@ export default function RelationshipMatrixPicker({ canvasDocument, onInsert, onU
     }
   };
 
-  // ── Step 3: confirm origin cell → merge → commit ──────────────────────────
-  const handleConfirmOrigin = () => {
-    if (!originCell || !selectedTarget || !builtMatrixData) return;
-    const merged = mergeCells(
-      selectedTarget.element.data,
-      builtMatrixData,
-      originCell.row,
-      originCell.col,
-    );
+  // ── Step 3: manual cell mapping ───────────────────────────────────────────
+  const handleTargetCellClick = (tgtRow, tgtCol) => {
+    if (!activeSrcCell) {
+      // No source active — click removes an existing mapping on this target cell
+      setCellMappings(prev => prev.filter(m => !(m.tgtRow === tgtRow && m.tgtCol === tgtCol)));
+      return;
+    }
+    // Assign: one source → one target (overwrite any prior mapping for either side)
+    setCellMappings(prev => {
+      const filtered = prev.filter(m =>
+        !(m.tgtRow === tgtRow && m.tgtCol === tgtCol) &&
+        !(m.srcRow === activeSrcCell.row && m.srcCol === activeSrcCell.col)
+      );
+      return [...filtered, { srcRow: activeSrcCell.row, srcCol: activeSrcCell.col, tgtRow, tgtCol }];
+    });
+    setActiveSrcCell(null); // deselect after placing
+  };
+
+  const handleApplyMapping = () => {
+    if (!cellMappings.length || !selectedTarget || !builtMatrixData) return;
+    const merged = mergeByMapping(selectedTarget.element.data, builtMatrixData, cellMappings);
     onUpdate(selectedTarget.element.id, selectedTarget.zone, selectedTarget.pageIndex, merged);
   };
 
   // ── Step 3 helpers ────────────────────────────────────────────────────────────
   const selectedMatrix = MATRICES.find((m) => m.id === matrixId);
 
-  /** Whether cell (r, c) falls inside the matrix region anchored at `origin` */
-  const inRange = (r, c, origin) => {
-    if (!origin || !builtMatrixData) return false;
-    return (
-      r >= origin.row &&
-      r <  origin.row + builtMatrixData.length &&
-      c >= origin.col &&
-      c <  origin.col + (builtMatrixData[0]?.length ?? 0)
-    );
-  };
+  // Source (built matrix) preview
+  const srcRows        = builtMatrixData ?? [];
+  const srcPreviewRows = srcRows.slice(0, MAX_PREVIEW_ROWS);
+  const srcHiddenRows  = srcRows.length - srcPreviewRows.length;
+  const srcCols        = srcPreviewRows[0]?.length ?? 0;
+  const srcClampedCols = Math.min(srcCols, MAX_PREVIEW_COLS);
+  const srcHiddenCols  = Math.max(0, srcCols - MAX_PREVIEW_COLS);
 
-  const tableRows   = selectedTarget?.element?.data ?? [];
-  const previewRows = tableRows.slice(0, MAX_PREVIEW_ROWS);
-  const previewCols = previewRows[0]?.length ?? 0;
-  const clampedCols = Math.min(previewCols, MAX_PREVIEW_COLS);
-  const hiddenRows  = tableRows.length - previewRows.length;
-  const hiddenCols  = Math.max(0, previewCols - MAX_PREVIEW_COLS);
+  // Target (existing table) preview
+  const tgtRows        = selectedTarget?.element?.data ?? [];
+  const tgtPreviewRows = tgtRows.slice(0, MAX_PREVIEW_ROWS);
+  const tgtHiddenRows  = tgtRows.length - tgtPreviewRows.length;
+  const tgtCols        = tgtPreviewRows[0]?.length ?? 0;
+  const tgtClampedCols = Math.min(tgtCols, MAX_PREVIEW_COLS);
+  const tgtHiddenCols  = Math.max(0, tgtCols - MAX_PREVIEW_COLS);
 
-  const matRows = builtMatrixData?.length ?? 0;
-  const matCols = builtMatrixData?.[0]?.length ?? 0;
-
-  const overflowWarning = originCell
-    ? (() => {
-        const rowOvf = Math.max(0, originCell.row + matRows - tableRows.length);
-        const colOvf = Math.max(0, originCell.col + matCols - previewCols);
-        if (rowOvf > 0 && colOvf > 0)
-          return `${rowOvf} row(s) and ${colOvf} col(s) of matrix data will be clipped (outside table bounds).`;
-        if (rowOvf > 0) return `${rowOvf} row(s) of matrix data will be clipped (outside table bounds).`;
-        if (colOvf > 0) return `${colOvf} col(s) of matrix data will be clipped (outside table bounds).`;
-        return null;
-      })()
-    : null;
+  // Mapping lookup helpers
+  const getMappingForSrc = (r, c) => cellMappings.find(m => m.srcRow === r && m.srcCol === c);
+  const getMappingForTgt = (r, c) => cellMappings.find(m => m.tgtRow === r && m.tgtCol === c);
 
   const stepLabel = step === 'matrix'
     ? 'Step 1 of 3 — Choose a matrix type'
     : step === 'target'
     ? `Step 2 of 3 — Where to place the ${selectedMatrix?.label}?`
-    : 'Step 3 of 3 — Click a cell to set the top-left corner';
+    : 'Step 3 of 3 — Map source cells to target cells';
 
   const handleBack = () => {
     if (step === 'target') { setStep('matrix'); setError(null); }
-    if (step === 'cell')   { setStep('target'); setOriginCell(null); setHoverCell(null); setError(null); }
+    if (step === 'cell')   { setStep('target'); setActiveSrcCell(null); setCellMappings([]); setError(null); }
   };
 
   return (
     <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh]">
+      <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-6xl flex flex-col max-h-[90vh]">
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 shrink-0">
@@ -331,7 +328,7 @@ export default function RelationshipMatrixPicker({ canvasDocument, onInsert, onU
                         <span className="text-amber-300 font-semibold text-sm">{t.label}</span>
                         <p className="text-gray-400 text-xs mt-0.5">
                           {t.element.data?.length ?? 0} rows × {t.element.data?.[0]?.length ?? 0} cols
-                          {' — '}you will choose the starting cell
+                          {' — '}you will manually map each cell
                         </p>
                       </div>
                       {loading
@@ -374,115 +371,235 @@ export default function RelationshipMatrixPicker({ canvasDocument, onInsert, onU
           </div>
         )}
 
-        {/* ── Step 3: Cell Picker ── */}
+        {/* ── Step 3: Cell Mapping ── */}
         {step === 'cell' && (
           <div className="flex flex-col overflow-hidden flex-1">
 
-            {/* Info bar */}
-            <div className="px-6 pt-4 pb-2 shrink-0 space-y-1.5">
-              <p className="text-gray-300 text-sm font-semibold">{selectedTarget?.label}</p>
-              <p className="text-gray-400 text-xs leading-relaxed">
-                Matrix to insert:{' '}
-                <span className="text-indigo-300 font-semibold">{matRows} rows × {matCols} cols</span>
-                {' '}({selectedMatrix?.label}). Click any cell below to set the top-left corner.
-                <span className="text-blue-300"> Blue</span> = hover region;
-                <span className="text-emerald-300"> green</span> = confirmed origin.
+            {/* Instruction bar */}
+            <div className="px-5 py-2.5 border-b border-gray-800 shrink-0 flex items-center gap-4">
+              <p className="flex-1 text-gray-400 text-xs leading-relaxed">
+                <span className="text-indigo-300 font-semibold">Left panel:</span> click a source cell to select it.{' '}
+                <span className="text-amber-300 font-semibold">Right panel:</span> click a target cell to assign the selected source to it.
+                Click a mapped target cell (no source selected) to <span className="text-red-400">remove</span> its mapping.
               </p>
-              {overflowWarning && (
-                <p className="text-yellow-400 text-xs bg-yellow-900/30 border border-yellow-700 rounded px-3 py-1.5">
-                  ⚠️ {overflowWarning}
-                </p>
+              {activeSrcCell && (
+                <span className="shrink-0 text-xs bg-indigo-900 text-indigo-200 border border-indigo-600 rounded px-2 py-1">
+                  Source R{activeSrcCell.row + 1}C{activeSrcCell.col + 1} selected → click a target
+                </span>
               )}
             </div>
 
-            {/* Scrollable table grid */}
-            <div className="flex-1 overflow-auto px-6 pb-2">
-              <table className="border-collapse select-none" style={{ tableLayout: 'fixed' }}>
-                <tbody>
-                  {previewRows.map((row, r) => (
-                    <tr key={r}>
-                      {row.slice(0, MAX_PREVIEW_COLS).map((cell, c) => {
-                        const isSelected = inRange(r, c, originCell);
-                        const isHovered  = !isSelected && inRange(r, c, hoverCell);
-                        const cellW = cell?.width  ?? selectedTarget?.element?.cellWidth;
-                        const cellH = cell?.height ?? selectedTarget?.element?.cellHeight;
-                        // Strip HTML tags for preview text
-                        const rawText = String(cell?.content ?? '').replace(/<[^>]+>/g, '').slice(0, 18);
-                        return (
-                          <td
-                            key={c}
-                            className="relative border border-gray-400 cursor-pointer overflow-hidden"
-                            style={{
-                              width:           cellW,
-                              minWidth:        cellW,
-                              maxWidth:        cellW,
-                              height:          cellH,
-                              maxHeight:       cellH,
-                              backgroundColor: cell?.bg,
-                              fontSize:        cell?.fontSize,
-                              fontFamily:      cell?.fontFamily,
-                              fontWeight:      cell?.fontWeight,
-                              fontStyle:       cell?.fontStyle,
-                              color:           cell?.color,
-                              textAlign:       cell?.align,
-                              padding:         '2px 4px',
-                              verticalAlign:   'top',
-                            }}
-                            onMouseEnter={() => setHoverCell({ row: r, col: c })}
-                            onMouseLeave={() => setHoverCell(null)}
-                            onClick={() => setOriginCell({ row: r, col: c })}
-                            title={`Row ${r + 1}, Col ${c + 1}${isSelected ? ' — origin' : ''}`}
-                          >
-                            {/* Highlight overlay — sits above cell background, below text */}
-                            {(isSelected || isHovered) && (
-                              <div
-                                className="absolute inset-0 pointer-events-none"
+            {/* Two-panel area */}
+            <div className="flex flex-1 overflow-hidden divide-x divide-gray-700">
+
+              {/* Source panel — built matrix data */}
+              <div className="flex flex-col w-1/2 overflow-hidden">
+                <div className="px-3 py-2 shrink-0 bg-gray-800/70">
+                  <p className="text-gray-300 text-xs font-semibold uppercase tracking-wide">Source — {selectedMatrix?.label}</p>
+                  <p className="text-gray-500 text-[10px] mt-0.5">{srcRows.length} rows × {srcCols} cols — click a cell to select it</p>
+                </div>
+                <div className="flex-1 overflow-auto p-3">
+                  <table className="border-collapse select-none" style={{ tableLayout: 'fixed' }}>
+                    <tbody>
+                      {srcPreviewRows.map((row, r) => (
+                        <tr key={r}>
+                          {row.slice(0, MAX_PREVIEW_COLS).map((cell, c) => {
+                            const mapping  = getMappingForSrc(r, c);
+                            const isActive = activeSrcCell?.row === r && activeSrcCell?.col === c;
+                            const isMapped = !!mapping;
+                            const rawText  = String(cell?.content ?? '').replace(/<[^>]+>/g, '').slice(0, 22);
+                            return (
+                              <td
+                                key={c}
+                                className="relative border border-gray-500 cursor-pointer overflow-hidden"
                                 style={{
-                                  backgroundColor: isSelected ? 'rgba(16,185,129,0.35)' : 'rgba(59,130,246,0.30)',
-                                  boxShadow: isSelected
-                                    ? 'inset 0 0 0 2px #10b981'
-                                    : 'inset 0 0 0 1.5px #3b82f6',
+                                  width:           cell?.width,
+                                  minWidth:        cell?.width,
+                                  maxWidth:        cell?.width,
+                                  height:          cell?.height,
+                                  maxHeight:       cell?.height,
+                                  backgroundColor: cell?.bg,
+                                  fontSize:        cell?.fontSize,
+                                  fontFamily:      cell?.fontFamily,
+                                  fontWeight:      cell?.fontWeight,
+                                  fontStyle:       cell?.fontStyle,
+                                  color:           cell?.color,
+                                  textAlign:       cell?.align,
+                                  padding:         '2px 4px',
+                                  verticalAlign:   'top',
                                 }}
-                              />
-                            )}
-                            <span className="block truncate leading-tight whitespace-nowrap">
-                              {rawText || ''}
-                            </span>
+                                onClick={() => setActiveSrcCell(isActive ? null : { row: r, col: c })}
+                                title={isMapped
+                                  ? `Source R${r+1}C${c+1} → target R${mapping.tgtRow+1}C${mapping.tgtCol+1} (click to re-select)`
+                                  : `Select source R${r+1}C${c+1}`}
+                              >
+                                <div
+                                  className="absolute inset-0 pointer-events-none"
+                                  style={{
+                                    boxShadow: isActive
+                                      ? 'inset 0 0 0 2px #818cf8'
+                                      : isMapped
+                                      ? 'inset 0 0 0 2px #10b981'
+                                      : undefined,
+                                    backgroundColor: isActive
+                                      ? 'rgba(99,102,241,0.18)'
+                                      : isMapped
+                                      ? 'rgba(16,185,129,0.12)'
+                                      : undefined,
+                                  }}
+                                />
+                                <span className="block truncate leading-tight whitespace-nowrap relative z-1">
+                                  {rawText}
+                                </span>
+                                {isMapped && (
+                                  <span className="absolute bottom-0.5 right-0.5 text-[8px] bg-emerald-700 text-white rounded px-1 leading-tight z-2 pointer-events-none">
+                                    →R{mapping.tgtRow+1}C{mapping.tgtCol+1}
+                                  </span>
+                                )}
+                              </td>
+                            );
+                          })}
+                          {srcHiddenCols > 0 && (
+                            <td className="text-gray-600 border border-gray-700 px-1 text-center text-[10px] italic">…</td>
+                          )}
+                        </tr>
+                      ))}
+                      {srcHiddenRows > 0 && (
+                        <tr>
+                          <td
+                            colSpan={srcClampedCols + (srcHiddenCols > 0 ? 1 : 0)}
+                            className="text-gray-600 border border-gray-700 px-2 py-1 text-center text-[10px] italic"
+                          >
+                            … {srcHiddenRows} more row(s)
                           </td>
-                        );
-                      })}
-                      {hiddenCols > 0 && (
-                        <td className="text-gray-500 border border-gray-700 px-1 text-center text-xs italic">…</td>
+                        </tr>
                       )}
-                    </tr>
-                  ))}
-                  {hiddenRows > 0 && (
-                    <tr>
-                      <td
-                        colSpan={clampedCols + (hiddenCols > 0 ? 1 : 0)}
-                        className="text-gray-500 border border-gray-700 px-2 py-1 text-center text-xs italic"
-                      >
-                        … {hiddenRows} more row(s) not shown in preview
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Target panel — existing template table */}
+              <div className="flex flex-col w-1/2 overflow-hidden">
+                <div className="px-3 py-2 shrink-0 bg-gray-800/70">
+                  <p className="text-gray-300 text-xs font-semibold uppercase tracking-wide">Target — {selectedTarget?.label}</p>
+                  <p className="text-gray-500 text-[10px] mt-0.5">{tgtRows.length} rows × {tgtCols} cols — click to assign selected source</p>
+                </div>
+                <div className="flex-1 overflow-auto p-3">
+                  <table className="border-collapse select-none" style={{ tableLayout: 'fixed' }}>
+                    <tbody>
+                      {tgtPreviewRows.map((row, r) => (
+                        <tr key={r}>
+                          {row.slice(0, MAX_PREVIEW_COLS).map((cell, c) => {
+                            const mapping        = getMappingForTgt(r, c);
+                            const isMapped       = !!mapping;
+                            const canAssign      = !!activeSrcCell;
+                            const mappedContent  = isMapped
+                              ? String(builtMatrixData?.[mapping.srcRow]?.[mapping.srcCol]?.content ?? '').replace(/<[^>]+>/g, '').slice(0, 22)
+                              : null;
+                            const rawText = mappedContent ?? String(cell?.content ?? '').replace(/<[^>]+>/g, '').slice(0, 22);
+                            return (
+                              <td
+                                key={c}
+                                className="relative border border-gray-400 overflow-hidden"
+                                style={{
+                                  width:           cell?.width,
+                                  minWidth:        cell?.width,
+                                  maxWidth:        cell?.width,
+                                  height:          cell?.height,
+                                  maxHeight:       cell?.height,
+                                  backgroundColor: cell?.bg,
+                                  fontSize:        cell?.fontSize,
+                                  fontFamily:      cell?.fontFamily,
+                                  fontWeight:      cell?.fontWeight,
+                                  fontStyle:       cell?.fontStyle,
+                                  color:           isMapped ? cell?.color : cell?.color,
+                                  textAlign:       cell?.align,
+                                  padding:         '2px 4px',
+                                  verticalAlign:   'top',
+                                  cursor:          (canAssign || isMapped) ? 'pointer' : 'default',
+                                }}
+                                onClick={() => handleTargetCellClick(r, c)}
+                                title={
+                                  isMapped
+                                    ? `Mapped from source R${mapping.srcRow+1}C${mapping.srcCol+1} — click without a source selected to remove`
+                                    : canAssign
+                                    ? `Assign source R${activeSrcCell.row+1}C${activeSrcCell.col+1} → here`
+                                    : `R${r+1}C${c+1}`
+                                }
+                              >
+                                <div
+                                  className="absolute inset-0 pointer-events-none"
+                                  style={{
+                                    boxShadow: isMapped
+                                      ? 'inset 0 0 0 2px #10b981'
+                                      : canAssign
+                                      ? 'inset 0 0 0 1.5px #3b82f6'
+                                      : undefined,
+                                    backgroundColor: isMapped
+                                      ? 'rgba(16,185,129,0.12)'
+                                      : canAssign
+                                      ? 'rgba(59,130,246,0.07)'
+                                      : undefined,
+                                  }}
+                                />
+                                <span className={`block truncate leading-tight whitespace-nowrap relative z-1 ${isMapped ? 'text-emerald-300' : ''}`}>
+                                  {rawText}
+                                </span>
+                                {isMapped && (
+                                  <span className="absolute bottom-0.5 right-0.5 text-[8px] bg-emerald-700 text-white rounded px-1 leading-tight z-2 pointer-events-none">
+                                    R{mapping.srcRow+1}C{mapping.srcCol+1}
+                                  </span>
+                                )}
+                              </td>
+                            );
+                          })}
+                          {tgtHiddenCols > 0 && (
+                            <td className="text-gray-600 border border-gray-700 px-1 text-center text-[10px] italic">…</td>
+                          )}
+                        </tr>
+                      ))}
+                      {tgtHiddenRows > 0 && (
+                        <tr>
+                          <td
+                            colSpan={tgtClampedCols + (tgtHiddenCols > 0 ? 1 : 0)}
+                            className="text-gray-600 border border-gray-700 px-2 py-1 text-center text-[10px] italic"
+                          >
+                            … {tgtHiddenRows} more row(s)
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
 
-            {/* Confirm bar */}
-            <div className="px-6 py-4 border-t border-gray-700 flex items-center justify-between shrink-0">
-              <span className="text-gray-400 text-xs">
-                {originCell
-                  ? `Starting at row ${originCell.row + 1}, col ${originCell.col + 1}`
-                  : 'No cell selected — click the grid above'}
-              </span>
+            {/* Action bar */}
+            <div className="px-5 py-3 border-t border-gray-700 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <span className="text-gray-400 text-xs">
+                  {cellMappings.length > 0
+                    ? `${cellMappings.length} cell${cellMappings.length !== 1 ? 's' : ''} mapped`
+                    : activeSrcCell
+                    ? 'Source selected — click a cell in the right panel'
+                    : 'Click a source cell on the left to begin'}
+                </span>
+                {cellMappings.length > 0 && (
+                  <button
+                    onClick={() => { setCellMappings([]); setActiveSrcCell(null); }}
+                    className="text-xs text-red-400 hover:text-red-300 underline underline-offset-2 transition-colors"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
               <button
-                onClick={handleConfirmOrigin}
-                disabled={!originCell}
+                onClick={handleApplyMapping}
+                disabled={!cellMappings.length}
                 className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-semibold rounded-lg text-sm transition-colors"
               >
-                ✓ Place Matrix Here
+                ✓ Apply Mapping
               </button>
             </div>
           </div>
