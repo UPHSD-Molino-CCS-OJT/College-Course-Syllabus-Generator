@@ -210,10 +210,12 @@ export function renderElement(element, syllabus, auxData = {}) {
                 };
               }
               if (!oldCell) return cell;
-              // Col 0 = LLO label: update from rebuilt (reflects DB text changes)
+              // Col 0 = LLO label: preserve user's rich-text edits; fall back to
+              // rebuilt content only when the cell has never been edited.
               if (c === 0) {
                 return {
                   ...cell,
+                  content:       oldCell.content       ?? cell.content,
                   width:         oldCell.width         ?? cell.width,
                   height:        oldCell.height        ?? cell.height,
                   fontSize:      oldCell.fontSize      ?? cell.fontSize,
