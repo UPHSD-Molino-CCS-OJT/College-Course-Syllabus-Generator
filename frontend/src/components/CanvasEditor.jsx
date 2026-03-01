@@ -16,6 +16,7 @@ import {
   buildLLOCLOMatrix,
   pasteAtAnchor,
 } from '../utils/templateRenderer';
+import { paginateDocument } from '../utils/paginateDocument';
 import PageSettings from './canvas-toolbar/PageSettings';
 import ZoneHeightControls from './canvas-toolbar/ZoneHeightControls';
 import ViewControls from './canvas-toolbar/ViewControls';
@@ -387,6 +388,12 @@ export default function CanvasEditor({ template, onClose, onSave }) {
     });
     setTimeout(() => { isUndoRedoRef.current = false; }, 0);
   }, [auxData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Paginate overflowing tables across pages ────────────────────────────────
+  const handlePaginateTables = useCallback(() => {
+    isUndoRedoRef.current = false; // this IS a user-visible structural change — save to history
+    setCanvasDocument(prev => paginateDocument(prev, PAGE_SIZES[pageSize][orientation]));
+  }, [pageSize, orientation]);
 
   // Save current state to history
   const saveToHistory = useCallback((newDocument) => {
@@ -1189,6 +1196,14 @@ export default function CanvasEditor({ template, onClose, onSave }) {
               title="Re-fetch data from the database and rebuild all matrix tables"
             >
               ⟳ Rebuild Matrices
+            </button>
+            {/* Paginate Tables */}
+            <button
+              onClick={handlePaginateTables}
+              className="px-3 py-1.5 rounded bg-indigo-700 hover:bg-indigo-600 text-white text-sm font-medium transition-colors flex items-center gap-1.5"
+              title="Split tables that overflow the page across multiple pages"
+            >
+              📄 Paginate Tables
             </button>
           </div>
           <EditorActions
