@@ -210,11 +210,13 @@ export default function CanvasEditor({ template, onClose, onSave }) {
             row.map((cell, c) => {
               const oldCell = el.data?.[r]?.[c];
               // Always use canonical header cells (period/week dividers, column headers)
+              // but preserve any user-edited content and sizing from the stored cell.
               if (cell._header) {
                 return {
                   ...cell,
-                  width:  oldCell?.width  ?? cell.width,
-                  height: oldCell?.height ?? cell.height,
+                  content: oldCell?.content ?? cell.content,
+                  width:   oldCell?.width   ?? cell.width,
+                  height:  oldCell?.height  ?? cell.height,
                 };
               }
               if (!oldCell) return cell;

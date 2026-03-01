@@ -75,17 +75,22 @@ export function buildLLOCLOMatrix(llos, clos, pos) {
 
   const rows = [];
 
+  // Preserve user-edited header text when rebuilding; use defaults only on first insert.
+  const storedLLOHeaderText = existingData?.[0]?.[0]?.content
+    ?? 'LESSON LEARNING OUTCOMES (LLOs)\n\nAt the end of the lesson, the students can';
+  const storedCLOHeaderText = existingData?.[0]?.[1]?.content
+    ?? 'COURSE LEARNING OUTCOMES (CLOs)';
+
   // ── Row 0: LLO header (rowspan=2) | CLO header (colspan=numCLOs) ──────────
   rows.push([
     Object.assign(
-      makeCell(
-        'LESSON LEARNING OUTCOMES (LLOs)\n\nAt the end of the lesson, the students can',
-        { bold: true, bg: HEADER_BG, align: 'center', width: LABEL_W, height: HEADER0_H, fontSize: 12, verticalAlign: 'middle' }
-      ),
+      makeCell(storedLLOHeaderText, {
+        bold: true, bg: HEADER_BG, align: 'center', width: LABEL_W, height: HEADER0_H, fontSize: 12, verticalAlign: 'middle',
+      }),
       { _header: true, rowspan: 2 }
     ),
     Object.assign(
-      makeCell('COURSE LEARNING OUTCOMES (CLOs)', {
+      makeCell(storedCLOHeaderText, {
         bold: true, bg: HEADER_BG, align: 'center', width: checkWidths[0], height: HEADER0_H, fontSize: 12, verticalAlign: 'middle',
       }),
       { _header: true, colspan: numCLOs }
