@@ -205,8 +205,6 @@ function buildTableElement(rows2d, { x = 60, y = 100 } = {}) {
   };
 }
 
-const HEADER_BG  = '#f0c060'; // warm gold — matches the tables in the screenshots
-const SUBHDR_BG  = '#fef3c7'; // light amber for sub-headers
 const CATEG_BG   = '#f8f0d0'; // very light for category rows
 
 /**
@@ -221,15 +219,8 @@ export function buildGAMissionKeywordMatrix(graduateAttributes, missionKeywords,
   const LABEL_W   = 420;
   const CHECK_W   = 60;
   const ROW_H     = 38;
-  const HEADER_H  = 44;
 
-  // Header row
-  const headerRow = [
-    makeCell('GRADUATE ATTRIBUTES', { bold: true, bg: HEADER_BG, align: 'center', width: LABEL_W, height: HEADER_H }),
-    ...mkCodes.map(c => makeCell(c, { bold: true, bg: HEADER_BG, align: 'center', width: CHECK_W, height: HEADER_H, color: '#b45309' })),
-  ];
-
-  const rows = [headerRow];
+  const rows = [];
 
   const categories = ['CHARACTER', 'COMPETENCE', 'COMMITMENT TO SERVICE'];
   categories.forEach(cat => {
@@ -270,19 +261,8 @@ export function buildPEOGAMatrix(peos, graduateAttributes, pos) {
   const LABEL_W  = 380;
   const CHECK_W  = 55;
   const ROW_H    = 60;
-  const HEADER_H = 44;
 
-  // Main header row
-  const headerRow = [
-    makeCell('PROGRAM EDUCATIONAL OBJECTIVES\n\nAfter five years of graduation, the graduates can:', {
-      bold: true, bg: HEADER_BG, align: 'center', width: LABEL_W, height: HEADER_H,
-    }),
-    ...gaLabels.map(lbl => makeCell(lbl, {
-      bold: true, bg: HEADER_BG, align: 'center', width: CHECK_W, height: HEADER_H, color: '#b45309',
-    })),
-  ];
-
-  const rows = [headerRow];
+  const rows = [];
 
   peos.forEach((peo, idx) => {
     const label = `${idx + 1}. ${peo.title} ${peo.description || ''}`.trim();
@@ -310,18 +290,8 @@ export function buildPLOPEOMatrix(plos, peos, pos) {
   const LABEL_W  = 400;
   const CHECK_W  = 65;
   const ROW_H    = 60;
-  const HEADER_H = 44;
 
-  const headerRow = [
-    makeCell('PROGRAM LEARNING OUTCOMES (PLOs)\n\nGraduates of the program are:', {
-      bold: true, bg: HEADER_BG, align: 'center', width: LABEL_W, height: HEADER_H,
-    }),
-    ...peoLabels.map(lbl => makeCell(lbl, {
-      bold: true, bg: HEADER_BG, align: 'center', width: CHECK_W, height: HEADER_H, color: '#b45309',
-    })),
-  ];
-
-  const rows = [headerRow];
+  const rows = [];
 
   plos.forEach((plo, idx) => {
     const label = `${idx + 1}. ${plo.title} ${plo.description || ''}`.trim();
@@ -349,18 +319,8 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
   const LABEL_W  = 400;
   const CHECK_W  = 65;
   const ROW_H    = 60;
-  const HEADER_H = 44;
 
-  const headerRow = [
-    makeCell('COURSE LEARNING OUTCOMES (CLOs)\n\nAt the end of the course, the students can:', {
-      bold: true, bg: HEADER_BG, align: 'center', width: LABEL_W, height: HEADER_H,
-    }),
-    ...ploLabels.map(lbl => makeCell(lbl, {
-      bold: true, bg: HEADER_BG, align: 'center', width: CHECK_W, height: HEADER_H, color: '#b45309',
-    })),
-  ];
-
-  const rows = [headerRow];
+  const rows = [];
 
   clos.forEach((clo, idx) => {
     const label = `${idx + 1}. ${clo.title} ${clo.description || ''}`.trim();
