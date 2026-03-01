@@ -90,7 +90,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   const canvasRef = useRef(null);
 
   // ── Fetch auxiliary data for matrix tables ─────────────────────────────────
-  useEffect(() => {
+  const fetchAuxData = useCallback(() => {
     let cancelled = false;
     Promise.all([
       graduateAttributeAPI.getAll({ limit: 200 }),
@@ -110,7 +110,19 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       });
     }).catch(() => {});
     return () => { cancelled = true; };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const cleanup = fetchAuxData();
+    // Re-fetch whenever the user comes back to this tab so the canvas editor
+    // always reflects the latest database data without needing a full page reload.
+    const handleVisibility = () => { if (!document.hidden) fetchAuxData(); };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      cleanup?.();
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [fetchAuxData]);
 
   // ── Auto-rebuild stale matrix tables whenever aux data loads / changes ─────
   useEffect(() => {
@@ -132,74 +144,82 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       }
       if (!rebuilt) return el;
 
-      // Detect any structural or content change (row/col count, placeholder strings, etc.)
-      const structureChanged = rebuilt.rows !== el.rows || rebuilt.cols !== el.cols;
-      let contentChanged = structureChanged;
-      if (!contentChanged && el.data) {
-        // Compare placeholder content cell-by-cell to catch category restructuring,
-        // code renames, or any other change short of a full row/col count change.
-        outer: for (let r = 0; r < rebuilt.data.length; r++) {
-          const rebRow = rebuilt.data[r];
-          const elRow  = el.data[r];
-          if (!elRow || rebRow.length !== elRow.length) { contentChanged = true; break; }
-          for (let c = 0; c < rebRow.length; c++) {
-            if (rebRow[c]?.content !== elRow[c]?.content) { contentChanged = true; break outer; }
-          }
-        }
-      }
-      // Nothing changed — avoid a needless re-render.
-      if (!contentChanged) return el;
+      // Use actual data dimensions — el.rows/cols may be stale after previous
+      // structural changes that weren't saved correctly.
+      const elRows = el.data?.length ?? el.rows;
+      const elCols = el.data?.[0]?.length ?? el.cols;
+      const structureChanged = rebuilt.rows !== elRows || rebuilt.cols !== elCols;
 
-      // When the structure is the same, merge per-cell user styles so that custom
-      // font, colour, background and border choices survive the rebuild.
-      let mergedData = rebuilt.data;
-      if (!structureChanged && el.data) {
-        mergedData = rebuilt.data.map((row, r) =>
-          row.map((cell, c) => {
-            const oldCell = el.data[r]?.[c];
-            if (!oldCell) return cell;
-            // If the rebuilt cell is bold/coloured it's a structural header row
-            // (e.g. CHARACTER / COMPETENCE / COMMITMENT TO SERVICE in GA matrices).
-            // Those semantic styles must win so that category rows are always bold
-            // and carry their background colour, regardless of what was stored.
-            const isHeader = cell.fontWeight === 'bold';
-            return {
-              ...cell,                              // rebuilt placeholder content + defaults
-              fontSize:      oldCell.fontSize      ?? cell.fontSize,
-              fontFamily:    oldCell.fontFamily    ?? cell.fontFamily,
-              fontWeight:    isHeader ? 'bold'    : (oldCell.fontWeight    ?? cell.fontWeight),
-              fontStyle:     oldCell.fontStyle     ?? cell.fontStyle,
-              color:         oldCell.color         ?? cell.color,
-              align:         isHeader ? cell.align : (oldCell.align         ?? cell.align),
-              verticalAlign: oldCell.verticalAlign ?? cell.verticalAlign,
-              bg:            isHeader ? cell.bg    : (oldCell.bg            ?? cell.bg),
-              width:         oldCell.width         ?? cell.width,
-              height:        oldCell.height        ?? cell.height,
-              // Preserve explicit per-cell border overrides
-              ...(oldCell.showBorderTop    !== undefined ? { showBorderTop:    oldCell.showBorderTop    } : {}),
-              ...(oldCell.showBorderRight  !== undefined ? { showBorderRight:  oldCell.showBorderRight  } : {}),
-              ...(oldCell.showBorderBottom !== undefined ? { showBorderBottom: oldCell.showBorderBottom } : {}),
-              ...(oldCell.showBorderLeft   !== undefined ? { showBorderLeft:   oldCell.showBorderLeft   } : {}),
-              ...(oldCell.borderColor      !== undefined ? { borderColor:      oldCell.borderColor      } : {}),
-              ...(oldCell.borderWidth      !== undefined ? { borderWidth:      oldCell.borderWidth      } : {}),
-              ...(oldCell.borderStyle      !== undefined ? { borderStyle:      oldCell.borderStyle      } : {}),
-            };
-          })
-        );
-      }
+      // Always merge per-cell user styles (font, colour, bg, borders) from the
+      // stored element into the freshly-built rows.  Category header rows (bold)
+      // keep their canonical styles intact; only data rows defer to stored styles.
+      const mergedData = rebuilt.data.map((row, r) =>
+        row.map((cell, c) => {
+          const oldCell = el.data?.[r]?.[c];
+          if (!oldCell) return cell;
+          const isHeader = cell.fontWeight === 'bold';
+          return {
+            ...cell,
+            fontSize:      oldCell.fontSize      ?? cell.fontSize,
+            fontFamily:    oldCell.fontFamily    ?? cell.fontFamily,
+            fontWeight:    isHeader ? 'bold'    : (oldCell.fontWeight    ?? cell.fontWeight),
+            fontStyle:     oldCell.fontStyle     ?? cell.fontStyle,
+            color:         oldCell.color         ?? cell.color,
+            align:         isHeader ? cell.align : (oldCell.align         ?? cell.align),
+            verticalAlign: oldCell.verticalAlign ?? cell.verticalAlign,
+            bg:            isHeader ? cell.bg    : (oldCell.bg            ?? cell.bg),
+            width:         oldCell.width         ?? cell.width,
+            height:        oldCell.height        ?? cell.height,
+            ...(oldCell.showBorderTop    !== undefined ? { showBorderTop:    oldCell.showBorderTop    } : {}),
+            ...(oldCell.showBorderRight  !== undefined ? { showBorderRight:  oldCell.showBorderRight  } : {}),
+            ...(oldCell.showBorderBottom !== undefined ? { showBorderBottom: oldCell.showBorderBottom } : {}),
+            ...(oldCell.showBorderLeft   !== undefined ? { showBorderLeft:   oldCell.showBorderLeft   } : {}),
+            ...(oldCell.borderColor      !== undefined ? { borderColor:      oldCell.borderColor      } : {}),
+            ...(oldCell.borderWidth      !== undefined ? { borderWidth:      oldCell.borderWidth      } : {}),
+            ...(oldCell.borderStyle      !== undefined ? { borderStyle:      oldCell.borderStyle      } : {}),
+          };
+        })
+      );
 
-      return {
+      const next = {
         ...rebuilt,
         id:          el.id,
         data:        mergedData,
+        rows:        rebuilt.rows,
+        cols:        rebuilt.cols,
         borderColor: el.borderColor,
         borderWidth: el.borderWidth,
         borderStyle: el.borderStyle,
-        // Preserve global cell-size overrides the user may have set in TableEditor
-        cellWidth:   el.cellWidth  ?? rebuilt.cellWidth,
-        cellHeight:  el.cellHeight ?? rebuilt.cellHeight,
+        cellWidth:   structureChanged ? rebuilt.cellWidth  : (el.cellWidth  ?? rebuilt.cellWidth),
+        cellHeight:  structureChanged ? rebuilt.cellHeight : (el.cellHeight ?? rebuilt.cellHeight),
         matrixType:  el.matrixType,
       };
+
+      // Bail out early (same reference) only if nothing actually changed, so React
+      // skips the re-render.  Compare rows, cols, and all cell contents.
+      if (!structureChanged) {
+        let same = true;
+        outer: for (let r = 0; r < next.data.length; r++) {
+          const nr = next.data[r];
+          const er = el.data[r];
+          if (!er || nr.length !== er.length) { same = false; break; }
+          for (let c = 0; c < nr.length; c++) {
+            const nc = nr[c];
+            const ec = er[c];
+            if (nc.content    !== ec.content    ||
+                nc.fontWeight !== ec.fontWeight  ||
+                nc.bg         !== ec.bg          ||
+                nc.width      !== ec.width       ||
+                nc.height     !== ec.height) { same = false; break outer; }
+          }
+        }
+        if (same &&
+            next.borderColor === el.borderColor &&
+            next.borderWidth === el.borderWidth &&
+            next.borderStyle === el.borderStyle) return el;
+      }
+
+      return next;
     };
 
     // Use functional update so we always operate on the latest canvasDocument
