@@ -26,6 +26,7 @@ app.use("/api/v1/graduate-attributes", require("./modules/graduateAttributes/ind
 app.use("/api/v1/peos", require("./modules/peos/index"));
 app.use("/api/v1/plos", require("./modules/plos/index"));
 app.use("/api/v1/clos", require("./modules/clos/index"));
+app.use("/api/v1/llos", require("./modules/llos/index"));
 
 // changes added from remote
 
