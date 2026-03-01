@@ -2,7 +2,7 @@
  * Utility functions for rendering templates with syllabus data
  */
 
-const CHECK = '✓';
+const CHECK = '✔';
 
 /** Category order used to sort GAs consistently between the builder and the resolver */
 const GA_CATEGORY_ORDER = ['CHARACTER', 'COMPETENCE', 'COMMITMENT TO SERVICE'];
@@ -592,7 +592,7 @@ export function pasteAtAnchor(existingData, matrixData, anchorRow, anchorCol) {
             content:    srcCell.content    ?? '',
             fontWeight: srcCell.fontWeight,   // always enforce builder: bold for category rows, normal for data rows
             bg:         srcIsHeader ? srcCell.bg        : (row[anchorCol + c].bg        ?? srcCell.bg),
-            align:      srcIsHeader ? srcCell.align     : (row[anchorCol + c].align     ?? srcCell.align),
+            align:      srcCell.align,   // always use canonical builder alignment (data cells → center, label cells → left)
             fontSize:   srcIsHeader ? srcCell.fontSize  : (row[anchorCol + c].fontSize  ?? srcCell.fontSize),
             fontStyle:  srcIsHeader ? srcCell.fontStyle : (row[anchorCol + c].fontStyle ?? srcCell.fontStyle),
           };
