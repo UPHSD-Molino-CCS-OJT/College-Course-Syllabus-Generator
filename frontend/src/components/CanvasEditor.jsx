@@ -7,12 +7,13 @@ import ImageStylePanel from './ImageStylePanel';
 import LineStylePanel from './LineStylePanel';
 import RelationshipMatrixPicker from './RelationshipMatrixPicker';
 import { useAutoSave, AutoSaveIndicator } from '../utils/useAutoSave.jsx';
-import { templateAPI, graduateAttributeAPI, missionKeywordAPI, peoAPI, ploAPI, cloAPI } from '../services/api';
+import { templateAPI, graduateAttributeAPI, missionKeywordAPI, peoAPI, ploAPI, cloAPI, lloAPI } from '../services/api';
 import {
   buildGAMissionKeywordMatrix,
   buildPEOGAMatrix,
   buildPLOPEOMatrix,
   buildCLOPLOMatrix,
+  buildLLOCLOMatrix,
   pasteAtAnchor,
 } from '../utils/templateRenderer';
 import PageSettings from './canvas-toolbar/PageSettings';
@@ -57,7 +58,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   const [gridSize, setGridSize] = useState(20); // Grid spacing in pixels
   const [clipboard, setClipboard] = useState(null); // Stores copied element with zone info
   const [showMatrixPicker, setShowMatrixPicker] = useState(false); // Relationship matrix modal
-  const [auxData, setAuxData] = useState({ gas: [], mks: [], peos: [], plos: [], clos: [], loaded: false });
+  const [auxData, setAuxData] = useState({ gas: [], mks: [], peos: [], plos: [], clos: [], llos: [], loaded: false });
   
   // History management for undo/redo
   const [history, setHistory] = useState([]);
@@ -99,7 +100,8 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       peoAPI.getAll({ limit: 200 }),
       ploAPI.getAll({ limit: 200 }),
       cloAPI.getAll({ limit: 200 }),
-    ]).then(([gaRes, mkRes, peoRes, ploRes, cloRes]) => {
+      lloAPI.getAll({ limit: 500 }),
+    ]).then(([gaRes, mkRes, peoRes, ploRes, cloRes, lloRes]) => {
       if (cancelled) return;
       setAuxData({
         gas:  gaRes.data?.graduateAttributes || [],
@@ -107,6 +109,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
         peos: peoRes.data?.peos              || [],
         plos: ploRes.data?.plos              || [],
         clos: cloRes.data?.clos              || [],
+        llos: lloRes.data?.llos              || [],
         loaded: true,
       });
     }).catch(() => {});
@@ -128,7 +131,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   // ── Auto-rebuild stale matrix tables whenever aux data loads / changes ─────
   useEffect(() => {
     if (!auxData.loaded) return;
-    const { gas, mks, peos, plos, clos } = auxData;
+    const { gas, mks, peos, plos, clos, llos } = auxData;
 
     const rebuildIfNeeded = (el) => {
       if (el.type !== 'table' || !el.matrixType) return el;
@@ -146,6 +149,8 @@ export default function CanvasEditor({ template, onClose, onSave }) {
         rebuilt = buildPLOPEOMatrix(plos, peos, pos);
       } else if (el.matrixType === 'clo-plo' && clos.length && plos.length) {
         rebuilt = buildCLOPLOMatrix(clos, plos, pos);
+      } else if (el.matrixType === 'llo-clo' && llos.length && clos.length) {
+        rebuilt = buildLLOCLOMatrix(llos, clos, pos);
       }
       if (!rebuilt) return el;
 
@@ -191,6 +196,29 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       const elRows = el.data?.length ?? el.rows;
       const elCols = el.data?.[0]?.length ?? el.cols;
       const structureChanged = rebuilt.rows !== elRows || rebuilt.cols !== elCols;
+
+      // LLO-CLO has dynamic section rows — always use a full structural rebuild
+      // to avoid row-index mismatches after LLOs are added/removed.
+      if (el.matrixType === 'llo-clo') {
+        const next = {
+          ...rebuilt,
+          id:         el.id,
+          matrixType: el.matrixType,
+        };
+        // Bail out early if nothing changed
+        let same = !structureChanged;
+        if (same) {
+          outer3: for (let r = 0; r < next.data.length; r++) {
+            for (let c = 0; c < (next.data[r]?.length ?? 0); c++) {
+              if ((next.data[r][c]?.content ?? '') !== (el.data?.[r]?.[c]?.content ?? '')) {
+                same = false; break outer3;
+              }
+            }
+          }
+        }
+        if (same) return el;
+        return next;
+      }
 
       // Always merge per-cell user styles (font, colour, bg, borders) from the
       // stored element into the freshly-built rows.  Category header rows (bold)
