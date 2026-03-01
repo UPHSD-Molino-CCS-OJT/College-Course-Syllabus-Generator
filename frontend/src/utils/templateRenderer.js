@@ -449,7 +449,7 @@ export function buildGAMissionKeywordMatrix(graduateAttributes, missionKeywords,
     gaInCat.forEach(() => {
       globalGAIdx++;
       rows.push([
-        makeCell(`{{ga_${globalGAIdx}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+        makeCell(`{{ga_${globalGAIdx}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 12 }),
         ...mkCodes.map(code => makeCell(`{{ga_${globalGAIdx}_mk_${code}}}`, { align: 'center', width: CHECK_W, height: ROW_H })),
       ]);
     });
@@ -465,7 +465,7 @@ export function buildGAMissionKeywordMatrix(graduateAttributes, missionKeywords,
     uncategorised.forEach(() => {
       globalGAIdx++;
       rows.push([
-        makeCell(`{{ga_${globalGAIdx}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+        makeCell(`{{ga_${globalGAIdx}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 12 }),
         ...mkCodes.map(code => makeCell(`{{ga_${globalGAIdx}_mk_${code}}}`, { align: 'center', width: CHECK_W, height: ROW_H })),
       ]);
     });
@@ -491,7 +491,7 @@ export function buildPEOGAMatrix(peos, graduateAttributes, pos) {
   sortedPEOs.forEach((_peo, idx) => {
     const n = idx + 1;
     rows.push([
-      makeCell(`{{peo_${n}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+      makeCell(`{{peo_${n}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 12 }),
       ...sortedGAsForCols.map((_ga, gi) => makeCell(`{{peo_${n}_ga_${gi + 1}}}`, { align: 'center', width: CHECK_W, height: ROW_H })),
     ]);
   });
@@ -516,7 +516,7 @@ export function buildPLOPEOMatrix(plos, peos, pos) {
   sortedPLOs.forEach((_plo, idx) => {
     const n = idx + 1;
     rows.push([
-      makeCell(`{{plo_${n}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+      makeCell(`{{plo_${n}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 12 }),
       ...sortedPEOs.map((_peo, pi) => makeCell(`{{plo_${n}_peo_${pi + 1}}}`, { align: 'center', width: CHECK_W, height: ROW_H })),
     ]);
   });
@@ -561,11 +561,11 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
   rows.push([
     Object.assign(makeCell('COURSE LEARNING OUTCOMES (CLOs)\n\nAt the end of the course, the students can:', {
       bold: true, bg: 'transparent', align: 'center',
-      width: LABEL_W, height: HEADER0_H, fontSize: 11,
+      width: LABEL_W, height: HEADER0_H, fontSize: 12,
     }), { _header: true, rowspan: 2 }),
     Object.assign(makeCell('PROGRAM LEARNING OUTCOMES (PLOs)', {
       bold: true, bg: 'transparent', align: 'center',
-      width: CHECK_W, height: HEADER0_H, fontSize: 11,
+      width: CHECK_W, height: HEADER0_H, fontSize: 12,
     }), { _header: true, colspan: numPLOs }),
     // Empty placeholders for cells visually covered by the colspan above
     ...Array.from({ length: numPLOs - 1 }, () =>
@@ -580,7 +580,7 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
     ...sortedPLOs.map((plo, pi) =>
       Object.assign(makeCell(String(plo.number ?? pi + 1), {
         bold: true, bg: 'transparent', align: 'center',
-        width: CHECK_W, height: HEADER1_H, fontSize: 11,
+        width: CHECK_W, height: HEADER1_H, fontSize: 12,
       }), { _header: true })
     ),
   ]);
@@ -589,7 +589,7 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
   sortedCLOs.forEach((_clo, idx) => {
     const n = idx + 1;
     rows.push([
-      makeCell(`{{clo_${n}_label}}`, { align: 'left', bg: 'transparent', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+      makeCell(`{{clo_${n}_label}}`, { align: 'left', bg: 'transparent', width: LABEL_W, height: ROW_H, fontSize: 12 }),
       ...sortedPLOs.map((_plo, pi) =>
         makeCell(`{{clo_${n}_plo_${pi + 1}}}`, { align: 'center', bg: 'transparent', width: CHECK_W, height: ROW_H })
       ),
