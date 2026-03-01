@@ -377,7 +377,7 @@ function buildTableElement(rows2d, { x = 60, y = 100, matrixType = null } = {}) 
   return el;
 }
 
-const CATEG_BG   = '#f8f0d0'; // very light for category rows
+const CATEG_BG   = '#ffffff'; // white background for category rows
 
 /**
  * Build a Graduate Attributes × Mission Keywords matrix table element.
