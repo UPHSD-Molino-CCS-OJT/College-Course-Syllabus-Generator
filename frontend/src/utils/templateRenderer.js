@@ -513,22 +513,29 @@ export function buildPLOPEOMatrix(plos, peos, pos) {
 /**
  * Build a CLO × PLO matrix table element.
  *
- * Layout:
- *   Row 0 – PLO numbers header: blank label cell | PLO number per column
- *   Row 1+ – data: {{clo_N_label}} | {{clo_N_plo_M}} per PLO
+ * The matrix is always pasted at anchorRow=1, anchorCol=1 so that row 0
+ * and col 0 of the host table are left untouched (their existing cell data
+ * is preserved by pasteAtAnchor).
  *
- * Total table width is kept constant regardless of PLO count by computing
- * CHECK_W = TOTAL_CHECK_AREA / numPLOs  (columns grow/shrink inward).
+ * Matrix layout (0-based within the builder output):
+ *   Row 0       – PLO numbers: PLO 1 number | PLO 2 number | …
+ *   Row 1+      – CLO data:    {{clo_N_plo_1}} | {{clo_N_plo_2}} | …
+ *
+ * Host table layout after paste:
+ *   Row 0       – untouched (preserved)
+ *   Row 1, Col 0 – untouched (preserved); Col 1+ = PLO numbers
+ *   Row 2+, Col 0 – untouched (preserved); Col 1+ = check cells
+ *
+ * Total check-cell width is kept constant regardless of PLO count by computing
+ * CHECK_W = TOTAL_CHECK_AREA / numPLOs (columns grow/shrink inward).
  *
  * @param {object[]} clos – populated from GET /clos
  * @param {object[]} plos – populated from GET /plos
  */
 export function buildCLOPLOMatrix(clos, plos, pos) {
-  const SKIP_COL_W     = 20;  // width of the empty skip column (col 0)
   const TOTAL_CHECK_W  = 260; // fixed total width of the check-cell area (matches 4 PLOs × 65 px)
   const ROW_H          = 60;
-  const HEADER2_H      = 40;
-  const SKIP_ROW_H     = 40;  // height of the empty skip row (row 0)
+  const HEADER_H       = 40;
 
   const sortedCLOs = [...clos].sort((a, b) => (a.number || 0) - (b.number || 0));
   const sortedPLOs = [...plos].sort((a, b) => (a.number || 0) - (b.number || 0));
@@ -539,40 +546,31 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
 
   const rows = [];
 
-  // ── Row 0: skip row (all empty) ───────────────────────────────────────────
-  rows.push([
-    makeCell('', { bg: 'transparent', width: SKIP_COL_W, height: SKIP_ROW_H }),
-    ...sortedPLOs.map(() =>
-      makeCell('', { bg: 'transparent', width: CHECK_W, height: SKIP_ROW_H })
-    ),
-  ]);
-
-  // ── Row 1: PLO numbers header — col 0 empty (skip), PLO numbers from col 1 ──
-  rows.push([
-    Object.assign(makeCell('', {
-      bg: 'transparent', align: 'left',
-      width: SKIP_COL_W, height: HEADER2_H,
-    }), { _header: true }),
-    ...sortedPLOs.map((plo, pi) =>
+  // ── Row 0 (→ host row 1): PLO numbers ────────────────────────────────────
+  rows.push(
+    sortedPLOs.map((plo, pi) =>
       Object.assign(makeCell(String(plo.number ?? pi + 1), {
         bold: true, bg: 'transparent', align: 'center',
-        width: CHECK_W, height: HEADER2_H, fontSize: 11,
+        width: CHECK_W, height: HEADER_H, fontSize: 11,
       }), { _header: true })
-    ),
-  ]);
+    )
+  );
 
-  // ── Data rows (row 2+): col 0 = CLO label, col 1+ = check cells ─────────
+  // ── Row 1+ (→ host row 2+): CLO check cells ───────────────────────────────
   sortedCLOs.forEach((_clo, idx) => {
     const n = idx + 1;
-    rows.push([
-      makeCell(`{{clo_${n}_label}}`, { align: 'left', bg: 'transparent', width: SKIP_COL_W, height: ROW_H, fontSize: 10 }),
-      ...sortedPLOs.map((_plo, pi) =>
+    rows.push(
+      sortedPLOs.map((_plo, pi) =>
         makeCell(`{{clo_${n}_plo_${pi + 1}}}`, { align: 'center', bg: 'transparent', width: CHECK_W, height: ROW_H })
-      ),
-    ]);
+      )
+    );
   });
 
-  return buildTableElement(rows, { ...pos, matrixType: 'clo-plo' });
+  const el = buildTableElement(rows, { ...pos, matrixType: 'clo-plo' });
+  // Anchor at (1,1) so row 0 and col 0 of the host table are always preserved
+  el.matrixAnchorRow = 1;
+  el.matrixAnchorCol = 1;
+  return el;
 }
 
 // ─── End Relationship Matrix Builders ─────────────────────────────────────────
