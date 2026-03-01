@@ -210,6 +210,30 @@ export const ploAPI = {
   },
 };
 
+// Lesson Learning Outcomes (LLOs) API
+export const lloAPI = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/llos', { params });
+    return response.data;
+  },
+  getById: async (id) => {
+    const response = await api.get(`/llos/${id}`);
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/llos', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.patch(`/llos/${id}`, data);
+    return response.data;
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/llos/${id}`);
+    return response.data;
+  },
+};
+
 // Course Learning Outcomes (CLOs) API
 export const cloAPI = {
   getAll: async (params = {}) => {
