@@ -2,62 +2,141 @@
  * Utility functions for rendering templates with syllabus data
  */
 
+const CHECK = '✓';
+
 /**
- * Replace placeholders in text with actual syllabus data
+ * Replace placeholders in text with actual syllabus data and optional auxiliary
+ * relationship-matrix data.
  * @param {string} text - Text containing placeholders like {{courseCode}}
  * @param {object} syllabus - Syllabus data object
+ * @param {object} [auxData] - { gas, mks, peos, plos, clos } arrays for matrix placeholders
  * @returns {string} Text with placeholders replaced
  */
-export function replacePlaceholders(text, syllabus) {
-  if (!text || !syllabus) return text || '';
+export function replacePlaceholders(text, syllabus, auxData = {}) {
+  if (!text) return text || '';
+  if (!syllabus && !Object.keys(auxData).length) return text;
 
   let result = text;
 
-  // Helper function to format month-year dates
-  const formatMonthYear = (dateString) => {
-    if (!dateString) return '';
-    try {
-      const [year, month] = dateString.split('-');
-      const date = new Date(year, parseInt(month) - 1);
-      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-    } catch (error) {
-      return dateString;
-    }
-  };
+  if (syllabus) {
+    const formatMonthYear = (dateString) => {
+      if (!dateString) return '';
+      try {
+        const [year, month] = dateString.split('-');
+        const date = new Date(year, parseInt(month) - 1);
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+      } catch (error) {
+        return dateString;
+      }
+    };
 
-  // Basic fields
-  const fieldMap = {
-    courseCode: syllabus.courseCode || '',
-    courseTitle: syllabus.courseTitle || '',
-    department: syllabus.department || '',
-    credits: syllabus.credits || '',
-    semester: syllabus.semester || '',
-    academicYear: syllabus.academicYear || '',
-    instructorName: syllabus.instructorName || '',
-    instructorEmail: syllabus.instructorEmail || '',
-    officeHours: syllabus.officeHours || '',
-    officeLocation: syllabus.officeLocation || '',
-    description: syllabus.description || '',
-    prerequisites: syllabus.prerequisites || '',
-    textbooks: syllabus.textbooks || '',
-    additionalMaterials: syllabus.additionalMaterials || '',
-    gradingScale: syllabus.gradingScale || '',
-    attendancePolicy: syllabus.attendancePolicy || '',
-    lateSubmissionPolicy: syllabus.lateSubmissionPolicy || '',
-    academicIntegrity: syllabus.academicIntegrity || '',
-    disabilities: syllabus.disabilities || '',
-    dateRevised: formatMonthYear(syllabus.dateRevised),
-    dateOfEffectivity: formatMonthYear(syllabus.dateOfEffectivity),
-    reviewed: syllabus.reviewed || '',
-    recommendingApproval: syllabus.recommendingApproval || '',
-    approved: syllabus.approved || '',
-  };
+    // Basic fields
+    const fieldMap = {
+      courseCode: syllabus.courseCode || '',
+      courseTitle: syllabus.courseTitle || '',
+      department: syllabus.department || '',
+      credits: syllabus.credits || '',
+      semester: syllabus.semester || '',
+      academicYear: syllabus.academicYear || '',
+      instructorName: syllabus.instructorName || '',
+      instructorEmail: syllabus.instructorEmail || '',
+      officeHours: syllabus.officeHours || '',
+      officeLocation: syllabus.officeLocation || '',
+      description: syllabus.description || '',
+      prerequisites: syllabus.prerequisites || '',
+      textbooks: syllabus.textbooks || '',
+      additionalMaterials: syllabus.additionalMaterials || '',
+      gradingScale: syllabus.gradingScale || '',
+      attendancePolicy: syllabus.attendancePolicy || '',
+      lateSubmissionPolicy: syllabus.lateSubmissionPolicy || '',
+      academicIntegrity: syllabus.academicIntegrity || '',
+      disabilities: syllabus.disabilities || '',
+      dateRevised: formatMonthYear(syllabus.dateRevised),
+      dateOfEffectivity: formatMonthYear(syllabus.dateOfEffectivity),
+      reviewed: syllabus.reviewed || '',
+      recommendingApproval: syllabus.recommendingApproval || '',
+      approved: syllabus.approved || '',
+    };
 
-  // Replace each field
-  Object.keys(fieldMap).forEach((key) => {
-    const placeholder = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-    result = result.replace(placeholder, fieldMap[key]);
-  });
+    // Replace each field
+    Object.keys(fieldMap).forEach((key) => {
+      const placeholder = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+      result = result.replace(placeholder, fieldMap[key]);
+    });
+  }
+  const { gas = [], mks = [], peos = [], plos = [], clos = [] } = auxData;
+  if (gas.length || mks.length || peos.length || plos.length || clos.length) {
+    // ga_N_label
+    result = result.replace(/\{\{ga_(\d+)_label\}\}/g, (_, n) => {
+      const ga = gas.find(g => g.number === Number(n));
+      if (!ga) return '';
+      return `${ga.title}${ga.description ? ' ' + ga.description : ''}`;
+    });
+
+    // ga_N_mk_CODE  (e.g. {{ga_3_mk_A}})
+    result = result.replace(/\{\{ga_(\d+)_mk_([^}]+)\}\}/g, (_, n, code) => {
+      const ga = gas.find(g => g.number === Number(n));
+      if (!ga) return '';
+      const linked = (ga.missionKeywords || []).map(mk =>
+        typeof mk === 'object' ? mk.code : (mks.find(m => String(m._id) === String(mk))?.code ?? '')
+      );
+      return linked.includes(code) ? CHECK : '';
+    });
+
+    // peo_N_label
+    result = result.replace(/\{\{peo_(\d+)_label\}\}/g, (_, n) => {
+      const peo = peos.find(p => p.number === Number(n));
+      if (!peo) return '';
+      return `${peo.title}${peo.description ? ' ' + peo.description : ''}`;
+    });
+
+    // peo_N_ga_M  (e.g. {{peo_2_ga_5}})
+    result = result.replace(/\{\{peo_(\d+)_ga_(\d+)\}\}/g, (_, pn, gn) => {
+      const peo = peos.find(p => p.number === Number(pn));
+      const ga  = gas.find(g => g.number === Number(gn));
+      if (!peo || !ga) return '';
+      const linked = (peo.graduateAttributes || []).map(g =>
+        typeof g === 'object' ? String(g._id) : String(g)
+      );
+      return linked.includes(String(ga._id)) ? CHECK : '';
+    });
+
+    // plo_N_label
+    result = result.replace(/\{\{plo_(\d+)_label\}\}/g, (_, n) => {
+      const plo = plos.find(p => p.number === Number(n));
+      if (!plo) return '';
+      return `${plo.title}${plo.description ? ' ' + plo.description : ''}`;
+    });
+
+    // plo_N_peo_M  (e.g. {{plo_3_peo_1}})
+    result = result.replace(/\{\{plo_(\d+)_peo_(\d+)\}\}/g, (_, plon, peon) => {
+      const plo = plos.find(p => p.number === Number(plon));
+      const peo = peos.find(p => p.number === Number(peon));
+      if (!plo || !peo) return '';
+      const linked = (plo.programEducationalObjectives || []).map(p =>
+        typeof p === 'object' ? String(p._id) : String(p)
+      );
+      return linked.includes(String(peo._id)) ? CHECK : '';
+    });
+
+    // clo_N_label
+    result = result.replace(/\{\{clo_(\d+)_label\}\}/g, (_, n) => {
+      const clo = clos.find(c => c.number === Number(n));
+      if (!clo) return '';
+      return `${clo.title}${clo.description ? ' ' + clo.description : ''}`;
+    });
+
+    // clo_N_plo_M  (e.g. {{clo_2_plo_4}})
+    result = result.replace(/\{\{clo_(\d+)_plo_(\d+)\}\}/g, (_, clon, plon) => {
+      const clo = clos.find(c => c.number === Number(clon));
+      const plo = plos.find(p => p.number === Number(plon));
+      if (!clo || !plo) return '';
+      const linked = (clo.programLearningOutcomes || []).map(p =>
+        typeof p === 'object' ? String(p._id) : String(p)
+      );
+      return linked.includes(String(plo._id)) ? CHECK : '';
+    });
+  }
 
   return result;
 }
@@ -66,21 +145,22 @@ export function replacePlaceholders(text, syllabus) {
  * Render a template element with syllabus data
  * @param {object} element - Template element (text or table)
  * @param {object} syllabus - Syllabus data object
+ * @param {object} [auxData] - Auxiliary collections for matrix placeholders
  * @returns {object} Element with content replaced
  */
-export function renderElement(element, syllabus) {
+export function renderElement(element, syllabus, auxData = {}) {
   if (!element) return element;
 
   const rendered = { ...element };
 
   if (element.type === 'text') {
-    rendered.content = replacePlaceholders(element.content, syllabus);
+    rendered.content = replacePlaceholders(element.content, syllabus, auxData);
   } else if (element.type === 'table' && element.data && Array.isArray(element.data)) {
     // Table structure uses element.data as a 2D array
     rendered.data = element.data.map((row) =>
       Array.isArray(row) ? row.map((cell) => ({
         ...cell,
-        content: replacePlaceholders(cell.content, syllabus),
+        content: replacePlaceholders(cell.content, syllabus, auxData),
       })) : row
     );
   }
@@ -92,9 +172,10 @@ export function renderElement(element, syllabus) {
  * Render an entire canvas document with syllabus data
  * @param {object} canvasDocument - Template canvas document
  * @param {object} syllabus - Syllabus data object
+ * @param {object} [auxData] - Auxiliary collections for matrix placeholders
  * @returns {object} Canvas document with all placeholders replaced
  */
-export function renderCanvasDocument(canvasDocument, syllabus) {
+export function renderCanvasDocument(canvasDocument, syllabus, auxData = {}) {
   if (!canvasDocument || !syllabus) return canvasDocument;
 
   const rendered = {
@@ -102,13 +183,13 @@ export function renderCanvasDocument(canvasDocument, syllabus) {
     header: {
       ...canvasDocument.header,
       elements: canvasDocument.header?.elements?.map((el) =>
-        renderElement(el, syllabus)
+        renderElement(el, syllabus, auxData)
       ) || [],
     },
     footer: {
       ...canvasDocument.footer,
       elements: canvasDocument.footer?.elements?.map((el) =>
-        renderElement(el, syllabus)
+        renderElement(el, syllabus, auxData)
       ) || [],
     },
   };
@@ -117,14 +198,14 @@ export function renderCanvasDocument(canvasDocument, syllabus) {
   if (canvasDocument.pages) {
     rendered.pages = canvasDocument.pages.map(page => ({
       ...page,
-      elements: page.elements?.map((el) => renderElement(el, syllabus)) || [],
+      elements: page.elements?.map((el) => renderElement(el, syllabus, auxData)) || [],
     }));
   } else if (canvasDocument.content) {
     // Backward compatibility
     rendered.content = {
       ...canvasDocument.content,
       elements: canvasDocument.content?.elements?.map((el) =>
-        renderElement(el, syllabus)
+        renderElement(el, syllabus, auxData)
       ) || [],
     };
   }
@@ -161,8 +242,6 @@ export function getFormattedGradingComponents(syllabus) {
 }
 
 // ─── Relationship Matrix Table Builders ───────────────────────────────────────
-
-const CHECK = '✓';
 
 /** Shared cell factory */
 function makeCell(content, { bold = false, bg = '#ffffff', align = 'center', width = 120, height = 40, fontSize = 11, color = '#000000', italic = false } = {}) {
@@ -213,12 +292,11 @@ const CATEG_BG   = '#f8f0d0'; // very light for category rows
  * @param {object[]} missionKeywords     – populated from GET /mission-keywords
  */
 export function buildGAMissionKeywordMatrix(graduateAttributes, missionKeywords, pos) {
-  const mkCodes  = missionKeywords.map(mk => mk.code);
-  const mkIds    = missionKeywords.map(mk => String(mk._id));
+  const mkCodes = missionKeywords.map(mk => mk.code);
 
-  const LABEL_W   = 420;
-  const CHECK_W   = 60;
-  const ROW_H     = 38;
+  const LABEL_W  = 420;
+  const CHECK_W  = 60;
+  const ROW_H    = 38;
 
   const rows = [];
 
@@ -227,21 +305,17 @@ export function buildGAMissionKeywordMatrix(graduateAttributes, missionKeywords,
     const gaInCat = graduateAttributes.filter(ga => ga.category === cat);
     if (gaInCat.length === 0) return;
 
-    // Category row
+    // Category separator row — static text, no placeholder needed
     const totalW = LABEL_W + CHECK_W * mkCodes.length;
     rows.push([
       makeCell(cat, { bold: true, bg: CATEG_BG, align: 'left', width: totalW, height: 32, fontSize: 11 }),
       ...mkCodes.map(() => makeCell('', { bg: CATEG_BG, width: CHECK_W, height: 32 })),
     ]);
 
-    gaInCat.forEach((ga, idx) => {
-      const label = `${idx + 1}. ${ga.title}${ga.description ? ' ' + ga.description : ''}`;
-      const gaLinkedIds = (ga.missionKeywords || []).map(mk =>
-        typeof mk === 'object' ? String(mk._id) : String(mk)
-      );
+    gaInCat.forEach(ga => {
       rows.push([
-        makeCell(label, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
-        ...mkIds.map(id => makeCell(gaLinkedIds.includes(id) ? CHECK : '', { align: 'center', width: CHECK_W, height: ROW_H })),
+        makeCell(`{{ga_${ga.number}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+        ...mkCodes.map(code => makeCell(`{{ga_${ga.number}_mk_${code}}}`, { align: 'center', width: CHECK_W, height: ROW_H })),
       ]);
     });
   });
@@ -255,23 +329,16 @@ export function buildGAMissionKeywordMatrix(graduateAttributes, missionKeywords,
  * @param {object[]} graduateAttributes – populated from GET /graduate-attributes
  */
 export function buildPEOGAMatrix(peos, graduateAttributes, pos) {
-  const gaIds   = graduateAttributes.map(ga => String(ga._id));
-  const gaLabels = graduateAttributes.map((ga, i) => `GA${i + 1}`);
-
   const LABEL_W  = 380;
   const CHECK_W  = 55;
   const ROW_H    = 60;
 
   const rows = [];
 
-  peos.forEach((peo, idx) => {
-    const label = `${idx + 1}. ${peo.title} ${peo.description || ''}`.trim();
-    const peoLinkedIds = (peo.graduateAttributes || []).map(ga =>
-      typeof ga === 'object' ? String(ga._id) : String(ga)
-    );
+  peos.forEach(peo => {
     rows.push([
-      makeCell(label, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
-      ...gaIds.map(id => makeCell(peoLinkedIds.includes(id) ? CHECK : '', { align: 'center', width: CHECK_W, height: ROW_H })),
+      makeCell(`{{peo_${peo.number}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+      ...graduateAttributes.map(ga => makeCell(`{{peo_${peo.number}_ga_${ga.number}}}`, { align: 'center', width: CHECK_W, height: ROW_H })),
     ]);
   });
 
@@ -284,23 +351,16 @@ export function buildPEOGAMatrix(peos, graduateAttributes, pos) {
  * @param {object[]} peos – populated from GET /peos
  */
 export function buildPLOPEOMatrix(plos, peos, pos) {
-  const peoIds    = peos.map(p => String(p._id));
-  const peoLabels = peos.map((_, i) => String(i + 1));
-
   const LABEL_W  = 400;
   const CHECK_W  = 65;
   const ROW_H    = 60;
 
   const rows = [];
 
-  plos.forEach((plo, idx) => {
-    const label = `${idx + 1}. ${plo.title} ${plo.description || ''}`.trim();
-    const ploLinkedIds = (plo.programEducationalObjectives || []).map(p =>
-      typeof p === 'object' ? String(p._id) : String(p)
-    );
+  plos.forEach(plo => {
     rows.push([
-      makeCell(label, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
-      ...peoIds.map(id => makeCell(ploLinkedIds.includes(id) ? CHECK : '', { align: 'center', width: CHECK_W, height: ROW_H })),
+      makeCell(`{{plo_${plo.number}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+      ...peos.map(peo => makeCell(`{{plo_${plo.number}_peo_${peo.number}}}`, { align: 'center', width: CHECK_W, height: ROW_H })),
     ]);
   });
 
@@ -313,23 +373,16 @@ export function buildPLOPEOMatrix(plos, peos, pos) {
  * @param {object[]} plos – populated from GET /plos
  */
 export function buildCLOPLOMatrix(clos, plos, pos) {
-  const ploIds    = plos.map(p => String(p._id));
-  const ploLabels = plos.map((_, i) => String(i + 1));
-
   const LABEL_W  = 400;
   const CHECK_W  = 65;
   const ROW_H    = 60;
 
   const rows = [];
 
-  clos.forEach((clo, idx) => {
-    const label = `${idx + 1}. ${clo.title} ${clo.description || ''}`.trim();
-    const cloLinkedIds = (clo.programLearningOutcomes || []).map(p =>
-      typeof p === 'object' ? String(p._id) : String(p)
-    );
+  clos.forEach(clo => {
     rows.push([
-      makeCell(label, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
-      ...ploIds.map(id => makeCell(cloLinkedIds.includes(id) ? CHECK : '', { align: 'center', width: CHECK_W, height: ROW_H })),
+      makeCell(`{{clo_${clo.number}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+      ...plos.map(plo => makeCell(`{{clo_${clo.number}_plo_${plo.number}}}`, { align: 'center', width: CHECK_W, height: ROW_H })),
     ]);
   });
 

@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { renderCanvasDocument } from '../utils/templateRenderer';
+import { graduateAttributeAPI, missionKeywordAPI, peoAPI, ploAPI, cloAPI } from '../services/api';
 
 // Page size configurations (in pixels, 96 DPI)
 const PAGE_SIZES = {
@@ -49,17 +50,42 @@ function computeCoveredCells(data) {
  * Render a template with syllabus data for print/export
  */
 export default function TemplateRenderer({ template, syllabus }) {
+  // Auxiliary data for relationship-matrix placeholder resolution
+  const [auxData, setAuxData] = useState({ gas: [], mks: [], peos: [], plos: [], clos: [] });
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      graduateAttributeAPI.getAll({ limit: 200 }),
+      missionKeywordAPI.getAll({ limit: 100 }),
+      peoAPI.getAll({ limit: 200 }),
+      ploAPI.getAll({ limit: 200 }),
+      cloAPI.getAll({ limit: 200 }),
+    ]).then(([gaRes, mkRes, peoRes, ploRes, cloRes]) => {
+      if (cancelled) return;
+      setAuxData({
+        gas:  gaRes.data?.graduateAttributes || [],
+        mks:  mkRes.data?.missionKeywords    || [],
+        peos: peoRes.data?.peos              || [],
+        plos: ploRes.data?.plos              || [],
+        clos: cloRes.data?.clos              || [],
+      });
+    }).catch(() => {}); // silently skip if offline / no data
+    return () => { cancelled = true; };
+  }, []);
+
+  // Render template with actual syllabus data - automatically updates when syllabus or auxData changes
+  const renderedDocument = useMemo(() => {
+    if (!template?.canvasDocument) return null;
+    return renderCanvasDocument(template.canvasDocument, syllabus, auxData);
+  }, [template?.canvasDocument, syllabus, auxData]);
+
   if (!template || !template.canvasDocument) {
     return null;
   }
 
   const pageSize = PAGE_SIZES[template.pageSize] || PAGE_SIZES.longBond;
   const dimensions = pageSize[template.orientation] || pageSize.landscape;
-  
-  // Render template with actual syllabus data - automatically updates when syllabus changes
-  const renderedDocument = useMemo(() => {
-    return renderCanvasDocument(template.canvasDocument, syllabus);
-  }, [template.canvasDocument, syllabus]);
 
   const renderElement = (element) => {
     const baseStyle = {
