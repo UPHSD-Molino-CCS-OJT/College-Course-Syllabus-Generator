@@ -882,7 +882,6 @@ export function buildLLOCLOMatrix(llos, clos, pos) {
 
   const HEADER_BG  = '#FCE9D9'; // salmon – matches other matrices
   const PERIOD_BG  = '#DAEEF3'; // light blue for PRELIM / MIDTERM / FINAL
-  const WEEK_BG    = '#F2F2F2'; // very light gray for week label rows
   const SECTION_H  = 20;        // height for section separator rows
   const DATA_H     = 50;        // default height for LLO data rows
 
@@ -941,11 +940,11 @@ export function buildLLOCLOMatrix(llos, clos, pos) {
       currentWeek = llo.weekLabel;
       rows.push([
         Object.assign(makeCell(llo.weekLabel, {
-          bold: true, bg: WEEK_BG, align: 'left',
+          bold: true, bg: "transparent", align: 'left',
           width: LABEL_W, height: SECTION_H, fontSize: 11, verticalAlign: 'middle',
         }), { _header: true, colspan: 1 + numCLOs }),
         ...Array.from({ length: numCLOs }, (_, ci) =>
-          Object.assign(makeCell('', { bg: WEEK_BG, width: checkWidths[ci], height: SECTION_H }), { _header: true })
+          Object.assign(makeCell('', { bg: "transparent", width: checkWidths[ci], height: SECTION_H }), { _header: true })
         ),
       ]);
     }
