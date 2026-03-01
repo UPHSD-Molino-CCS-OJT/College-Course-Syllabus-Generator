@@ -4,6 +4,22 @@
 
 const CHECK = '✓';
 
+/** Category order used to sort GAs consistently between the builder and the resolver */
+const GA_CATEGORY_ORDER = ['CHARACTER', 'COMPETENCE', 'COMMITMENT TO SERVICE'];
+
+/**
+ * Return a copy of `graduateAttributes` sorted by canonical category order then by number.
+ * This ensures the builder and the resolver always agree on which GA is "GA #N".
+ */
+function sortGAs(graduateAttributes) {
+  return [...graduateAttributes].sort((a, b) => {
+    const ai = GA_CATEGORY_ORDER.indexOf(a.category);
+    const bi = GA_CATEGORY_ORDER.indexOf(b.category);
+    if (ai !== bi) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    return (a.number || 0) - (b.number || 0);
+  });
+}
+
 /**
  * Replace placeholders in text with actual syllabus data and optional auxiliary
  * relationship-matrix data.
@@ -66,16 +82,17 @@ export function replacePlaceholders(text, syllabus, auxData = {}) {
   }
   const { gas = [], mks = [], peos = [], plos = [], clos = [] } = auxData;
   if (gas.length || mks.length || peos.length || plos.length || clos.length) {
-    // ga_N_label
+    // ga_N_label — N is the 1-based position in the canonical category-sorted GA list
+    const sortedGAs = sortGAs(gas);
     result = result.replace(/\{\{ga_(\d+)_label\}\}/g, (_, n) => {
-      const ga = gas.find(g => g.number === Number(n));
+      const ga = sortedGAs[Number(n) - 1];
       if (!ga) return '';
-      return `${ga.title}${ga.description ? ' ' + ga.description : ''}`;
+      return `${n}. ${ga.title}${ga.description ? ' ' + ga.description : ''}`;
     });
 
     // ga_N_mk_CODE  (e.g. {{ga_3_mk_A}})
     result = result.replace(/\{\{ga_(\d+)_mk_([^}]+)\}\}/g, (_, n, code) => {
-      const ga = gas.find(g => g.number === Number(n));
+      const ga = sortedGAs[Number(n) - 1];
       if (!ga) return '';
       const linked = (ga.missionKeywords || []).map(mk =>
         typeof mk === 'object' ? mk.code : (mks.find(m => String(m._id) === String(mk))?.code ?? '')
@@ -300,9 +317,13 @@ export function buildGAMissionKeywordMatrix(graduateAttributes, missionKeywords,
 
   const rows = [];
 
-  const categories = ['CHARACTER', 'COMPETENCE', 'COMMITMENT TO SERVICE'];
-  categories.forEach(cat => {
-    const gaInCat = graduateAttributes.filter(ga => ga.category === cat);
+  // Sort GAs using the same canonical order as the resolver so that the
+  // global 1-based index in the placeholder matches what replacePlaceholders expects.
+  const sortedAllGAs = sortGAs(graduateAttributes);
+  let globalGAIdx = 0;
+
+  GA_CATEGORY_ORDER.forEach(cat => {
+    const gaInCat = sortedAllGAs.filter(ga => ga.category === cat);
     if (gaInCat.length === 0) return;
 
     // Category separator row — static text, no placeholder needed
@@ -312,13 +333,30 @@ export function buildGAMissionKeywordMatrix(graduateAttributes, missionKeywords,
       ...mkCodes.map(() => makeCell('', { bg: CATEG_BG, width: CHECK_W, height: 32 })),
     ]);
 
-    gaInCat.forEach(ga => {
+    gaInCat.forEach(() => {
+      globalGAIdx++;
       rows.push([
-        makeCell(`{{ga_${ga.number}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
-        ...mkCodes.map(code => makeCell(`{{ga_${ga.number}_mk_${code}}}`, { align: 'center', width: CHECK_W, height: ROW_H })),
+        makeCell(`{{ga_${globalGAIdx}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+        ...mkCodes.map(code => makeCell(`{{ga_${globalGAIdx}_mk_${code}}}`, { align: 'center', width: CHECK_W, height: ROW_H })),
       ]);
     });
   });
+
+  // Include any GAs that don't belong to a known category at the end
+  const uncategorised = sortedAllGAs.filter(ga => !GA_CATEGORY_ORDER.includes(ga.category));
+  if (uncategorised.length > 0) {
+    rows.push([
+      makeCell('OTHER', { bold: true, bg: CATEG_BG, align: 'left', width: LABEL_W + CHECK_W * mkCodes.length, height: 32, fontSize: 11 }),
+      ...mkCodes.map(() => makeCell('', { bg: CATEG_BG, width: CHECK_W, height: 32 })),
+    ]);
+    uncategorised.forEach(() => {
+      globalGAIdx++;
+      rows.push([
+        makeCell(`{{ga_${globalGAIdx}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+        ...mkCodes.map(code => makeCell(`{{ga_${globalGAIdx}_mk_${code}}}`, { align: 'center', width: CHECK_W, height: ROW_H })),
+      ]);
+    });
+  }
 
   return buildTableElement(rows, pos);
 }
