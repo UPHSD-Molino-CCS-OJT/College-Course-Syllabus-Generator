@@ -192,8 +192,22 @@ export function renderElement(element, syllabus, auxData = {}) {
       rebuilt = buildCLOPLOMatrix(clos, plos, pos);
     }
     if (rebuilt) {
+      // ── CLO-PLO: always fully replace — headers + data rebuild every time ──
+      if (element.matrixType === 'clo-plo') {
+        rendered = {
+          ...rebuilt,
+          id:          element.id,
+          x:           element.x,
+          y:           element.y,
+          borderColor: element.borderColor ?? rebuilt.borderColor,
+          borderWidth: element.borderWidth ?? rebuilt.borderWidth,
+          borderStyle: element.borderStyle ?? rebuilt.borderStyle,
+          cellWidth:   element.cellWidth   ?? rebuilt.cellWidth,
+          cellHeight:  element.cellHeight  ?? rebuilt.cellHeight,
+          matrixType:  element.matrixType,
+        };
       // ── Anchor-based paste: re-paste the fresh matrix at the stored position ──
-      if (element.matrixAnchorRow !== undefined) {
+      } else if (element.matrixAnchorRow !== undefined) {
         const anchorRow = element.matrixAnchorRow ?? 0;
         const anchorCol = element.matrixAnchorCol ?? 0;
         const { data: pastedData, rows: pRows, cols: pCols } = pasteAtAnchor(
@@ -513,18 +527,13 @@ export function buildPLOPEOMatrix(plos, peos, pos) {
 /**
  * Build a CLO × PLO matrix table element.
  *
- * The matrix is always pasted at anchorRow=1, anchorCol=1 so that row 0
- * and col 0 of the host table are left untouched (their existing cell data
- * is preserved by pasteAtAnchor).
- *
- * Matrix layout (0-based within the builder output):
- *   Row 0       – PLO numbers: PLO 1 number | PLO 2 number | …
- *   Row 1+      – CLO data:    {{clo_N_plo_1}} | {{clo_N_plo_2}} | …
- *
- * Host table layout after paste:
- *   Row 0       – untouched (preserved)
- *   Row 1, Col 0 – untouched (preserved); Col 1+ = PLO numbers
- *   Row 2+, Col 0 – untouched (preserved); Col 1+ = check cells
+ * Layout:
+ *   Row 0, Col 0  – "COURSE LEARNING OUTCOMES (CLOs)…" section header  (rowspan=2)
+ *   Row 0, Col 1+ – "PROGRAM LEARNING OUTCOMES (PLOs)" section header  (colspan=numPLOs)
+ *   Row 1, Col 0  – placeholder (visually covered by rowspan above)
+ *   Row 1, Col 1+ – PLO numbers (1, 2, …)
+ *   Row 2+, Col 0 – {{clo_N_label}}
+ *   Row 2+, Col 1+– {{clo_N_plo_M}}
  *
  * Total check-cell width is kept constant regardless of PLO count by computing
  * CHECK_W = TOTAL_CHECK_AREA / numPLOs (columns grow/shrink inward).
@@ -533,9 +542,11 @@ export function buildPLOPEOMatrix(plos, peos, pos) {
  * @param {object[]} plos – populated from GET /plos
  */
 export function buildCLOPLOMatrix(clos, plos, pos) {
+  const LABEL_W        = 400;
   const TOTAL_CHECK_W  = 260; // fixed total width of the check-cell area (matches 4 PLOs × 65 px)
   const ROW_H          = 60;
-  const HEADER_H       = 40;
+  const HEADER0_H      = 40;  // row 0 height
+  const HEADER1_H      = 40;  // row 1 (PLO numbers) height
 
   const sortedCLOs = [...clos].sort((a, b) => (a.number || 0) - (b.number || 0));
   const sortedPLOs = [...plos].sort((a, b) => (a.number || 0) - (b.number || 0));
@@ -546,31 +557,46 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
 
   const rows = [];
 
-  // ── Row 0 (→ host row 1): PLO numbers ────────────────────────────────────
-  rows.push(
-    sortedPLOs.map((plo, pi) =>
+  // ── Row 0: CLO section header (rowspan=2) | PLO section header (colspan=numPLOs) ──
+  rows.push([
+    Object.assign(makeCell('COURSE LEARNING OUTCOMES (CLOs)\n\nAt the end of the course, the students can:', {
+      bold: true, bg: 'transparent', align: 'center',
+      width: LABEL_W, height: HEADER0_H, fontSize: 11,
+    }), { _header: true, rowspan: 2 }),
+    Object.assign(makeCell('PROGRAM LEARNING OUTCOMES (PLOs)', {
+      bold: true, bg: 'transparent', align: 'center',
+      width: CHECK_W, height: HEADER0_H, fontSize: 11,
+    }), { _header: true, colspan: numPLOs }),
+    // Empty placeholders for cells visually covered by the colspan above
+    ...Array.from({ length: numPLOs - 1 }, () =>
+      Object.assign(makeCell('', { bg: 'transparent', width: CHECK_W, height: HEADER0_H }), { _header: true })
+    ),
+  ]);
+
+  // ── Row 1: col 0 covered by rowspan | PLO numbers ────────────────────────
+  rows.push([
+    // Placeholder for col 0 — visually covered by the rowspan cell in row 0
+    Object.assign(makeCell('', { bg: 'transparent', width: LABEL_W, height: HEADER1_H }), { _header: true }),
+    ...sortedPLOs.map((plo, pi) =>
       Object.assign(makeCell(String(plo.number ?? pi + 1), {
         bold: true, bg: 'transparent', align: 'center',
-        width: CHECK_W, height: HEADER_H, fontSize: 11,
+        width: CHECK_W, height: HEADER1_H, fontSize: 11,
       }), { _header: true })
-    )
-  );
+    ),
+  ]);
 
-  // ── Row 1+ (→ host row 2+): CLO check cells ───────────────────────────────
+  // ── Data rows (row 2+): CLO label | check cells ───────────────────────────
   sortedCLOs.forEach((_clo, idx) => {
     const n = idx + 1;
-    rows.push(
-      sortedPLOs.map((_plo, pi) =>
+    rows.push([
+      makeCell(`{{clo_${n}_label}}`, { align: 'left', bg: 'transparent', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+      ...sortedPLOs.map((_plo, pi) =>
         makeCell(`{{clo_${n}_plo_${pi + 1}}}`, { align: 'center', bg: 'transparent', width: CHECK_W, height: ROW_H })
-      )
-    );
+      ),
+    ]);
   });
 
-  const el = buildTableElement(rows, { ...pos, matrixType: 'clo-plo' });
-  // Anchor at (1,1) so row 0 and col 0 of the host table are always preserved
-  el.matrixAnchorRow = 1;
-  el.matrixAnchorCol = 1;
-  return el;
+  return buildTableElement(rows, { ...pos, matrixType: 'clo-plo' });
 }
 
 // ─── End Relationship Matrix Builders ─────────────────────────────────────────
