@@ -200,14 +200,65 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       // LLO-CLO has dynamic section rows — always use a full structural rebuild
       // to avoid row-index mismatches after LLOs are added/removed.
       if (el.matrixType === 'llo-clo') {
-        const next = {
-          ...rebuilt,
-          id:         el.id,
-          matrixType: el.matrixType,
-        };
-        // Bail out early if nothing changed
-        let same = !structureChanged;
-        if (same) {
+        // When structure is unchanged, merge: preserve user-edited check cell
+        // content (col 1+) so manual checkmark edits survive a rebuild, while
+        // always pulling fresh label text (col 0) from the rebuilt data.
+        // When structure HAS changed (LLOs added/removed), fall through to a
+        // full rebuild to avoid stale row-index mismatches.
+        if (!structureChanged) {
+          const mergedLLOData = rebuilt.data.map((row, r) =>
+            row.map((cell, c) => {
+              const oldCell = el.data?.[r]?.[c];
+              // Always use canonical header cells (period/week dividers, column headers)
+              if (cell._header) {
+                return {
+                  ...cell,
+                  width:  oldCell?.width  ?? cell.width,
+                  height: oldCell?.height ?? cell.height,
+                };
+              }
+              if (!oldCell) return cell;
+              // Col 0 = LLO label: update content from rebuild (reflects DB changes),
+              // but preserve any user-set sizes and styles.
+              if (c === 0) {
+                return {
+                  ...cell,
+                  width:         oldCell.width         ?? cell.width,
+                  height:        oldCell.height        ?? cell.height,
+                  fontSize:      oldCell.fontSize      ?? cell.fontSize,
+                  fontFamily:    oldCell.fontFamily    ?? cell.fontFamily,
+                  fontStyle:     oldCell.fontStyle     ?? cell.fontStyle,
+                  color:         oldCell.color         ?? cell.color,
+                  verticalAlign: oldCell.verticalAlign ?? cell.verticalAlign,
+                  bg:            oldCell.bg            ?? cell.bg,
+                };
+              }
+              // Col 1+ = CLO check cells: preserve user-edited content (checkmarks
+              // the user has manually toggled) and restore sizes.
+              return {
+                ...cell,
+                content: oldCell.content, // keep user-edited checkmark
+                width:         oldCell.width         ?? cell.width,
+                height:        oldCell.height        ?? cell.height,
+                fontSize:      oldCell.fontSize      ?? cell.fontSize,
+                fontFamily:    oldCell.fontFamily    ?? cell.fontFamily,
+                fontStyle:     oldCell.fontStyle     ?? cell.fontStyle,
+                color:         oldCell.color         ?? cell.color,
+                verticalAlign: oldCell.verticalAlign ?? cell.verticalAlign,
+                bg:            oldCell.bg            ?? cell.bg,
+              };
+            })
+          );
+
+          const next = {
+            ...rebuilt,
+            id:         el.id,
+            data:       mergedLLOData,
+            matrixType: el.matrixType,
+          };
+
+          // Bail out early if nothing actually changed after the merge
+          let same = true;
           outer3: for (let r = 0; r < next.data.length; r++) {
             for (let c = 0; c < (next.data[r]?.length ?? 0); c++) {
               if ((next.data[r][c]?.content ?? '') !== (el.data?.[r]?.[c]?.content ?? '')) {
@@ -215,9 +266,16 @@ export default function CanvasEditor({ template, onClose, onSave }) {
               }
             }
           }
+          if (same) return el;
+          return next;
         }
-        if (same) return el;
-        return next;
+
+        // Structure changed (LLOs added/removed) — full rebuild
+        return {
+          ...rebuilt,
+          id:         el.id,
+          matrixType: el.matrixType,
+        };
       }
 
       // Always merge per-cell user styles (font, colour, bg, borders) from the

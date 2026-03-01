@@ -195,13 +195,65 @@ export function renderElement(element, syllabus, auxData = {}) {
       rebuilt = buildLLOCLOMatrix(llos, clos, posWithData);
     }
     if (rebuilt) {
-      // ── LLO-CLO: dynamic section rows — always do a full structural rebuild ─
+      // ── LLO-CLO: dynamic section rows — rebuild structure from DB but preserve
+      //    user-edited checkmark content when the structure is unchanged, so
+      //    manual check/uncheck toggles survive a re-render. ──────────────────
       if (element.matrixType === 'llo-clo') {
+        const lloStructureChanged =
+          rebuilt.rows !== (element.data?.length ?? element.rows) ||
+          rebuilt.cols !== (element.data?.[0]?.length ?? element.cols);
+
+        let lloData = rebuilt.data;
+        if (!lloStructureChanged && element.data) {
+          lloData = rebuilt.data.map((row, r) =>
+            row.map((cell, c) => {
+              const oldCell = element.data[r]?.[c];
+              // Always use canonical header cells (period/week dividers, CLO number row)
+              if (cell._header) {
+                return {
+                  ...cell,
+                  width:  oldCell?.width  ?? cell.width,
+                  height: oldCell?.height ?? cell.height,
+                };
+              }
+              if (!oldCell) return cell;
+              // Col 0 = LLO label: update from rebuilt (reflects DB text changes)
+              if (c === 0) {
+                return {
+                  ...cell,
+                  width:         oldCell.width         ?? cell.width,
+                  height:        oldCell.height        ?? cell.height,
+                  fontSize:      oldCell.fontSize      ?? cell.fontSize,
+                  fontFamily:    oldCell.fontFamily    ?? cell.fontFamily,
+                  fontStyle:     oldCell.fontStyle     ?? cell.fontStyle,
+                  color:         oldCell.color         ?? cell.color,
+                  verticalAlign: oldCell.verticalAlign ?? cell.verticalAlign,
+                  bg:            oldCell.bg            ?? cell.bg,
+                };
+              }
+              // Col 1+ = CLO check cells: preserve user-edited content (checkmarks)
+              return {
+                ...cell,
+                content:       oldCell.content,
+                width:         oldCell.width         ?? cell.width,
+                height:        oldCell.height        ?? cell.height,
+                fontSize:      oldCell.fontSize      ?? cell.fontSize,
+                fontFamily:    oldCell.fontFamily    ?? cell.fontFamily,
+                fontStyle:     oldCell.fontStyle     ?? cell.fontStyle,
+                color:         oldCell.color         ?? cell.color,
+                verticalAlign: oldCell.verticalAlign ?? cell.verticalAlign,
+                bg:            oldCell.bg            ?? cell.bg,
+              };
+            })
+          );
+        }
+
         rendered = {
           ...rebuilt,
           id:          element.id,
           x:           element.x,
           y:           element.y,
+          data:        lloData,
           borderColor: element.borderColor ?? rebuilt.borderColor,
           borderWidth: element.borderWidth ?? rebuilt.borderWidth,
           borderStyle: element.borderStyle ?? rebuilt.borderStyle,
