@@ -114,4 +114,124 @@ export const templateAPI = {
   },
 };
 
+// Mission Keywords API
+export const missionKeywordAPI = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/mission-keywords', { params });
+    return response.data;
+  },
+  getById: async (id) => {
+    const response = await api.get(`/mission-keywords/${id}`);
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/mission-keywords', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.patch(`/mission-keywords/${id}`, data);
+    return response.data;
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/mission-keywords/${id}`);
+    return response.data;
+  },
+};
+
+// Graduate Attributes API
+export const graduateAttributeAPI = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/graduate-attributes', { params });
+    return response.data;
+  },
+  getById: async (id) => {
+    const response = await api.get(`/graduate-attributes/${id}`);
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/graduate-attributes', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.patch(`/graduate-attributes/${id}`, data);
+    return response.data;
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/graduate-attributes/${id}`);
+    return response.data;
+  },
+};
+
+// Program Educational Objectives (PEOs) API
+export const peoAPI = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/peos', { params });
+    return response.data;
+  },
+  getById: async (id) => {
+    const response = await api.get(`/peos/${id}`);
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/peos', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.patch(`/peos/${id}`, data);
+    return response.data;
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/peos/${id}`);
+    return response.data;
+  },
+};
+
+// Program Learning Outcomes (PLOs) API
+export const ploAPI = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/plos', { params });
+    return response.data;
+  },
+  getById: async (id) => {
+    const response = await api.get(`/plos/${id}`);
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/plos', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.patch(`/plos/${id}`, data);
+    return response.data;
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/plos/${id}`);
+    return response.data;
+  },
+};
+
+// Course Learning Outcomes (CLOs) API
+export const cloAPI = {
+  getAll: async (params = {}) => {
+    const response = await api.get('/clos', { params });
+    return response.data;
+  },
+  getById: async (id) => {
+    const response = await api.get(`/clos/${id}`);
+    return response.data;
+  },
+  create: async (data) => {
+    const response = await api.post('/clos', data);
+    return response.data;
+  },
+  update: async (id, data) => {
+    const response = await api.patch(`/clos/${id}`, data);
+    return response.data;
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/clos/${id}`);
+    return response.data;
+  },
+};
+
 export default api;
