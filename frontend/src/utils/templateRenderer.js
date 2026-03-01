@@ -182,14 +182,15 @@ export function renderElement(element, syllabus, auxData = {}) {
     const { gas = [], mks = [], peos = [], plos = [], clos = [] } = auxData;
     let rebuilt = null;
     const pos = { x: element.x, y: element.y };
+    const posWithData = { ...pos, existingData: element.data };
     if (element.matrixType === 'ga-mk' && gas.length && mks.length) {
-      rebuilt = buildGAMissionKeywordMatrix(gas, mks, pos);
+      rebuilt = buildGAMissionKeywordMatrix(gas, mks, posWithData);
     } else if (element.matrixType === 'peo-ga' && peos.length && gas.length) {
-      rebuilt = buildPEOGAMatrix(peos, gas, pos);
+      rebuilt = buildPEOGAMatrix(peos, gas, posWithData);
     } else if (element.matrixType === 'plo-peo' && plos.length && peos.length) {
-      rebuilt = buildPLOPEOMatrix(plos, peos, pos);
+      rebuilt = buildPLOPEOMatrix(plos, peos, posWithData);
     } else if (element.matrixType === 'clo-plo' && clos.length && plos.length) {
-      rebuilt = buildCLOPLOMatrix(clos, plos, { ...pos, existingData: element.data });
+      rebuilt = buildCLOPLOMatrix(clos, plos, posWithData);
     }
     if (rebuilt) {
       // ── CLO-PLO: rebuild structure from DB but preserve the two constant header
@@ -400,8 +401,8 @@ export function getFormattedGradingComponents(syllabus) {
 // ─── Relationship Matrix Table Builders ───────────────────────────────────────
 
 /** Shared cell factory */
-function makeCell(content, { bold = false, bg = '#ffffff', align = 'center', width = 120, height = 40, fontSize = 12, color = '#000000', italic = false, verticalAlign = 'middle' } = {}) {
-  return {
+function makeCell(content, { bold = false, bg = '#ffffff', align = 'center', width = undefined, height = undefined, fontSize = 12, color = '#000000', italic = false, verticalAlign = 'middle' } = {}) {
+  const cell = {
     content,
     fontSize,
     fontFamily: 'Arial',
@@ -411,9 +412,10 @@ function makeCell(content, { bold = false, bg = '#ffffff', align = 'center', wid
     align,
     verticalAlign,
     bg,
-    width,
-    height,
   };
+  if (width  !== undefined) cell.width  = width;
+  if (height !== undefined) cell.height = height;
+  return cell;
 }
 
 /** Build a canvas table element from a 2-D array of cell descriptors */
@@ -453,14 +455,33 @@ const CATEG_BG   = '#ffffff'; // white background for category rows
 export function buildGAMissionKeywordMatrix(graduateAttributes, missionKeywords, pos) {
   const mkCodes = missionKeywords.map(mk => mk.code);
 
-  const LABEL_W  = 420;
-  const CHECK_W  = 60;
-  const ROW_H    = 38;
+  const existingData = pos?.existingData || null;
+
+  const getStoredColWidth = (colIndex) => {
+    if (!existingData) return undefined;
+    for (const row of existingData) {
+      const w = row?.[colIndex]?.width;
+      if (w != null) return w;
+    }
+    return undefined;
+  };
+
+  const getStoredRowHeight = (rowIndex) => {
+    if (!existingData) return undefined;
+    const row = existingData[rowIndex];
+    if (!row) return undefined;
+    for (const cell of row) {
+      if (cell?.height != null) return cell.height;
+    }
+    return undefined;
+  };
+
+  const LABEL_W = getStoredColWidth(0);
+  const CHECK_W = getStoredColWidth(1);
 
   const rows = [];
+  let rowIndex = 0;
 
-  // Sort GAs using the same canonical order as the resolver so that the
-  // global 1-based index in the placeholder matches what replacePlaceholders expects.
   const sortedAllGAs = sortGAs(graduateAttributes);
   let globalGAIdx = 0;
 
@@ -468,35 +489,40 @@ export function buildGAMissionKeywordMatrix(graduateAttributes, missionKeywords,
     const gaInCat = sortedAllGAs.filter(ga => ga.category === cat);
     if (gaInCat.length === 0) return;
 
-    // Category separator row — static text, no placeholder needed
-    const totalW = LABEL_W + CHECK_W * mkCodes.length;
+    const catH = getStoredRowHeight(rowIndex);
     rows.push([
-      makeCell(cat, { bold: true, bg: CATEG_BG, align: 'left', width: totalW, height: 32, fontSize: 12 }),
-      ...mkCodes.map(() => makeCell('', { bg: CATEG_BG, width: CHECK_W, height: 32 })),
+      makeCell(cat, { bold: true, bg: CATEG_BG, align: 'left', width: LABEL_W, height: catH, fontSize: 12 }),
+      ...mkCodes.map(() => makeCell('', { bg: CATEG_BG, width: CHECK_W, height: catH })),
     ]);
+    rowIndex++;
 
     gaInCat.forEach(() => {
       globalGAIdx++;
+      const rowH = getStoredRowHeight(rowIndex);
       rows.push([
-        makeCell(`{{ga_${globalGAIdx}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 12, verticalAlign: 'middle' }),
-        ...mkCodes.map(code => makeCell(`{{ga_${globalGAIdx}_mk_${code}}}`, { align: 'center', width: CHECK_W, height: ROW_H, verticalAlign: 'middle' })),
+        makeCell(`{{ga_${globalGAIdx}_label}}`, { align: 'left', width: LABEL_W, height: rowH, fontSize: 12, verticalAlign: 'middle' }),
+        ...mkCodes.map(code => makeCell(`{{ga_${globalGAIdx}_mk_${code}}}`, { align: 'center', width: CHECK_W, height: rowH, verticalAlign: 'middle' })),
       ]);
+      rowIndex++;
     });
   });
 
-  // Include any GAs that don't belong to a known category at the end
   const uncategorised = sortedAllGAs.filter(ga => !GA_CATEGORY_ORDER.includes(ga.category));
   if (uncategorised.length > 0) {
+    const catH = getStoredRowHeight(rowIndex);
     rows.push([
-      makeCell('OTHER', { bold: true, bg: CATEG_BG, align: 'left', width: LABEL_W + CHECK_W * mkCodes.length, height: 32, fontSize: 12 }),
-      ...mkCodes.map(() => makeCell('', { bg: CATEG_BG, width: CHECK_W, height: 32 })),
+      makeCell('OTHER', { bold: true, bg: CATEG_BG, align: 'left', width: LABEL_W, height: catH, fontSize: 12 }),
+      ...mkCodes.map(() => makeCell('', { bg: CATEG_BG, width: CHECK_W, height: catH })),
     ]);
+    rowIndex++;
     uncategorised.forEach(() => {
       globalGAIdx++;
+      const rowH = getStoredRowHeight(rowIndex);
       rows.push([
-        makeCell(`{{ga_${globalGAIdx}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 12, verticalAlign: 'middle' }),
-        ...mkCodes.map(code => makeCell(`{{ga_${globalGAIdx}_mk_${code}}}`, { align: 'center', width: CHECK_W, height: ROW_H, verticalAlign: 'middle' })),
+        makeCell(`{{ga_${globalGAIdx}_label}}`, { align: 'left', width: LABEL_W, height: rowH, fontSize: 12, verticalAlign: 'middle' }),
+        ...mkCodes.map(code => makeCell(`{{ga_${globalGAIdx}_mk_${code}}}`, { align: 'center', width: CHECK_W, height: rowH, verticalAlign: 'middle' })),
       ]);
+      rowIndex++;
     });
   }
 
@@ -509,9 +535,37 @@ export function buildGAMissionKeywordMatrix(graduateAttributes, missionKeywords,
  * @param {object[]} graduateAttributes – populated from GET /graduate-attributes
  */
 export function buildPEOGAMatrix(peos, graduateAttributes, pos) {
-  const LABEL_W  = 380;
-  const CHECK_W  = 55;
-  const ROW_H    = 60;
+  const existingData = pos?.existingData || null;
+
+  const getStoredColWidth = (colIndex) => {
+    if (!existingData) return undefined;
+    for (const row of existingData) {
+      const w = row?.[colIndex]?.width;
+      if (w != null) return w;
+    }
+    return undefined;
+  };
+
+  const getStoredRowHeight = (rowIndex) => {
+    if (!existingData) return undefined;
+    const row = existingData[rowIndex];
+    if (!row) return undefined;
+    for (const cell of row) {
+      if (cell?.height != null) return cell.height;
+    }
+    return undefined;
+  };
+
+  const lastStoredRowHeight = (() => {
+    if (!existingData) return undefined;
+    for (let r = existingData.length - 1; r >= 0; r--) {
+      const h = getStoredRowHeight(r);
+      if (h != null) return h;
+    }
+    return undefined;
+  })();
+
+  const LABEL_W = getStoredColWidth(0);
 
   const sortedPEOs = [...peos].sort((a, b) => (a.number || 0) - (b.number || 0));
   const sortedGAsForCols = sortGAs(graduateAttributes);
@@ -519,9 +573,11 @@ export function buildPEOGAMatrix(peos, graduateAttributes, pos) {
 
   sortedPEOs.forEach((_peo, idx) => {
     const n = idx + 1;
+    const rowH = getStoredRowHeight(idx) ?? lastStoredRowHeight;
+    const colWidths = sortedGAsForCols.map((_, gi) => getStoredColWidth(gi + 1));
     rows.push([
-      makeCell(`{{peo_${n}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 12, verticalAlign: 'middle' }),
-      ...sortedGAsForCols.map((_ga, gi) => makeCell(`{{peo_${n}_ga_${gi + 1}}}`, { align: 'center', width: CHECK_W, height: ROW_H, verticalAlign: 'middle' })),
+      makeCell(`{{peo_${n}_label}}`, { align: 'left', width: LABEL_W, height: rowH, fontSize: 12, verticalAlign: 'middle' }),
+      ...sortedGAsForCols.map((_ga, gi) => makeCell(`{{peo_${n}_ga_${gi + 1}}}`, { align: 'center', width: colWidths[gi], height: rowH, verticalAlign: 'middle' })),
     ]);
   });
 
@@ -534,9 +590,37 @@ export function buildPEOGAMatrix(peos, graduateAttributes, pos) {
  * @param {object[]} peos – populated from GET /peos
  */
 export function buildPLOPEOMatrix(plos, peos, pos) {
-  const LABEL_W  = 400;
-  const CHECK_W  = 65;
-  const ROW_H    = 60;
+  const existingData = pos?.existingData || null;
+
+  const getStoredColWidth = (colIndex) => {
+    if (!existingData) return undefined;
+    for (const row of existingData) {
+      const w = row?.[colIndex]?.width;
+      if (w != null) return w;
+    }
+    return undefined;
+  };
+
+  const getStoredRowHeight = (rowIndex) => {
+    if (!existingData) return undefined;
+    const row = existingData[rowIndex];
+    if (!row) return undefined;
+    for (const cell of row) {
+      if (cell?.height != null) return cell.height;
+    }
+    return undefined;
+  };
+
+  const lastStoredRowHeight = (() => {
+    if (!existingData) return undefined;
+    for (let r = existingData.length - 1; r >= 0; r--) {
+      const h = getStoredRowHeight(r);
+      if (h != null) return h;
+    }
+    return undefined;
+  })();
+
+  const LABEL_W = getStoredColWidth(0);
 
   const sortedPLOs = [...plos].sort((a, b) => (a.number || 0) - (b.number || 0));
   const sortedPEOs = [...peos].sort((a, b) => (a.number || 0) - (b.number || 0));
@@ -544,9 +628,11 @@ export function buildPLOPEOMatrix(plos, peos, pos) {
 
   sortedPLOs.forEach((_plo, idx) => {
     const n = idx + 1;
+    const rowH = getStoredRowHeight(idx) ?? lastStoredRowHeight;
+    const colWidths = sortedPEOs.map((_, pi) => getStoredColWidth(pi + 1));
     rows.push([
-      makeCell(`{{plo_${n}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 12, verticalAlign: 'middle' }),
-      ...sortedPEOs.map((_peo, pi) => makeCell(`{{plo_${n}_peo_${pi + 1}}}`, { align: 'center', width: CHECK_W, height: ROW_H, verticalAlign: 'middle' })),
+      makeCell(`{{plo_${n}_label}}`, { align: 'left', width: LABEL_W, height: rowH, fontSize: 12, verticalAlign: 'middle' }),
+      ...sortedPEOs.map((_peo, pi) => makeCell(`{{plo_${n}_peo_${pi + 1}}}`, { align: 'center', width: colWidths[pi], height: rowH, verticalAlign: 'middle' })),
     ]);
   });
 
@@ -571,65 +657,52 @@ export function buildPLOPEOMatrix(plos, peos, pos) {
  * @param {object[]} plos – populated from GET /plos
  */
 export function buildCLOPLOMatrix(clos, plos, pos) {
-  // Default dimensions – used only when no existing table data is available
-  const DEFAULT_LABEL_W  = 400;
-  const DEFAULT_CHECK_W  = 65;
-  const DEFAULT_ROW_H    = 60;
-  const DEFAULT_HEADER_H = 40;
-
   const existingData = pos?.existingData || null;
 
-  // Derive a stored width for a given column by scanning non-header data rows first,
-  // then falling back to the header rows. This correctly reflects any user resizes.
   const getStoredColWidth = (colIndex) => {
-    if (!existingData) return null;
+    if (!existingData) return undefined;
     for (let r = 2; r < existingData.length; r++) {
       const w = existingData[r]?.[colIndex]?.width;
       if (w != null) return w;
     }
-    // row 1 (PLO numbers) — safe for check columns since there is no colspan there
     const w1 = existingData[1]?.[colIndex]?.width;
     if (w1 != null) return w1;
-    // row 0 col 0 is the rowspan header — valid for the label column
     if (colIndex === 0) {
       const w0 = existingData[0]?.[0]?.width;
       if (w0 != null) return w0;
     }
-    return null;
+    return undefined;
   };
 
   const getStoredRowHeight = (rowIndex) => {
-    if (!existingData) return null;
+    if (!existingData) return undefined;
     const row = existingData[rowIndex];
-    if (!row) return null;
+    if (!row) return undefined;
     for (const cell of row) {
       if (cell?.height != null) return cell.height;
     }
-    return null;
+    return undefined;
   };
 
-  // Height to use for CLO rows that are beyond what was previously stored
   const lastStoredDataRowHeight = (() => {
-    if (!existingData) return null;
+    if (!existingData) return undefined;
     for (let r = existingData.length - 1; r >= 2; r--) {
       const h = getStoredRowHeight(r);
       if (h != null) return h;
     }
-    return null;
+    return undefined;
   })();
 
   const sortedCLOs = [...clos].sort((a, b) => (a.number || 0) - (b.number || 0));
   const sortedPLOs = [...plos].sort((a, b) => (a.number || 0) - (b.number || 0));
   const numPLOs    = sortedPLOs.length;
 
-  // Per-column widths: prefer stored, fall back to defaults
-  const LABEL_W   = getStoredColWidth(0) ?? DEFAULT_LABEL_W;
-  const checkWidths = sortedPLOs.map((_, pi) => getStoredColWidth(pi + 1) ?? DEFAULT_CHECK_W);
+  const LABEL_W     = getStoredColWidth(0);
+  const checkWidths = sortedPLOs.map((_, pi) => getStoredColWidth(pi + 1));
 
-  // Per-row heights: prefer stored, fall back to defaults
-  const HEADER0_H = getStoredRowHeight(0) ?? DEFAULT_HEADER_H;
-  const HEADER1_H = getStoredRowHeight(1) ?? DEFAULT_HEADER_H;
-  const ROW_H     = lastStoredDataRowHeight ?? DEFAULT_ROW_H;
+  const HEADER0_H = getStoredRowHeight(0);
+  const HEADER1_H = getStoredRowHeight(1);
+  const ROW_H     = lastStoredDataRowHeight;
 
   const rows = [];
 
@@ -643,11 +716,11 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
     }), { _header: true, rowspan: 2 }),
     Object.assign(makeCell('PROGRAM LEARNING OUTCOMES (PLOs)', {
       bold: true, bg: HEADER_BG, align: 'center',
-      width: checkWidths[0] ?? DEFAULT_CHECK_W, height: HEADER0_H, fontSize: 12, verticalAlign: 'middle',
+      width: checkWidths[0], height: HEADER0_H, fontSize: 12, verticalAlign: 'middle',
     }), { _header: true, colspan: numPLOs }),
     // Empty placeholders for cells visually covered by the colspan above
     ...Array.from({ length: numPLOs - 1 }, (_, pi) =>
-      Object.assign(makeCell('', { bg: HEADER_BG, width: checkWidths[pi + 1] ?? DEFAULT_CHECK_W, height: HEADER0_H }), { _header: true })
+      Object.assign(makeCell('', { bg: HEADER_BG, width: checkWidths[pi + 1], height: HEADER0_H }), { _header: true })
     ),
   ]);
 
@@ -658,7 +731,7 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
     ...sortedPLOs.map((plo, pi) =>
       Object.assign(makeCell(String(plo.number ?? pi + 1), {
         bold: true, bg: HEADER_BG, align: 'center',
-        width: checkWidths[pi] ?? DEFAULT_CHECK_W, height: HEADER1_H, fontSize: 12, verticalAlign: 'middle',
+        width: checkWidths[pi], height: HEADER1_H, fontSize: 12, verticalAlign: 'middle',
       }), { _header: true })
     ),
   ]);
@@ -670,7 +743,7 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
     rows.push([
       makeCell(`{{clo_${n}_label}}`, { align: 'left', bg: 'transparent', width: LABEL_W, height: rowH, fontSize: 12, verticalAlign: 'top' }),
       ...sortedPLOs.map((_plo, pi) =>
-        makeCell(`{{clo_${n}_plo_${pi + 1}}}`, { align: 'center', bg: 'transparent', width: checkWidths[pi] ?? DEFAULT_CHECK_W, height: rowH, verticalAlign: 'middle' })
+        makeCell(`{{clo_${n}_plo_${pi + 1}}}`, { align: 'center', bg: 'transparent', width: checkWidths[pi], height: rowH, verticalAlign: 'middle' })
       ),
     ]);
   });
