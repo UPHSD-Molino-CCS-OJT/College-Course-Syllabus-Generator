@@ -11,7 +11,7 @@ const lloSchema = new mongoose.Schema(
       maxlength: 1000,
       trim: true,
     },
-    // Domain: A = Affective, S = Skills/Psychomotor, K = Knowledge
+    // Domain: A = Attitude, S = Skills/Psychomotor, K = Knowledge
     domain: {
       type: String,
       required: true,

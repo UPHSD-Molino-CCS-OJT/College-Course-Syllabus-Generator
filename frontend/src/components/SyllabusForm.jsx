@@ -1790,7 +1790,7 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
                     >
                       <option value="K">K – Knowledge</option>
                       <option value="S">S – Skills</option>
-                      <option value="A">A – Affective</option>
+                      <option value="A">A – Attitude</option>
                     </select>
                   </div>
                   <div>
