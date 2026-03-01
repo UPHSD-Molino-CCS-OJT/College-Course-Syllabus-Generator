@@ -378,11 +378,11 @@ export default function TableEditor({ table, onUpdate }) {
       {isMatrix && (
         <div className="mb-3 flex-shrink-0 bg-emerald-900/40 border border-emerald-600 rounded-lg px-3 py-2.5 text-xs">
           <div className="flex items-center gap-2 text-emerald-300 font-semibold mb-1">
-            <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            Live-Synced Matrix
+            <span className="inline-block w-2 h-2 rounded-full bg-emerald-400" />
+            Matrix Table
           </div>
           <p className="text-emerald-400/80 leading-relaxed">
-            {MATRIX_LABELS[table.matrixType] || table.matrixType} — rows and columns are automatically rebuilt from the database on every preview render. Structural edits (add/remove rows or columns) are disabled.
+            {MATRIX_LABELS[table.matrixType] || table.matrixType} — use the <strong className="text-emerald-300">⟳ Rebuild Matrices</strong> button in the toolbar to sync rows and columns from the database. Structural edits (add/remove rows or columns) are disabled.
             {table.matrixAnchorRow !== undefined && (
               <span className="block mt-1 text-emerald-500/70">
                 Pasted at row {(table.matrixAnchorRow ?? 0) + 1}, col {(table.matrixAnchorCol ?? 0) + 1} of this table.

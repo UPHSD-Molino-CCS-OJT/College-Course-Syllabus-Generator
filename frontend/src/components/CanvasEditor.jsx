@@ -128,8 +128,8 @@ export default function CanvasEditor({ template, onClose, onSave }) {
     };
   }, [fetchAuxData]);
 
-  // ── Auto-rebuild stale matrix tables whenever aux data loads / changes ─────
-  useEffect(() => {
+  // ── Manual rebuild of stale matrix tables ────────────────────────────────
+  const handleRebuildMatrices = useCallback(() => {
     if (!auxData.loaded) return;
     const { gas, mks, peos, plos, clos, llos } = auxData;
 
@@ -362,9 +362,8 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       return next;
     };
 
-    // Use functional update so we always operate on the latest canvasDocument
-    // without needing it in the dependency array (avoids infinite loop).
-    isUndoRedoRef.current = true; // suppress history for auto-rebuild
+    // Use functional update so we always operate on the latest canvasDocument.
+    isUndoRedoRef.current = true; // suppress history for matrix rebuild
     setCanvasDocument(prev => {
       let changed = false;
       const rebuildList = (elements) =>
@@ -1179,6 +1178,16 @@ export default function CanvasEditor({ template, onClose, onSave }) {
                 ↷ Redo
               </button>
             </div>
+            <div className="h-5 w-px bg-gray-600"></div>
+            {/* Rebuild Matrices */}
+            <button
+              onClick={handleRebuildMatrices}
+              disabled={!auxData.loaded}
+              className="px-3 py-1.5 rounded bg-teal-700 hover:bg-teal-600 text-white text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+              title="Re-fetch data from the database and rebuild all matrix tables"
+            >
+              ⟳ Rebuild Matrices
+            </button>
           </div>
           <EditorActions
             autoSaveEnabled={autoSaveEnabled}
