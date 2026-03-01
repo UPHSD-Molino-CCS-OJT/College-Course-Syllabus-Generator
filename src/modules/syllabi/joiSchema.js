@@ -56,6 +56,7 @@ module.exports = {
     recommendingApproval: Joi.string().max(200).allow(""),
     approved: Joi.string().max(200).allow(""),
     
+    courseLearningOutcomes: Joi.array().items(Joi.string()).default([]),
     status: Joi.string().valid("draft", "published", "archived"),
     template: Joi.string().allow(null),
     createdBy: Joi.string().allow(null),
@@ -101,6 +102,7 @@ module.exports = {
     recommendingApproval: Joi.string().max(200).allow(""),
     approved: Joi.string().max(200).allow(""),
     
+    courseLearningOutcomes: Joi.array().items(Joi.string()),
     status: Joi.string().valid("draft", "published", "archived"),
     template: Joi.string().allow(null),
     createdBy: Joi.string().allow(null),

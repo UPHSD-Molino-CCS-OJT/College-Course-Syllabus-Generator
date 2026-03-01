@@ -191,6 +191,14 @@ const syllabusSchema = new mongoose.Schema(
       default: "draft",
     },
 
+    // Outcome Alignment
+    courseLearningOutcomes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "CourseLearningOutcome",
+      },
+    ],
+
     // Template Reference
     template: {
       type: mongoose.Schema.Types.ObjectId,

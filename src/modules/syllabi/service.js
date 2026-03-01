@@ -17,6 +17,18 @@ exports.getSyllabi = async (query) => {
     .sort({ academicYear: -1, semester: 1, courseCode: 1 })
     .populate('createdBy', 'name email')
     .populate('template')
+    .populate({
+      path: 'courseLearningOutcomes',
+      select: 'number title description programLearningOutcomes',
+      populate: {
+        path: 'programLearningOutcomes',
+        select: 'number title programEducationalObjectives',
+        populate: {
+          path: 'programEducationalObjectives',
+          select: 'number title',
+        },
+      },
+    })
     .exec();
 };
 
@@ -24,6 +36,18 @@ exports.getSyllabusById = async (id) => {
   return Syllabus.findById(id)
     .populate('createdBy', 'name email')
     .populate('template')
+    .populate({
+      path: 'courseLearningOutcomes',
+      select: 'number title description programLearningOutcomes',
+      populate: {
+        path: 'programLearningOutcomes',
+        select: 'number title programEducationalObjectives',
+        populate: {
+          path: 'programEducationalObjectives',
+          select: 'number title',
+        },
+      },
+    })
     .exec();
 };
 
