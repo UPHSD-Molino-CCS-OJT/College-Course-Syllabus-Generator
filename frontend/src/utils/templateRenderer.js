@@ -202,16 +202,17 @@ export function renderElement(element, syllabus, auxData = {}) {
           row.map((cell, c) => {
             const oldCell = element.data[r]?.[c];
             if (!oldCell) return cell;
+            const isHeader = cell.fontWeight === 'bold';
             return {
               ...cell,
               fontSize:      oldCell.fontSize      ?? cell.fontSize,
               fontFamily:    oldCell.fontFamily    ?? cell.fontFamily,
-              fontWeight:    oldCell.fontWeight    ?? cell.fontWeight,
+              fontWeight:    isHeader ? 'bold'    : (oldCell.fontWeight    ?? cell.fontWeight),
               fontStyle:     oldCell.fontStyle     ?? cell.fontStyle,
               color:         oldCell.color         ?? cell.color,
-              align:         oldCell.align         ?? cell.align,
+              align:         isHeader ? cell.align : (oldCell.align         ?? cell.align),
               verticalAlign: oldCell.verticalAlign ?? cell.verticalAlign,
-              bg:            oldCell.bg            ?? cell.bg,
+              bg:            isHeader ? cell.bg    : (oldCell.bg            ?? cell.bg),
               width:         oldCell.width         ?? cell.width,
               height:        oldCell.height        ?? cell.height,
               ...(oldCell.showBorderTop    !== undefined ? { showBorderTop:    oldCell.showBorderTop    } : {}),

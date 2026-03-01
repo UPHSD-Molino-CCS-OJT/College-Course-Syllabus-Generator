@@ -158,16 +158,21 @@ export default function CanvasEditor({ template, onClose, onSave }) {
           row.map((cell, c) => {
             const oldCell = el.data[r]?.[c];
             if (!oldCell) return cell;
+            // If the rebuilt cell is bold/coloured it's a structural header row
+            // (e.g. CHARACTER / COMPETENCE / COMMITMENT TO SERVICE in GA matrices).
+            // Those semantic styles must win so that category rows are always bold
+            // and carry their background colour, regardless of what was stored.
+            const isHeader = cell.fontWeight === 'bold';
             return {
               ...cell,                              // rebuilt placeholder content + defaults
               fontSize:      oldCell.fontSize      ?? cell.fontSize,
               fontFamily:    oldCell.fontFamily    ?? cell.fontFamily,
-              fontWeight:    oldCell.fontWeight    ?? cell.fontWeight,
+              fontWeight:    isHeader ? 'bold'    : (oldCell.fontWeight    ?? cell.fontWeight),
               fontStyle:     oldCell.fontStyle     ?? cell.fontStyle,
               color:         oldCell.color         ?? cell.color,
-              align:         oldCell.align         ?? cell.align,
+              align:         isHeader ? cell.align : (oldCell.align         ?? cell.align),
               verticalAlign: oldCell.verticalAlign ?? cell.verticalAlign,
-              bg:            oldCell.bg            ?? cell.bg,
+              bg:            isHeader ? cell.bg    : (oldCell.bg            ?? cell.bg),
               width:         oldCell.width         ?? cell.width,
               height:        oldCell.height        ?? cell.height,
               // Preserve explicit per-cell border overrides

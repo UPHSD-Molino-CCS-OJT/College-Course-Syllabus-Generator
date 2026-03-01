@@ -145,8 +145,18 @@ function pasteAtAnchor(existingData, matrixData, anchorRow, anchorCol) {
       for (let c = 0; c < matrixCols; c++) {
         const srcCell = matrixRow[c];
         if (srcCell !== undefined) {
-          // Preserve existing cell style; only replace the placeholder content
-          row[anchorCol + c] = { ...row[anchorCol + c], content: srcCell.content ?? '' };
+          // Category header rows (CHARACTER, COMPETENCE …) are bold in the source;
+          // their structural style must override whatever the target cell had.
+          const srcIsHeader = srcCell.fontWeight === 'bold';
+          row[anchorCol + c] = {
+            ...row[anchorCol + c],
+            content:    srcCell.content    ?? '',
+            fontWeight: srcIsHeader ? 'bold'           : (row[anchorCol + c].fontWeight ?? srcCell.fontWeight),
+            bg:         srcIsHeader ? srcCell.bg        : (row[anchorCol + c].bg        ?? srcCell.bg),
+            align:      srcIsHeader ? srcCell.align     : (row[anchorCol + c].align     ?? srcCell.align),
+            fontSize:   srcIsHeader ? srcCell.fontSize  : (row[anchorCol + c].fontSize  ?? srcCell.fontSize),
+            fontStyle:  srcIsHeader ? srcCell.fontStyle : (row[anchorCol + c].fontStyle ?? srcCell.fontStyle),
+          };
         }
       }
     }
