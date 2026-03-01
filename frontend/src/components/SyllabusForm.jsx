@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { syllabusAPI, templateAPI } from '../services/api';
+import { syllabusAPI, templateAPI, cloAPI, ploAPI } from '../services/api';
 import { useAutoSave, AutoSaveIndicator } from '../utils/useAutoSave.jsx';
 
 const INITIAL_FORM_DATA = {
@@ -32,18 +32,33 @@ const INITIAL_FORM_DATA = {
   approved: '',
   status: 'draft',
   template: null,
+  courseLearningOutcomes: [],
 };
 
 export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllabusUpdated, onCancel }) {
-  const [formData, setFormData] = useState(editSyllabus || INITIAL_FORM_DATA);
+  const [formData, setFormData] = useState(() => {
+    if (editSyllabus) {
+      return {
+        ...editSyllabus,
+        // Normalise CLO refs — store only the IDs regardless of population state
+        courseLearningOutcomes: (editSyllabus.courseLearningOutcomes || []).map(
+          (c) => (typeof c === 'object' ? c._id : c)
+        ),
+      };
+    }
+    return INITIAL_FORM_DATA;
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('basic');
   const [templates, setTemplates] = useState([]);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(!!editSyllabus);
+  const [availableCLOs, setAvailableCLOs] = useState([]);
+  const [cloLoading, setCloLoading] = useState(false);
 
   useEffect(() => {
     fetchTemplates();
+    fetchCLOs();
   }, []);
 
   const fetchTemplates = async () => {
@@ -52,6 +67,30 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
       setTemplates(response.data.templates || []);
     } catch (err) {
       console.error('Error fetching templates:', err);
+    }
+  };
+
+  const fetchCLOs = async () => {
+    setCloLoading(true);
+    try {
+      const [cloRes, ploRes] = await Promise.all([
+        cloAPI.getAll({ limit: 100 }),
+        ploAPI.getAll({ limit: 100 }),
+      ]);
+      const plos = ploRes.data?.plos || [];
+      const clos = (cloRes.data?.clos || []).map((clo) => ({
+        ...clo,
+        // Attach full PLO objects for display
+        _plos: (clo.programLearningOutcomes || []).map((ref) => {
+          const id = typeof ref === 'object' ? ref._id : ref;
+          return plos.find((p) => String(p._id) === String(id)) || ref;
+        }),
+      }));
+      setAvailableCLOs(clos);
+    } catch (err) {
+      console.error('Error fetching CLOs:', err);
+    } finally {
+      setCloLoading(false);
     }
   };
 
@@ -163,10 +202,30 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
     setFormData({ ...formData, weeklySchedule: updated });
   };
 
+  const toggleCLO = (cloId) => {
+    const id = String(cloId);
+    const already = formData.courseLearningOutcomes.map(String).includes(id);
+    setFormData({
+      ...formData,
+      courseLearningOutcomes: already
+        ? formData.courseLearningOutcomes.filter((c) => String(c) !== id)
+        : [...formData.courseLearningOutcomes, id],
+    });
+  };
+
+  const selectAllCLOs = () => {
+    setFormData({ ...formData, courseLearningOutcomes: availableCLOs.map((c) => String(c._id)) });
+  };
+
+  const clearAllCLOs = () => {
+    setFormData({ ...formData, courseLearningOutcomes: [] });
+  };
+
   const tabs = [
     { id: 'basic', name: 'Basic Info' },
     { id: 'instructor', name: 'Instructor' },
     { id: 'course', name: 'Course Details' },
+    { id: 'outcomes', name: 'Outcomes' },
     { id: 'grading', name: 'Grading' },
     { id: 'schedule', name: 'Schedule' },
     { id: 'policies', name: 'Policies' },
@@ -487,6 +546,110 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
                 placeholder="Optional readings, resources..."
               />
             </div>
+          </div>
+        )}
+
+        {/* Outcomes Tab */}
+        {activeTab === 'outcomes' && (
+          <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-blue-800 mb-1">Course Learning Outcomes (CLOs)</h3>
+              <p className="text-xs text-blue-600">
+                Select the CLOs that apply to this course. Each CLO shows its linked Program Learning Outcomes (PLOs) for context.
+              </p>
+            </div>
+
+            {cloLoading ? (
+              <div className="flex items-center justify-center py-10 text-gray-400">
+                <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                Loading outcomes…
+              </div>
+            ) : availableCLOs.length === 0 ? (
+              <div className="text-center py-10 text-gray-400">
+                <p className="text-4xl mb-2">📭</p>
+                <p className="font-medium">No Course Learning Outcomes found.</p>
+                <p className="text-sm mt-1">Add CLOs via the Outcomes management pages first.</p>
+              </div>
+            ) : (
+              <>
+                {/* Select / Clear all */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">
+                    {formData.courseLearningOutcomes.length} / {availableCLOs.length} selected
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={selectAllCLOs}
+                      className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearAllCLOs}
+                      className="text-xs px-3 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                </div>
+
+                {/* CLO checklist */}
+                <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+                  {availableCLOs.map((clo) => {
+                    const cloId = String(clo._id);
+                    const isChecked = formData.courseLearningOutcomes.map(String).includes(cloId);
+                    return (
+                      <label
+                        key={cloId}
+                        className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
+                          isChecked
+                            ? 'border-blue-400 bg-blue-50'
+                            : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleCLO(cloId)}
+                          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+                              isChecked ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+                            }`}>
+                              CLO {clo.number}
+                            </span>
+                            <span className="font-semibold text-sm text-gray-800">{clo.title}</span>
+                          </div>
+                          {clo.description && (
+                            <p className="text-xs text-gray-500 mt-1 leading-relaxed">{clo.description}</p>
+                          )}
+                          {clo._plos && clo._plos.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {clo._plos.map((plo, pi) => (
+                                <span
+                                  key={pi}
+                                  className="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200"
+                                  title={typeof plo === 'object' ? plo.title : ''}
+                                >
+                                  PLO {typeof plo === 'object' ? plo.number : '?'}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         )}
 
