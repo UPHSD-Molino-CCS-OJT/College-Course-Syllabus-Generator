@@ -4,6 +4,14 @@ import CellGridSelector from './table-editor/CellGridSelector';
 import CellEditorModal from './table-editor/CellEditorModal';
 
 export default function TableEditor({ table, onUpdate }) {
+  const isMatrix = !!table.matrixType;
+
+  const MATRIX_LABELS = {
+    'ga-mk':  'Graduate Attributes × Mission Keywords',
+    'peo-ga': 'PEOs × Graduate Attributes',
+    'plo-peo':'PLOs × Program Educational Objectives',
+    'clo-plo':'CLOs × Program Learning Outcomes',
+  };
   const [selectedCell, setSelectedCell] = useState(null);
   const [expandedSections, setExpandedSections] = useState({
     dimensions: true,
@@ -307,6 +315,19 @@ export default function TableEditor({ table, onUpdate }) {
     <div className="p-4 text-white h-full flex flex-col overflow-hidden">
       <h3 className="text-lg font-semibold mb-4 border-b border-gray-700 pb-2 flex-shrink-0">Table Properties</h3>
 
+      {/* Matrix sync banner */}
+      {isMatrix && (
+        <div className="mb-3 flex-shrink-0 bg-emerald-900/40 border border-emerald-600 rounded-lg px-3 py-2.5 text-xs">
+          <div className="flex items-center gap-2 text-emerald-300 font-semibold mb-1">
+            <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            Live-Synced Matrix
+          </div>
+          <p className="text-emerald-400/80 leading-relaxed">
+            {MATRIX_LABELS[table.matrixType] || table.matrixType} — rows and columns are automatically rebuilt from the database on every preview render. Structural edits (add/remove rows or columns) are disabled.
+          </p>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto space-y-3 pr-2">
         {/* Table Dimensions */}
         <div className="border border-gray-700 rounded-lg overflow-hidden">
@@ -325,16 +346,17 @@ export default function TableEditor({ table, onUpdate }) {
                   <div className="flex gap-2">
                     <button
                       onClick={handleRemoveRow}
-                      disabled={table.rows <= 1}
+                      disabled={table.rows <= 1 || isMatrix}
                       className="w-8 h-8 bg-red-600 rounded text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-bold"
-                      title="Remove row"
+                      title={isMatrix ? 'Row count is managed automatically' : 'Remove row'}
                     >
                       −
                     </button>
                     <button
                       onClick={handleAddRow}
-                      className="w-8 h-8 bg-blue-600 rounded text-sm hover:bg-blue-700 flex items-center justify-center font-bold"
-                      title="Add row"
+                      disabled={isMatrix}
+                      className="w-8 h-8 bg-blue-600 rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-bold"
+                      title={isMatrix ? 'Row count is managed automatically' : 'Add row'}
                     >
                       +
                     </button>
@@ -345,16 +367,17 @@ export default function TableEditor({ table, onUpdate }) {
                   <div className="flex gap-2">
                     <button
                       onClick={handleRemoveColumn}
-                      disabled={table.cols <= 1}
+                      disabled={table.cols <= 1 || isMatrix}
                       className="w-8 h-8 bg-red-600 rounded text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-bold"
-                      title="Remove column"
+                      title={isMatrix ? 'Column count is managed automatically' : 'Remove column'}
                     >
                       −
                     </button>
                     <button
                       onClick={handleAddColumn}
-                      className="w-8 h-8 bg-blue-600 rounded text-sm hover:bg-blue-700 flex items-center justify-center font-bold"
-                      title="Add column"
+                      disabled={isMatrix}
+                      className="w-8 h-8 bg-blue-600 rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-bold"
+                      title={isMatrix ? 'Column count is managed automatically' : 'Add column'}
                     >
                       +
                     </button>
@@ -364,6 +387,9 @@ export default function TableEditor({ table, onUpdate }) {
 
               <div className="pt-2 border-t border-gray-700">
                 <label className="block text-xs font-medium text-gray-400 mb-2">Resize All Cells</label>
+                {isMatrix && (
+                  <p className="text-xs text-amber-400/80 mb-2">⚠ Cell sizes set here apply to the stored template. They may be overridden when the matrix rebuilds if sizes differ.</p>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-xs text-gray-400 mb-1 block">Width (px)</label>
@@ -552,6 +578,11 @@ export default function TableEditor({ table, onUpdate }) {
           {expandedSections.cells && (
             <div className="p-3 bg-gray-800/50">
               <div className="text-xs text-gray-400 mb-2">Click a cell to edit its content and style</div>
+              {isMatrix && (
+                <div className="mb-2 text-xs text-emerald-400/80 bg-emerald-900/20 border border-emerald-700/50 rounded px-2 py-1.5">
+                  Cell content shown here are placeholders resolved at render time. You can still edit cell styles (colors, borders, font) — they are preserved across rebuilds.
+                </div>
+              )}
               <div className="space-y-1 max-h-96 overflow-y-auto">
                 {table.data.map((row, rowIndex) => (
                   <div key={rowIndex}>
