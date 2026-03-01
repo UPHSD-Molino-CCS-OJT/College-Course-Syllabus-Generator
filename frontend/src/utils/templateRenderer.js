@@ -354,7 +354,7 @@ export function getFormattedGradingComponents(syllabus) {
 // ─── Relationship Matrix Table Builders ───────────────────────────────────────
 
 /** Shared cell factory */
-function makeCell(content, { bold = false, bg = '#ffffff', align = 'center', width = 120, height = 40, fontSize = 11, color = '#000000', italic = false } = {}) {
+function makeCell(content, { bold = false, bg = '#ffffff', align = 'center', width = 120, height = 40, fontSize = 12, color = '#000000', italic = false } = {}) {
   return {
     content,
     fontSize,
@@ -424,7 +424,7 @@ export function buildGAMissionKeywordMatrix(graduateAttributes, missionKeywords,
     // Category separator row — static text, no placeholder needed
     const totalW = LABEL_W + CHECK_W * mkCodes.length;
     rows.push([
-      makeCell(cat, { bold: true, bg: CATEG_BG, align: 'left', width: totalW, height: 32, fontSize: 11 }),
+      makeCell(cat, { bold: true, bg: CATEG_BG, align: 'left', width: totalW, height: 32, fontSize: 12 }),
       ...mkCodes.map(() => makeCell('', { bg: CATEG_BG, width: CHECK_W, height: 32 })),
     ]);
 
@@ -441,7 +441,7 @@ export function buildGAMissionKeywordMatrix(graduateAttributes, missionKeywords,
   const uncategorised = sortedAllGAs.filter(ga => !GA_CATEGORY_ORDER.includes(ga.category));
   if (uncategorised.length > 0) {
     rows.push([
-      makeCell('OTHER', { bold: true, bg: CATEG_BG, align: 'left', width: LABEL_W + CHECK_W * mkCodes.length, height: 32, fontSize: 11 }),
+      makeCell('OTHER', { bold: true, bg: CATEG_BG, align: 'left', width: LABEL_W + CHECK_W * mkCodes.length, height: 32, fontSize: 12 }),
       ...mkCodes.map(() => makeCell('', { bg: CATEG_BG, width: CHECK_W, height: 32 })),
     ]);
     uncategorised.forEach(() => {
