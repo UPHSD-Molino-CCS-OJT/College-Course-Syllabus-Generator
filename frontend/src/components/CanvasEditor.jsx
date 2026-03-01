@@ -5,6 +5,7 @@ import TextStylePanel from './TextStylePanel';
 import TableEditor from './TableEditor';
 import ImageStylePanel from './ImageStylePanel';
 import LineStylePanel from './LineStylePanel';
+import RelationshipMatrixPicker from './RelationshipMatrixPicker';
 import { useAutoSave, AutoSaveIndicator } from '../utils/useAutoSave.jsx';
 import { templateAPI } from '../services/api';
 import PageSettings from './canvas-toolbar/PageSettings';
@@ -48,6 +49,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   const [showGrid, setShowGrid] = useState(false);
   const [gridSize, setGridSize] = useState(20); // Grid spacing in pixels
   const [clipboard, setClipboard] = useState(null); // Stores copied element with zone info
+  const [showMatrixPicker, setShowMatrixPicker] = useState(false); // Relationship matrix modal
   
   // History management for undo/redo
   const [history, setHistory] = useState([]);
@@ -532,6 +534,31 @@ export default function CanvasEditor({ template, onClose, onSave }) {
     setSelectedElement(newLine);
   };
 
+  // Insert a pre-built table element (from RelationshipMatrixPicker) into the active zone
+  const handleInsertMatrixElement = (element) => {
+    const zone = editingZone || 'content';
+    if (zone === 'header' || zone === 'footer') {
+      setCanvasDocument(prev => ({
+        ...prev,
+        [zone]: {
+          ...prev[zone],
+          elements: [...prev[zone].elements, element],
+        },
+      }));
+    } else {
+      setCanvasDocument(prev => ({
+        ...prev,
+        pages: (prev.pages || []).map((page, idx) =>
+          idx === currentPageIndex
+            ? { ...page, elements: [...(page.elements || []), element] }
+            : page
+        ),
+      }));
+    }
+    setSelectedElement(element);
+    setShowMatrixPicker(false);
+  };
+
   const handleUpdateElement = (zone, elementId, updates) => {
     // Update selectedElement first for immediate visual feedback
     if (selectedElement?.id === elementId) {
@@ -873,6 +900,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
           onAddTable={handleAddTable}
           onAddImage={handleAddImage}
           onAddLine={handleAddLine}
+          onAddMatrix={() => setShowMatrixPicker(true)}
           onZoneChange={setEditingZone}
         />
 
@@ -995,6 +1023,14 @@ export default function CanvasEditor({ template, onClose, onSave }) {
           </div>
         )}
       </div>
+
+      {/* Relationship Matrix Picker Modal */}
+      {showMatrixPicker && (
+        <RelationshipMatrixPicker
+          onInsert={handleInsertMatrixElement}
+          onClose={() => setShowMatrixPicker(false)}
+        />
+      )}
     </div>
   );
 }
