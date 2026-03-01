@@ -218,6 +218,8 @@ export function renderElement(element, syllabus, auxData = {}) {
         if (!structureChanged && element.data) {
           mergedData = rebuilt.data.map((row, r) =>
             row.map((cell, c) => {
+              // Static header cells always use canonical builder styles
+              if (cell._header) return cell;
               const oldCell = element.data[r]?.[c];
               if (!oldCell) return cell;
               const isHeader = cell.fontWeight === 'bold';
@@ -228,7 +230,7 @@ export function renderElement(element, syllabus, auxData = {}) {
                 fontWeight:    cell.fontWeight,   // always enforce builder: bold for category rows, normal for data rows
                 fontStyle:     oldCell.fontStyle     ?? cell.fontStyle,
                 color:         oldCell.color         ?? cell.color,
-                align:         isHeader ? cell.align : (oldCell.align         ?? cell.align),
+                align:         cell.align,   // always use canonical builder alignment
                 verticalAlign: oldCell.verticalAlign ?? cell.verticalAlign,
                 bg:            isHeader ? cell.bg    : (oldCell.bg            ?? cell.bg),
                 width:         oldCell.width         ?? cell.width,
@@ -508,23 +510,78 @@ export function buildPLOPEOMatrix(plos, peos, pos) {
 
 /**
  * Build a CLO × PLO matrix table element.
+ *
+ * Layout (3+ rows):
+ *   Row 0 – header: "COURSE LEARNING OUTCOMES (CLOs)" | "PROGRAM LEARNING OUTCOMES (PLOs)" (colspan = numPLOs)
+ *   Row 1 – sub-header: "At the end of the course, the students can:" | PLO number per column
+ *   Row 2+ – data: {{clo_N_label}} | {{clo_N_plo_M}} per PLO
+ *
+ * Total table width is kept constant regardless of PLO count by computing
+ * CHECK_W = TOTAL_CHECK_AREA / numPLOs  (columns grow/shrink inward).
+ *
  * @param {object[]} clos – populated from GET /clos
  * @param {object[]} plos – populated from GET /plos
  */
 export function buildCLOPLOMatrix(clos, plos, pos) {
-  const LABEL_W  = 400;
-  const CHECK_W  = 65;
-  const ROW_H    = 60;
+  const LABEL_W        = 400;
+  const TOTAL_CHECK_W  = 260; // fixed total width of the check-cell area (matches 4 PLOs × 65 px)
+  const ROW_H          = 60;
+  const HEADER1_H      = 36;
+  const HEADER2_H      = 40;
+  const HEADER_BG      = '#F2DCDB'; // light salmon – matches the existing template colour
 
   const sortedCLOs = [...clos].sort((a, b) => (a.number || 0) - (b.number || 0));
   const sortedPLOs = [...plos].sort((a, b) => (a.number || 0) - (b.number || 0));
+  const numPLOs    = sortedPLOs.length;
+
+  // Dynamic column width – columns shrink/grow inward so total width stays constant
+  const CHECK_W = numPLOs > 0 ? Math.max(28, Math.floor(TOTAL_CHECK_W / numPLOs)) : 65;
+
   const rows = [];
 
+  // ── Row 0: top header ────────────────────────────────────────────────────
+  // [0,0]  → "COURSE LEARNING OUTCOMES (CLOs)" – label column
+  // [0,1]  → "PROGRAM LEARNING OUTCOMES (PLOs)" with colspan = numPLOs
+  // [0,2…] → filler cells hidden by the colspan above
+  rows.push([
+    Object.assign(makeCell('COURSE LEARNING OUTCOMES (CLOs)', {
+      bold: true, bg: HEADER_BG, align: 'center',
+      width: LABEL_W, height: HEADER1_H, fontSize: 11,
+    }), { _header: true }),
+    Object.assign(
+      makeCell('PROGRAM LEARNING OUTCOMES (PLOs)', {
+        bold: true, bg: HEADER_BG, align: 'center',
+        width: CHECK_W, height: HEADER1_H, fontSize: 11,
+      }),
+      { colspan: numPLOs, _header: true }
+    ),
+    ...Array.from({ length: Math.max(0, numPLOs - 1) }, () =>
+      Object.assign(makeCell('', { bg: HEADER_BG, width: CHECK_W, height: HEADER1_H }), { _header: true })
+    ),
+  ]);
+
+  // ── Row 1: sub-header (description + PLO numbers) ────────────────────────
+  rows.push([
+    Object.assign(makeCell('At the end of the course, the students can:', {
+      bold: false, italic: true, bg: HEADER_BG, align: 'left',
+      width: LABEL_W, height: HEADER2_H, fontSize: 10,
+    }), { _header: true }),
+    ...sortedPLOs.map((plo, pi) =>
+      Object.assign(makeCell(String(plo.number ?? pi + 1), {
+        bold: true, bg: HEADER_BG, align: 'center',
+        width: CHECK_W, height: HEADER2_H, fontSize: 11,
+      }), { _header: true })
+    ),
+  ]);
+
+  // ── Data rows: one per CLO ────────────────────────────────────────────────
   sortedCLOs.forEach((_clo, idx) => {
     const n = idx + 1;
     rows.push([
       makeCell(`{{clo_${n}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
-      ...sortedPLOs.map((_plo, pi) => makeCell(`{{clo_${n}_plo_${pi + 1}}}`, { align: 'center', width: CHECK_W, height: ROW_H })),
+      ...sortedPLOs.map((_plo, pi) =>
+        makeCell(`{{clo_${n}_plo_${pi + 1}}}`, { align: 'center', width: CHECK_W, height: ROW_H })
+      ),
     ]);
   });
 
@@ -586,16 +643,21 @@ export function pasteAtAnchor(existingData, matrixData, anchorRow, anchorCol) {
       for (let c = 0; c < matrixCols; c++) {
         const srcCell = matrixRow[c];
         if (srcCell !== undefined) {
-          const srcIsHeader = srcCell.fontWeight === 'bold';
-          row[anchorCol + c] = {
-            ...row[anchorCol + c],
-            content:    srcCell.content    ?? '',
-            fontWeight: srcCell.fontWeight,   // always enforce builder: bold for category rows, normal for data rows
-            bg:         srcIsHeader ? srcCell.bg        : (row[anchorCol + c].bg        ?? srcCell.bg),
-            align:      srcCell.align,   // always use canonical builder alignment (data cells → center, label cells → left)
-            fontSize:   srcIsHeader ? srcCell.fontSize  : (row[anchorCol + c].fontSize  ?? srcCell.fontSize),
-            fontStyle:  srcIsHeader ? srcCell.fontStyle : (row[anchorCol + c].fontStyle ?? srcCell.fontStyle),
-          };
+          // Static header cells always win — use the builder's canonical content and styles
+          if (srcCell._header) {
+            row[anchorCol + c] = { ...srcCell };
+          } else {
+            const srcIsHeader = srcCell.fontWeight === 'bold';
+            row[anchorCol + c] = {
+              ...row[anchorCol + c],
+              content:    srcCell.content    ?? '',
+              fontWeight: srcCell.fontWeight,   // always enforce builder: bold for category rows, normal for data rows
+              bg:         srcIsHeader ? srcCell.bg        : (row[anchorCol + c].bg        ?? srcCell.bg),
+              align:      srcCell.align,   // always use canonical builder alignment (data cells → center, label cells → left)
+              fontSize:   srcIsHeader ? srcCell.fontSize  : (row[anchorCol + c].fontSize  ?? srcCell.fontSize),
+              fontStyle:  srcIsHeader ? srcCell.fontStyle : (row[anchorCol + c].fontStyle ?? srcCell.fontStyle),
+            };
+          }
         }
       }
     }

@@ -193,6 +193,8 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       // keep their canonical styles intact; only data rows defer to stored styles.
       const mergedData = rebuilt.data.map((row, r) =>
         row.map((cell, c) => {
+          // Static header cells (e.g. CLO×PLO title rows) always use canonical builder styles
+          if (cell._header) return cell;
           const oldCell = el.data?.[r]?.[c];
           if (!oldCell) return cell;
           const isHeader = cell.fontWeight === 'bold';
