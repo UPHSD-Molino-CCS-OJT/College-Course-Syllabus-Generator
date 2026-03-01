@@ -142,7 +142,7 @@ export function replacePlaceholders(text, syllabus, auxData = {}) {
       return `${n}. ${clo.title}${clo.description ? ' ' + clo.description : ''}`;
     });
 
-    // clo_N_plo_M  â€” N = CLO position, M = PLO position
+    // clo_N_plo_M  — N = CLO position, M = PLO position
     result = result.replace(/\{\{clo_(\d+)_plo_(\d+)\}\}/g, (_, clon, plon) => {
       const clo = sortedCLOs[Number(clon) - 1];
       const plo = sortedPLOs[Number(plon) - 1];
@@ -151,6 +151,34 @@ export function replacePlaceholders(text, syllabus, auxData = {}) {
         typeof p === 'object' ? String(p._id) : String(p)
       );
       return linked.includes(String(plo._id)) ? CHECK : '';
+    });
+
+    // llo_N_label  — N is the 1-based sequential position in period→weekOrder→order-sorted LLO list
+    const PERIOD_RANK_TR = { PRELIM: 0, MIDTERM: 1, FINAL: 2 };
+    const sortedLLOs = [...(llos || [])].sort((a, b) => {
+      const pa = PERIOD_RANK_TR[a.period] ?? 99;
+      const pb = PERIOD_RANK_TR[b.period] ?? 99;
+      if (pa !== pb) return pa - pb;
+      const wa = a.weekOrder ?? 0;
+      const wb = b.weekOrder ?? 0;
+      if (wa !== wb) return wa - wb;
+      return (a.order ?? 0) - (b.order ?? 0);
+    });
+    result = result.replace(/\{\{llo_(\d+)_label\}\}/g, (_, n) => {
+      const llo = sortedLLOs[Number(n) - 1];
+      if (!llo) return '';
+      return `${n}.  ${llo.text} (${llo.domain})`;
+    });
+
+    // llo_N_clo_M  — N = LLO position (sorted), M = CLO position (number-sorted)
+    result = result.replace(/\{\{llo_(\d+)_clo_(\d+)\}\}/g, (_, llon, clon) => {
+      const llo = sortedLLOs[Number(llon) - 1];
+      const clo = sortedCLOs[Number(clon) - 1];
+      if (!llo || !clo) return '';
+      const linked = (llo.courseLearningOutcomes || []).map(c =>
+        typeof c === 'object' ? String(c._id) : String(c)
+      );
+      return linked.includes(String(clo._id)) ? CHECK : '';
     });
   }
 

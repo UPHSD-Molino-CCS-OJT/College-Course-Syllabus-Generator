@@ -9,7 +9,7 @@
  *   Row 2+        – alternating period divider rows, week label rows, and LLO data rows
  */
 
-import { CHECK, makeCell, buildTableElement } from './shared.js';
+import { makeCell, buildTableElement } from './shared.js';
 
 /** Canonical ordering for exam periods */
 const PERIOD_RANK = { PRELIM: 0, MIDTERM: 1, FINAL: 2 };
@@ -157,18 +157,15 @@ export function buildLLOCLOMatrix(llos, clos, pos) {
 
     // LLO data row
     lloCounter += 1;
-    const lloText      = `${lloCounter}.  ${llo.text} (${llo.domain})`;
-    const mappedCloIds = (llo.courseLearningOutcomes || []).map((c) =>
-      typeof c === 'object' ? String(c._id) : String(c)
-    );
+    const n = lloCounter;
 
     rows.push([
-      makeCell(lloText, {
+      makeCell(`{{llo_${n}_label}}`, {
         align: 'left', bg: 'transparent',
         width: LABEL_W, height: DATA_H, fontSize: 11, verticalAlign: 'top', italic: true,
       }),
       ...sortedCLOs.map((clo, ci) =>
-        makeCell(mappedCloIds.includes(String(clo._id)) ? CHECK : '', {
+        makeCell(`{{llo_${n}_clo_${ci + 1}}}`, {
           align: 'center', bg: 'transparent',
           width: checkWidths[ci], height: DATA_H, fontSize: 12, verticalAlign: 'middle', bold: true,
         })
