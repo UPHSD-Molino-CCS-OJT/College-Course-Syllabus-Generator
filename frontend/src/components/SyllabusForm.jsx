@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { syllabusAPI, templateAPI, cloAPI, ploAPI, peoAPI, graduateAttributeAPI, missionKeywordAPI } from '../services/api';
+import { syllabusAPI, templateAPI, cloAPI, ploAPI, peoAPI, graduateAttributeAPI, missionKeywordAPI, lloAPI } from '../services/api';
 import { useAutoSave, AutoSaveIndicator } from '../utils/useAutoSave.jsx';
 
 const INITIAL_FORM_DATA = {
@@ -80,6 +80,12 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
   const [ploForm, setPloForm] = useState(null);
   const [ploSubmitting, setPloSubmitting] = useState(false);
 
+  // LLOs management
+  const [lloList, setLloList] = useState([]);
+  const [lloListLoading, setLloListLoading] = useState(false);
+  const [lloForm, setLloForm] = useState(null);
+  const [lloSubmitting, setLloSubmitting] = useState(false);
+
   useEffect(() => {
     fetchTemplates();
     fetchCLOs();
@@ -87,6 +93,7 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
     fetchGAList();
     fetchPEOList();
     fetchPLOList();
+    fetchLLOList();
   }, []);
 
   const fetchTemplates = async () => {
@@ -167,6 +174,18 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
       console.error('Error fetching PLOs:', err);
     } finally {
       setPloListLoading(false);
+    }
+  };
+
+  const fetchLLOList = async () => {
+    setLloListLoading(true);
+    try {
+      const res = await lloAPI.getAll({ limit: 500 });
+      setLloList(res.data?.llos || []);
+    } catch (err) {
+      console.error('Error fetching LLOs:', err);
+    } finally {
+      setLloListLoading(false);
     }
   };
 
@@ -345,6 +364,56 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
     setPloForm({ ...ploForm, programEducationalObjectives: already ? ploForm.programEducationalObjectives.filter((p) => p !== id) : [...ploForm.programEducationalObjectives, id] });
   };
 
+  // --- LLOs CRUD ---
+  const LLO_BLANK = { text: '', domain: 'K', period: 'PRELIM', weekLabel: '', periodOrder: 0, weekOrder: 0, order: 1, courseLearningOutcomes: [] };
+  const saveLLO = async () => {
+    setLloSubmitting(true);
+    try {
+      const payload = {
+        text: lloForm.text,
+        domain: lloForm.domain,
+        period: lloForm.period,
+        weekLabel: lloForm.weekLabel,
+        periodOrder: Number(lloForm.periodOrder),
+        weekOrder: Number(lloForm.weekOrder),
+        order: Number(lloForm.order),
+        courseLearningOutcomes: lloForm.courseLearningOutcomes,
+      };
+      if (lloForm._id) {
+        await lloAPI.update(lloForm._id, payload);
+      } else {
+        await lloAPI.create(payload);
+      }
+      setLloForm(null);
+      await fetchLLOList();
+    } catch (err) {
+      console.error('Error saving LLO:', err);
+    } finally {
+      setLloSubmitting(false);
+    }
+  };
+  const deleteLLO = async (id) => {
+    if (!window.confirm('Delete this Lesson Learning Outcome?')) return;
+    try { await lloAPI.delete(id); await fetchLLOList(); }
+    catch (err) { console.error('Error deleting LLO:', err); }
+  };
+  const editLLO = (llo) => setLloForm({
+    _id: llo._id,
+    text: llo.text || '',
+    domain: llo.domain || 'K',
+    period: llo.period || 'PRELIM',
+    weekLabel: llo.weekLabel || '',
+    periodOrder: llo.periodOrder ?? 0,
+    weekOrder: llo.weekOrder ?? 0,
+    order: llo.order ?? 1,
+    courseLearningOutcomes: (llo.courseLearningOutcomes || []).map((c) => typeof c === 'object' ? String(c._id) : String(c)),
+  });
+  const toggleLLOCLO = (cloId) => {
+    const id = String(cloId);
+    const already = lloForm.courseLearningOutcomes.includes(id);
+    setLloForm({ ...lloForm, courseLearningOutcomes: already ? lloForm.courseLearningOutcomes.filter((c) => c !== id) : [...lloForm.courseLearningOutcomes, id] });
+  };
+
   // Auto-save function
   const autoSaveFunction = useCallback(async (data) => {
     if (editSyllabus && editSyllabus._id) {
@@ -480,6 +549,7 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
     { id: 'grad-attrs', name: 'Graduate Attrs' },
     { id: 'peos', name: 'PEOs' },
     { id: 'plos', name: 'PLOs' },
+    { id: 'llos', name: 'LLOs' },
     { id: 'grading', name: 'Grading' },
     { id: 'schedule', name: 'Schedule' },
     { id: 'policies', name: 'Policies' },
@@ -1669,6 +1739,250 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* LLOs Tab */}
+        {activeTab === 'llos' && (
+          <div className="space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex-1">
+                <h3 className="text-sm font-semibold text-amber-800 mb-1">Lesson Learning Outcomes (LLOs)</h3>
+                <p className="text-xs text-amber-600">
+                  Manage LLOs grouped by period and week. Map each LLO to the CLOs it supports. These populate the LLO–CLO matrix in the canvas editor.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLloForm({ ...LLO_BLANK })}
+                className="shrink-0 px-4 py-2 bg-amber-600 text-white text-sm rounded-lg hover:bg-amber-700 transition-colors"
+              >
+                + Add LLO
+              </button>
+            </div>
+
+            {lloForm && (
+              <div className="border-2 border-amber-400 rounded-lg p-5 bg-amber-50 space-y-3">
+                <h4 className="font-semibold text-amber-800 text-sm">
+                  {lloForm._id ? 'Edit Lesson Learning Outcome' : 'New Lesson Learning Outcome'}
+                </h4>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">LLO Text *</label>
+                  <textarea
+                    value={lloForm.text}
+                    onChange={(e) => setLloForm({ ...lloForm, text: e.target.value })}
+                    rows="2"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    placeholder="e.g. Explain the fundamental concepts of algorithms…"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Domain</label>
+                    <select
+                      value={lloForm.domain}
+                      onChange={(e) => setLloForm({ ...lloForm, domain: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    >
+                      <option value="K">K – Knowledge</option>
+                      <option value="S">S – Skills</option>
+                      <option value="A">A – Affective</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Period</label>
+                    <select
+                      value={lloForm.period}
+                      onChange={(e) => setLloForm({ ...lloForm, period: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    >
+                      <option value="PRELIM">PRELIM</option>
+                      <option value="MIDTERM">MIDTERM</option>
+                      <option value="FINAL">FINAL</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Week Label</label>
+                    <input
+                      type="text"
+                      value={lloForm.weekLabel}
+                      onChange={(e) => setLloForm({ ...lloForm, weekLabel: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      placeholder="e.g. FIRST WEEK"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Period Order</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={lloForm.periodOrder}
+                      onChange={(e) => setLloForm({ ...lloForm, periodOrder: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Week Order</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={lloForm.weekOrder}
+                      onChange={(e) => setLloForm({ ...lloForm, weekOrder: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Order</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={lloForm.order}
+                      onChange={(e) => setLloForm({ ...lloForm, order: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-2">
+                    Map to Course Learning Outcomes (CLOs)
+                    {availableCLOs.length === 0 && <span className="text-gray-400 font-normal"> — add CLOs in the Outcomes tab first</span>}
+                  </label>
+                  {availableCLOs.length > 0 && (
+                    <div className="space-y-1 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-white">
+                      {availableCLOs.map((clo) => {
+                        const id = String(clo._id);
+                        const checked = lloForm.courseLearningOutcomes.includes(id);
+                        return (
+                          <label key={id} className="flex items-center gap-2 text-xs cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleLLOCLO(id)}
+                              className="h-3 w-3 rounded text-amber-600"
+                            />
+                            <span className={`shrink-0 px-1.5 py-0.5 rounded text-xs font-bold ${checked ? 'bg-amber-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
+                              CLO {clo.number}
+                            </span>
+                            <span className={checked ? 'font-semibold text-amber-700' : 'text-gray-600'}>{clo.title}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={saveLLO}
+                    disabled={lloSubmitting || !lloForm.text}
+                    className="px-4 py-1.5 bg-amber-600 text-white text-sm rounded-md hover:bg-amber-700 disabled:opacity-50 transition-colors"
+                  >
+                    {lloSubmitting ? 'Saving…' : 'Save'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLloForm(null)}
+                    className="px-4 py-1.5 border border-gray-300 text-sm rounded-md hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {lloListLoading ? (
+              <div className="flex items-center justify-center py-10 text-gray-400">
+                <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                Loading…
+              </div>
+            ) : lloList.length === 0 ? (
+              <div className="text-center py-10 text-gray-400 border border-dashed border-gray-300 rounded-lg">
+                <p className="text-4xl mb-2">📖</p>
+                <p className="font-medium">No Lesson Learning Outcomes yet.</p>
+                <p className="text-sm mt-1">Click &quot;Add LLO&quot; to create the first one.</p>
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-[520px] overflow-y-auto pr-1">
+                {/* Group by period → week */}
+                {['PRELIM', 'MIDTERM', 'FINAL'].map((period) => {
+                  const periodLLOs = lloList.filter((l) => l.period === period);
+                  if (periodLLOs.length === 0) return null;
+                  // Collect unique weekLabels in weekOrder order
+                  const weeks = [];
+                  const seenWeeks = new Set();
+                  [...periodLLOs].sort((a, b) => (a.weekOrder ?? 0) - (b.weekOrder ?? 0)).forEach((l) => {
+                    const key = l.weekLabel || '(no week label)';
+                    if (!seenWeeks.has(key)) { seenWeeks.add(key); weeks.push({ label: key, weekOrder: l.weekOrder ?? 0 }); }
+                  });
+                  const periodColor = period === 'PRELIM' ? 'bg-red-100 text-red-700 border-red-200' : period === 'MIDTERM' ? 'bg-orange-100 text-orange-700 border-orange-200' : 'bg-blue-100 text-blue-700 border-blue-200';
+                  return (
+                    <div key={period} className="rounded-lg border border-gray-200 overflow-hidden">
+                      <div className={`px-4 py-2 text-xs font-bold uppercase tracking-wide border-b ${periodColor}`}>{period} PERIOD</div>
+                      <div className="divide-y divide-gray-100">
+                        {weeks.map(({ label: weekLabel }) => {
+                          const weekLLOs = periodLLOs
+                            .filter((l) => (l.weekLabel || '(no week label)') === weekLabel)
+                            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+                          return (
+                            <div key={weekLabel}>
+                              <div className="px-4 py-1.5 bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">{weekLabel}</div>
+                              {weekLLOs.map((llo) => (
+                                <div key={llo._id} className="flex items-start gap-3 px-4 py-3 bg-white hover:bg-gray-50 transition-colors">
+                                  <span className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded mt-0.5 ${llo.domain === 'K' ? 'bg-blue-100 text-blue-700' : llo.domain === 'S' ? 'bg-green-100 text-green-700' : 'bg-pink-100 text-pink-700'}`}>
+                                    {llo.domain}
+                                  </span>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-gray-800 leading-relaxed">{llo.text}</p>
+                                    {(llo.courseLearningOutcomes || []).length > 0 && (
+                                      <div className="flex flex-wrap gap-1 mt-1.5">
+                                        {(llo.courseLearningOutcomes || []).map((c, ci) => {
+                                          const clo = typeof c === 'object' ? c : availableCLOs.find((cl) => String(cl._id) === String(c));
+                                          return (
+                                            <span key={ci} className="text-xs px-1.5 py-0.5 rounded bg-teal-100 text-teal-700 border border-teal-200">
+                                              CLO {clo ? clo.number : '?'}
+                                            </span>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex gap-1.5 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => editLLO(llo)}
+                                      className="px-3 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50 transition-colors"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => deleteLLO(llo._id)}
+                                      className="px-3 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50 transition-colors"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
