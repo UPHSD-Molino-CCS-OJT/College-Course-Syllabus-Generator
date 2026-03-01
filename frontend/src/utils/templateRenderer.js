@@ -524,10 +524,11 @@ export function buildPLOPEOMatrix(plos, peos, pos) {
  * @param {object[]} plos – populated from GET /plos
  */
 export function buildCLOPLOMatrix(clos, plos, pos) {
-  const LABEL_W        = 400;
+  const SKIP_COL_W     = 20;  // width of the empty skip column (col 0)
   const TOTAL_CHECK_W  = 260; // fixed total width of the check-cell area (matches 4 PLOs × 65 px)
   const ROW_H          = 60;
   const HEADER2_H      = 40;
+  const SKIP_ROW_H     = 40;  // height of the empty skip row (row 0)
 
   const sortedCLOs = [...clos].sort((a, b) => (a.number || 0) - (b.number || 0));
   const sortedPLOs = [...plos].sort((a, b) => (a.number || 0) - (b.number || 0));
@@ -538,11 +539,19 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
 
   const rows = [];
 
-  // ── Row 0: PLO numbers header ─────────────────────────────────────────────
+  // ── Row 0: skip row (all empty) ───────────────────────────────────────────
+  rows.push([
+    makeCell('', { bg: 'transparent', width: SKIP_COL_W, height: SKIP_ROW_H }),
+    ...sortedPLOs.map(() =>
+      makeCell('', { bg: 'transparent', width: CHECK_W, height: SKIP_ROW_H })
+    ),
+  ]);
+
+  // ── Row 1: PLO numbers header — col 0 empty (skip), PLO numbers from col 1 ──
   rows.push([
     Object.assign(makeCell('', {
       bg: 'transparent', align: 'left',
-      width: LABEL_W, height: HEADER2_H,
+      width: SKIP_COL_W, height: HEADER2_H,
     }), { _header: true }),
     ...sortedPLOs.map((plo, pi) =>
       Object.assign(makeCell(String(plo.number ?? pi + 1), {
@@ -552,11 +561,11 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
     ),
   ]);
 
-  // ── Data rows: one per CLO ────────────────────────────────────────────────
+  // ── Data rows (row 2+): col 0 = CLO label, col 1+ = check cells ─────────
   sortedCLOs.forEach((_clo, idx) => {
     const n = idx + 1;
     rows.push([
-      makeCell(`{{clo_${n}_label}}`, { align: 'left', bg: 'transparent', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+      makeCell(`{{clo_${n}_label}}`, { align: 'left', bg: 'transparent', width: SKIP_COL_W, height: ROW_H, fontSize: 10 }),
       ...sortedPLOs.map((_plo, pi) =>
         makeCell(`{{clo_${n}_plo_${pi + 1}}}`, { align: 'center', bg: 'transparent', width: CHECK_W, height: ROW_H })
       ),
