@@ -402,8 +402,8 @@ export default function RelationshipMatrixPicker({ canvasDocument, onInsert, onU
                       {row.slice(0, MAX_PREVIEW_COLS).map((cell, c) => {
                         const isSelected = inRange(r, c, originCell);
                         const isHovered  = !isSelected && inRange(r, c, hoverCell);
-                        const cellW = cell?.width  ?? selectedTarget?.element?.cellWidth  ?? 120;
-                        const cellH = cell?.height ?? selectedTarget?.element?.cellHeight ?? 40;
+                        const cellW = cell?.width  ?? selectedTarget?.element?.cellWidth;
+                        const cellH = cell?.height ?? selectedTarget?.element?.cellHeight;
                         // Strip HTML tags for preview text
                         const rawText = String(cell?.content ?? '').replace(/<[^>]+>/g, '').slice(0, 18);
                         return (
@@ -416,13 +416,13 @@ export default function RelationshipMatrixPicker({ canvasDocument, onInsert, onU
                               maxWidth:        cellW,
                               height:          cellH,
                               maxHeight:       cellH,
-                              backgroundColor: cell?.bg ?? '#ffffff',
-                              fontSize:        cell?.fontSize   ?? 11,
-                              fontFamily:      cell?.fontFamily ?? 'Arial',
-                              fontWeight:      cell?.fontWeight ?? 'normal',
-                              fontStyle:       cell?.fontStyle  ?? 'normal',
-                              color:           cell?.color      ?? '#000000',
-                              textAlign:       cell?.align      ?? 'left',
+                              backgroundColor: cell?.bg,
+                              fontSize:        cell?.fontSize,
+                              fontFamily:      cell?.fontFamily,
+                              fontWeight:      cell?.fontWeight,
+                              fontStyle:       cell?.fontStyle,
+                              color:           cell?.color,
+                              textAlign:       cell?.align,
                               padding:         '2px 4px',
                               verticalAlign:   'top',
                             }}
