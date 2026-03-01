@@ -229,7 +229,10 @@ export default function TemplateRenderer({ template, syllabus }) {
                   {Array.isArray(row) && row.map((cell, colIndex) => {
                     if (coveredCells.has(`${rowIndex}-${colIndex}`)) return null;
 
-                    const cellWidth = cell.width || element.cellWidth || 150;
+                    // Width: sum the colgroup widths for the spanned columns so
+                    // colspan cells are never clipped by a single-column maxWidth.
+                    const cs = cell.colspan || 1;
+                    const cellWidth = colWidths.slice(colIndex, colIndex + cs).reduce((s, w) => s + w, 0) || element.cellWidth || 150;
                     const cellHeight = cell.height || element.cellHeight || 40;
 
                     const showBorderTop    = cell.showBorderTop    !== undefined ? cell.showBorderTop    : element.showBorderTop    !== false;
