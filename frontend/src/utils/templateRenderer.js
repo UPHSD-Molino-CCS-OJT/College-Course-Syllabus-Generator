@@ -242,6 +242,8 @@ export function renderElement(element, syllabus, auxData = {}) {
                 ...(oldCell.borderColor      !== undefined ? { borderColor:      oldCell.borderColor      } : {}),
                 ...(oldCell.borderWidth      !== undefined ? { borderWidth:      oldCell.borderWidth      } : {}),
                 ...(oldCell.borderStyle      !== undefined ? { borderStyle:      oldCell.borderStyle      } : {}),
+                ...(oldCell.colspan          !== undefined ? { colspan:          oldCell.colspan          } : {}),
+                ...(oldCell.rowspan          !== undefined ? { rowspan:          oldCell.rowspan          } : {}),
               };
             })
           );
@@ -578,9 +580,9 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
   sortedCLOs.forEach((_clo, idx) => {
     const n = idx + 1;
     rows.push([
-      makeCell(`{{clo_${n}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+      makeCell(`{{clo_${n}_label}}`, { align: 'left', bg: 'transparent', width: LABEL_W, height: ROW_H, fontSize: 10 }),
       ...sortedPLOs.map((_plo, pi) =>
-        makeCell(`{{clo_${n}_plo_${pi + 1}}}`, { align: 'center', width: CHECK_W, height: ROW_H })
+        makeCell(`{{clo_${n}_plo_${pi + 1}}}`, { align: 'center', bg: 'transparent', width: CHECK_W, height: ROW_H })
       ),
     ]);
   });

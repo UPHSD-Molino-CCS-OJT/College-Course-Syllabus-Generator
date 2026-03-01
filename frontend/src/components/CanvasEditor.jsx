@@ -217,6 +217,8 @@ export default function CanvasEditor({ template, onClose, onSave }) {
             ...(oldCell.borderColor      !== undefined ? { borderColor:      oldCell.borderColor      } : {}),
             ...(oldCell.borderWidth      !== undefined ? { borderWidth:      oldCell.borderWidth      } : {}),
             ...(oldCell.borderStyle      !== undefined ? { borderStyle:      oldCell.borderStyle      } : {}),
+            ...(oldCell.colspan          !== undefined ? { colspan:          oldCell.colspan          } : {}),
+            ...(oldCell.rowspan          !== undefined ? { rowspan:          oldCell.rowspan          } : {}),
           };
         })
       );
