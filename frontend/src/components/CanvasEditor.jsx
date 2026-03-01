@@ -132,7 +132,11 @@ export default function CanvasEditor({ template, onClose, onSave }) {
 
     const rebuildIfNeeded = (el) => {
       if (el.type !== 'table' || !el.matrixType) return el;
-      const pos = { x: el.x, y: el.y };
+      // Pass existingData so matrix builders can restore per-column widths and
+      // per-row heights that the user set (via resize handles or the cell editor).
+      // Without this, header cells in particular lose their explicit sizes because
+      // they bypass the per-cell merge step (see `if (cell._header) return cell`).
+      const pos = { x: el.x, y: el.y, existingData: el.data };
       let rebuilt = null;
       if (el.matrixType === 'ga-mk' && gas.length && mks.length) {
         rebuilt = buildGAMissionKeywordMatrix(gas, mks, pos);
