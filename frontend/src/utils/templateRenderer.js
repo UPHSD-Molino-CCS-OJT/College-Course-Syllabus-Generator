@@ -192,55 +192,74 @@ export function renderElement(element, syllabus, auxData = {}) {
       rebuilt = buildCLOPLOMatrix(clos, plos, pos);
     }
     if (rebuilt) {
-      const structureChanged = rebuilt.rows !== element.rows || rebuilt.cols !== element.cols;
-
-      // When the structure is the same, preserve per-cell user styles (fonts, colours,
-      // background, per-cell borders); only the placeholder content comes from rebuilt.
-      let mergedData = rebuilt.data;
-      if (!structureChanged && element.data) {
-        mergedData = rebuilt.data.map((row, r) =>
-          row.map((cell, c) => {
-            const oldCell = element.data[r]?.[c];
-            if (!oldCell) return cell;
-            const isHeader = cell.fontWeight === 'bold';
-            return {
-              ...cell,
-              fontSize:      oldCell.fontSize      ?? cell.fontSize,
-              fontFamily:    oldCell.fontFamily    ?? cell.fontFamily,
-              fontWeight:    isHeader ? 'bold'    : (oldCell.fontWeight    ?? cell.fontWeight),
-              fontStyle:     oldCell.fontStyle     ?? cell.fontStyle,
-              color:         oldCell.color         ?? cell.color,
-              align:         isHeader ? cell.align : (oldCell.align         ?? cell.align),
-              verticalAlign: oldCell.verticalAlign ?? cell.verticalAlign,
-              bg:            isHeader ? cell.bg    : (oldCell.bg            ?? cell.bg),
-              width:         oldCell.width         ?? cell.width,
-              height:        oldCell.height        ?? cell.height,
-              ...(oldCell.showBorderTop    !== undefined ? { showBorderTop:    oldCell.showBorderTop    } : {}),
-              ...(oldCell.showBorderRight  !== undefined ? { showBorderRight:  oldCell.showBorderRight  } : {}),
-              ...(oldCell.showBorderBottom !== undefined ? { showBorderBottom: oldCell.showBorderBottom } : {}),
-              ...(oldCell.showBorderLeft   !== undefined ? { showBorderLeft:   oldCell.showBorderLeft   } : {}),
-              ...(oldCell.borderColor      !== undefined ? { borderColor:      oldCell.borderColor      } : {}),
-              ...(oldCell.borderWidth      !== undefined ? { borderWidth:      oldCell.borderWidth      } : {}),
-              ...(oldCell.borderStyle      !== undefined ? { borderStyle:      oldCell.borderStyle      } : {}),
-            };
-          })
+      // ── Anchor-based paste: re-paste the fresh matrix at the stored position ──
+      if (element.matrixAnchorRow !== undefined) {
+        const anchorRow = element.matrixAnchorRow ?? 0;
+        const anchorCol = element.matrixAnchorCol ?? 0;
+        const { data: pastedData, rows: pRows, cols: pCols } = pasteAtAnchor(
+          element.data, rebuilt.data, anchorRow, anchorCol
         );
-      }
+        rendered = {
+          ...element,
+          data:            pastedData,
+          rows:            pRows,
+          cols:            pCols,
+          matrixType:      element.matrixType,
+          matrixAnchorRow: anchorRow,
+          matrixAnchorCol: anchorCol,
+        };
+      } else {
+        // ── Full-table rebuild: preserve per-cell user styles ──────────────────
+        const structureChanged = rebuilt.rows !== element.rows || rebuilt.cols !== element.cols;
 
-      // Preserve user-customised styling from the stored element; only update structure
-      rendered = {
-        ...rebuilt,
-        id:          element.id,
-        x:           element.x,
-        y:           element.y,
-        data:        mergedData,
-        borderColor: element.borderColor ?? rebuilt.borderColor,
-        borderWidth: element.borderWidth ?? rebuilt.borderWidth,
-        borderStyle: element.borderStyle ?? rebuilt.borderStyle,
-        cellWidth:   element.cellWidth   ?? rebuilt.cellWidth,
-        cellHeight:  element.cellHeight  ?? rebuilt.cellHeight,
-        matrixType:  element.matrixType,
-      };
+        // When the structure is the same, preserve per-cell user styles (fonts, colours,
+        // background, per-cell borders); only the placeholder content comes from rebuilt.
+        let mergedData = rebuilt.data;
+        if (!structureChanged && element.data) {
+          mergedData = rebuilt.data.map((row, r) =>
+            row.map((cell, c) => {
+              const oldCell = element.data[r]?.[c];
+              if (!oldCell) return cell;
+              const isHeader = cell.fontWeight === 'bold';
+              return {
+                ...cell,
+                fontSize:      oldCell.fontSize      ?? cell.fontSize,
+                fontFamily:    oldCell.fontFamily    ?? cell.fontFamily,
+                fontWeight:    isHeader ? 'bold'    : (oldCell.fontWeight    ?? cell.fontWeight),
+                fontStyle:     oldCell.fontStyle     ?? cell.fontStyle,
+                color:         oldCell.color         ?? cell.color,
+                align:         isHeader ? cell.align : (oldCell.align         ?? cell.align),
+                verticalAlign: oldCell.verticalAlign ?? cell.verticalAlign,
+                bg:            isHeader ? cell.bg    : (oldCell.bg            ?? cell.bg),
+                width:         oldCell.width         ?? cell.width,
+                height:        oldCell.height        ?? cell.height,
+                ...(oldCell.showBorderTop    !== undefined ? { showBorderTop:    oldCell.showBorderTop    } : {}),
+                ...(oldCell.showBorderRight  !== undefined ? { showBorderRight:  oldCell.showBorderRight  } : {}),
+                ...(oldCell.showBorderBottom !== undefined ? { showBorderBottom: oldCell.showBorderBottom } : {}),
+                ...(oldCell.showBorderLeft   !== undefined ? { showBorderLeft:   oldCell.showBorderLeft   } : {}),
+                ...(oldCell.borderColor      !== undefined ? { borderColor:      oldCell.borderColor      } : {}),
+                ...(oldCell.borderWidth      !== undefined ? { borderWidth:      oldCell.borderWidth      } : {}),
+                ...(oldCell.borderStyle      !== undefined ? { borderStyle:      oldCell.borderStyle      } : {}),
+              };
+            })
+          );
+        }
+
+        // Preserve user-customised styling from the stored element; only update structure
+        rendered = {
+          ...rebuilt,
+          id:          element.id,
+          x:           element.x,
+          y:           element.y,
+          data:        mergedData,
+          borderColor: element.borderColor ?? rebuilt.borderColor,
+          borderWidth: element.borderWidth ?? rebuilt.borderWidth,
+          borderStyle: element.borderStyle ?? rebuilt.borderStyle,
+          cellWidth:   element.cellWidth   ?? rebuilt.cellWidth,
+          cellHeight:  element.cellHeight  ?? rebuilt.cellHeight,
+          matrixType:  element.matrixType,
+        };
+      }
     }
   }
 
@@ -513,6 +532,78 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
 }
 
 // ─── End Relationship Matrix Builders ─────────────────────────────────────────
+
+/**
+ * Paste the source matrix onto the target table starting at (anchorRow, anchorCol).
+ * Expands or trims rows and columns so the table exactly fits the matrix from the
+ * anchor point. Rows/cols before the anchor are kept intact. Existing cell styles
+ * (font, colour, bg, borders) are preserved; only `content` is overwritten from
+ * the matrix source.
+ *
+ * Returns { data, rows, cols } — the updated 2-D array plus new dimensions.
+ */
+export function pasteAtAnchor(existingData, matrixData, anchorRow, anchorCol) {
+  const matrixRows = matrixData.length;
+  const matrixCols = matrixData[0]?.length ?? 0;
+  const targetRowCount = anchorRow + matrixRows;
+  const targetColCount = anchorCol + matrixCols;
+
+  // Deep copy
+  let merged = existingData.map(row => row.map(cell => ({ ...cell })));
+
+  // Expand rows if the matrix extends beyond the current bottom
+  while (merged.length < targetRowCount) {
+    const templateRow = merged[merged.length - 1] ?? [];
+    merged.push(templateRow.map(cell => ({ ...cell, content: '' })));
+  }
+
+  // Trim excess rows below the matrix extent
+  if (merged.length > targetRowCount) {
+    merged = merged.slice(0, targetRowCount);
+  }
+
+  // Fix each row's column count and overwrite matrix cell content
+  merged = merged.map((row, r) => {
+    // Expand cols if needed (copy style from last col as template)
+    while (row.length < targetColCount) {
+      const tpl = row[row.length - 1] ?? {
+        content: '', fontSize: 12, fontFamily: 'Arial', fontWeight: 'normal',
+        color: '#000000', align: 'left', bg: '#ffffff', width: 120, height: 40,
+      };
+      row = [...row, { ...tpl, content: '' }];
+    }
+
+    // Trim excess cols beyond the matrix extent
+    if (row.length > targetColCount) {
+      row = row.slice(0, targetColCount);
+    }
+
+    // For rows inside the matrix zone: overwrite content from the source matrix
+    if (r >= anchorRow) {
+      const mr = r - anchorRow;
+      const matrixRow = matrixData[mr] ?? [];
+      row = [...row];
+      for (let c = 0; c < matrixCols; c++) {
+        const srcCell = matrixRow[c];
+        if (srcCell !== undefined) {
+          const srcIsHeader = srcCell.fontWeight === 'bold';
+          row[anchorCol + c] = {
+            ...row[anchorCol + c],
+            content:    srcCell.content    ?? '',
+            fontWeight: srcIsHeader ? 'bold'           : (row[anchorCol + c].fontWeight ?? srcCell.fontWeight),
+            bg:         srcIsHeader ? srcCell.bg        : (row[anchorCol + c].bg        ?? srcCell.bg),
+            align:      srcIsHeader ? srcCell.align     : (row[anchorCol + c].align     ?? srcCell.align),
+            fontSize:   srcIsHeader ? srcCell.fontSize  : (row[anchorCol + c].fontSize  ?? srcCell.fontSize),
+            fontStyle:  srcIsHeader ? srcCell.fontStyle : (row[anchorCol + c].fontStyle ?? srcCell.fontStyle),
+          };
+        }
+      }
+    }
+    return row;
+  });
+
+  return { data: merged, rows: targetRowCount, cols: targetColCount };
+}
 
 /**
  * Get formatted weekly schedule as text

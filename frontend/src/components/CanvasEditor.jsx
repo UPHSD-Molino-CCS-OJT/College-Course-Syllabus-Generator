@@ -13,6 +13,7 @@ import {
   buildPEOGAMatrix,
   buildPLOPEOMatrix,
   buildCLOPLOMatrix,
+  pasteAtAnchor,
 } from '../utils/templateRenderer';
 import PageSettings from './canvas-toolbar/PageSettings';
 import ZoneHeightControls from './canvas-toolbar/ZoneHeightControls';
@@ -144,6 +145,43 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       }
       if (!rebuilt) return el;
 
+      // ── Anchor-based paste matrices (pasted into an existing table) ────────
+      // When the element was created by pasting a matrix at a specific anchor
+      // cell inside an existing table, re-apply the paste at the same position
+      // so it reflects any DB changes (new/removed rows in the source data).
+      if (el.matrixAnchorRow !== undefined) {
+        const anchorRow = el.matrixAnchorRow ?? 0;
+        const anchorCol = el.matrixAnchorCol ?? 0;
+        const { data: pastedData, rows: pRows, cols: pCols } = pasteAtAnchor(
+          el.data, rebuilt.data, anchorRow, anchorCol
+        );
+
+        const next = {
+          ...el,
+          data:           pastedData,
+          rows:           pRows,
+          cols:           pCols,
+          matrixType:     el.matrixType,
+          matrixAnchorRow: anchorRow,
+          matrixAnchorCol: anchorCol,
+        };
+
+        // Bail out early if nothing actually changed
+        if (pRows === (el.data?.length ?? el.rows) && pCols === (el.data?.[0]?.length ?? el.cols)) {
+          let same = true;
+          outer2: for (let r = 0; r < pastedData.length; r++) {
+            for (let c = 0; c < (pastedData[r]?.length ?? 0); c++) {
+              if ((pastedData[r][c]?.content ?? '') !== (el.data?.[r]?.[c]?.content ?? '')) {
+                same = false; break outer2;
+              }
+            }
+          }
+          if (same) return el;
+        }
+        return next;
+      }
+
+      // ── Full-table rebuild (insert-as-new-element matrices) ────────────────
       // Use actual data dimensions — el.rows/cols may be stale after previous
       // structural changes that weren't saved correctly.
       const elRows = el.data?.length ?? el.rows;

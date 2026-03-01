@@ -324,6 +324,11 @@ export default function TableEditor({ table, onUpdate }) {
           </div>
           <p className="text-emerald-400/80 leading-relaxed">
             {MATRIX_LABELS[table.matrixType] || table.matrixType} — rows and columns are automatically rebuilt from the database on every preview render. Structural edits (add/remove rows or columns) are disabled.
+            {table.matrixAnchorRow !== undefined && (
+              <span className="block mt-1 text-emerald-500/70">
+                Pasted at row {(table.matrixAnchorRow ?? 0) + 1}, col {(table.matrixAnchorCol ?? 0) + 1} of this table.
+              </span>
+            )}
           </p>
         </div>
       )}

@@ -5,6 +5,7 @@ import {
   buildPEOGAMatrix,
   buildPLOPEOMatrix,
   buildCLOPLOMatrix,
+  pasteAtAnchor,
 } from '../utils/templateRenderer';
 
 const MATRICES = [
@@ -90,80 +91,6 @@ function computeCoveredCells(data) {
     });
   });
   return covered;
-}
-
-/**
- * Paste the source matrix onto the target table starting at (anchorRow, anchorCol).
- * Expands or trims rows and columns so the table exactly fits the matrix from the
- * anchor point. Rows/cols before the anchor are kept intact. Existing cell styles
- * (font, colour, bg, borders) are preserved; only `content` is overwritten from
- * the matrix source.
- *
- * Returns { data, rows, cols } — the updated 2-D data array plus new dimensions.
- */
-function pasteAtAnchor(existingData, matrixData, anchorRow, anchorCol) {
-  const matrixRows = matrixData.length;
-  const matrixCols = matrixData[0]?.length ?? 0;
-  const targetRowCount = anchorRow + matrixRows;
-  const targetColCount = anchorCol + matrixCols;
-
-  // ── Deep copy ──────────────────────────────────────────────────────────────
-  let merged = existingData.map(row => row.map(cell => ({ ...cell })));
-
-  // ── Expand rows if the matrix extends beyond the current bottom ────────────
-  while (merged.length < targetRowCount) {
-    const templateRow = merged[merged.length - 1] ?? [];
-    merged.push(templateRow.map(cell => ({ ...cell, content: '' })));
-  }
-
-  // ── Trim excess rows below the matrix extent ───────────────────────────────
-  if (merged.length > targetRowCount) {
-    merged = merged.slice(0, targetRowCount);
-  }
-
-  // ── Fix each row's column count and overwrite matrix cell content ──────────
-  merged = merged.map((row, r) => {
-    // Expand cols if needed (copy style from last col as template)
-    while (row.length < targetColCount) {
-      const tpl = row[row.length - 1] ?? {
-        content: '', fontSize: 12, fontFamily: 'Arial', fontWeight: 'normal',
-        color: '#000000', align: 'left', bg: '#ffffff', width: 120, height: 40,
-      };
-      row = [...row, { ...tpl, content: '' }];
-    }
-
-    // Trim excess cols beyond the matrix extent
-    if (row.length > targetColCount) {
-      row = row.slice(0, targetColCount);
-    }
-
-    // For rows inside the matrix zone: overwrite content from the source matrix
-    if (r >= anchorRow) {
-      const mr = r - anchorRow;
-      const matrixRow = matrixData[mr] ?? [];
-      row = [...row];
-      for (let c = 0; c < matrixCols; c++) {
-        const srcCell = matrixRow[c];
-        if (srcCell !== undefined) {
-          // Category header rows (CHARACTER, COMPETENCE …) are bold in the source;
-          // their structural style must override whatever the target cell had.
-          const srcIsHeader = srcCell.fontWeight === 'bold';
-          row[anchorCol + c] = {
-            ...row[anchorCol + c],
-            content:    srcCell.content    ?? '',
-            fontWeight: srcIsHeader ? 'bold'           : (row[anchorCol + c].fontWeight ?? srcCell.fontWeight),
-            bg:         srcIsHeader ? srcCell.bg        : (row[anchorCol + c].bg        ?? srcCell.bg),
-            align:      srcIsHeader ? srcCell.align     : (row[anchorCol + c].align     ?? srcCell.align),
-            fontSize:   srcIsHeader ? srcCell.fontSize  : (row[anchorCol + c].fontSize  ?? srcCell.fontSize),
-            fontStyle:  srcIsHeader ? srcCell.fontStyle : (row[anchorCol + c].fontStyle ?? srcCell.fontStyle),
-          };
-        }
-      }
-    }
-    return row;
-  });
-
-  return { data: merged, rows: targetRowCount, cols: targetColCount };
 }
 
 /** Fetch matrix data from the API and return a built table element. Throws on empty data. */
@@ -286,7 +213,8 @@ export default function RelationshipMatrixPicker({ canvasDocument, onInsert, onU
       selectedTarget.zone,
       selectedTarget.pageIndex,
       data,
-      { rows, cols },
+      // Store matrixType + anchor so the editor can auto-rebuild on next open
+      { rows, cols, matrixType: matrixId, matrixAnchorRow: anchor.row, matrixAnchorCol: anchor.col },
     );
   };
 
