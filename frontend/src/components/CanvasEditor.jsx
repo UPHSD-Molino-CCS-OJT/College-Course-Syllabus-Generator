@@ -218,11 +218,12 @@ export default function CanvasEditor({ template, onClose, onSave }) {
                 };
               }
               if (!oldCell) return cell;
-              // Col 0 = LLO label: update content from rebuild (reflects DB changes),
-              // but preserve any user-set sizes and styles.
+              // Col 0 = LLO label: preserve user's rich-text edits; fall back to
+              // rebuilt content only when the cell has never been edited.
               if (c === 0) {
                 return {
                   ...cell,
+                  content:       oldCell.content       ?? cell.content,
                   width:         oldCell.width         ?? cell.width,
                   height:        oldCell.height        ?? cell.height,
                   fontSize:      oldCell.fontSize      ?? cell.fontSize,
