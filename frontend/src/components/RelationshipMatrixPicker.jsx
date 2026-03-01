@@ -395,57 +395,70 @@ export default function RelationshipMatrixPicker({ canvasDocument, onInsert, onU
 
             {/* Scrollable table grid */}
             <div className="flex-1 overflow-auto px-6 pb-2">
-              <table className="border-collapse text-[10px] select-none">
-                <thead>
-                  <tr>
-                    <th className="w-6 text-gray-600 font-normal border border-gray-700 px-1">#</th>
-                    {Array.from({ length: clampedCols }, (_, c) => (
-                      <th key={c} className="min-w-15 text-gray-600 font-normal border border-gray-700 px-1">
-                        {c + 1}
-                      </th>
-                    ))}
-                    {hiddenCols > 0 && (
-                      <th className="text-gray-600 border border-gray-700 px-1">+{hiddenCols}</th>
-                    )}
-                  </tr>
-                </thead>
+              <table className="border-collapse select-none" style={{ tableLayout: 'fixed' }}>
                 <tbody>
                   {previewRows.map((row, r) => (
                     <tr key={r}>
-                      <td className="text-gray-600 border border-gray-700 px-1 text-center">{r + 1}</td>
                       {row.slice(0, MAX_PREVIEW_COLS).map((cell, c) => {
                         const isSelected = inRange(r, c, originCell);
                         const isHovered  = !isSelected && inRange(r, c, hoverCell);
-                        const cellCls = isSelected
-                          ? 'bg-emerald-700/50 border-emerald-500'
-                          : isHovered
-                          ? 'bg-blue-700/40 border-blue-500'
-                          : 'bg-gray-800 border-gray-700 hover:bg-gray-700';
+                        const cellW = cell?.width  ?? selectedTarget?.element?.cellWidth  ?? 120;
+                        const cellH = cell?.height ?? selectedTarget?.element?.cellHeight ?? 40;
+                        // Strip HTML tags for preview text
+                        const rawText = String(cell?.content ?? '').replace(/<[^>]+>/g, '').slice(0, 18);
                         return (
                           <td
                             key={c}
-                            className={`border cursor-pointer transition-colors duration-75 px-1.5 py-1 max-w-20 ${cellCls}`}
+                            className="relative border border-gray-400 cursor-pointer overflow-hidden"
+                            style={{
+                              width:           cellW,
+                              minWidth:        cellW,
+                              maxWidth:        cellW,
+                              height:          cellH,
+                              maxHeight:       cellH,
+                              backgroundColor: cell?.bg ?? '#ffffff',
+                              fontSize:        cell?.fontSize   ?? 11,
+                              fontFamily:      cell?.fontFamily ?? 'Arial',
+                              fontWeight:      cell?.fontWeight ?? 'normal',
+                              fontStyle:       cell?.fontStyle  ?? 'normal',
+                              color:           cell?.color      ?? '#000000',
+                              textAlign:       cell?.align      ?? 'left',
+                              padding:         '2px 4px',
+                              verticalAlign:   'top',
+                            }}
                             onMouseEnter={() => setHoverCell({ row: r, col: c })}
                             onMouseLeave={() => setHoverCell(null)}
                             onClick={() => setOriginCell({ row: r, col: c })}
                             title={`Row ${r + 1}, Col ${c + 1}${isSelected ? ' — origin' : ''}`}
                           >
-                            <span className="block truncate text-gray-300 leading-tight">
-                              {String(cell?.content ?? '').slice(0, 12) || <span className="text-gray-600">—</span>}
+                            {/* Highlight overlay — sits above cell background, below text */}
+                            {(isSelected || isHovered) && (
+                              <div
+                                className="absolute inset-0 pointer-events-none"
+                                style={{
+                                  backgroundColor: isSelected ? 'rgba(16,185,129,0.35)' : 'rgba(59,130,246,0.30)',
+                                  boxShadow: isSelected
+                                    ? 'inset 0 0 0 2px #10b981'
+                                    : 'inset 0 0 0 1.5px #3b82f6',
+                                }}
+                              />
+                            )}
+                            <span className="block truncate leading-tight whitespace-nowrap">
+                              {rawText || ''}
                             </span>
                           </td>
                         );
                       })}
                       {hiddenCols > 0 && (
-                        <td className="text-gray-600 border border-gray-700 px-1 text-center">…</td>
+                        <td className="text-gray-500 border border-gray-700 px-1 text-center text-xs italic">…</td>
                       )}
                     </tr>
                   ))}
                   {hiddenRows > 0 && (
                     <tr>
                       <td
-                        colSpan={clampedCols + 1 + (hiddenCols > 0 ? 1 : 0)}
-                        className="text-gray-600 border border-gray-700 px-2 py-1 text-center italic"
+                        colSpan={clampedCols + (hiddenCols > 0 ? 1 : 0)}
+                        className="text-gray-500 border border-gray-700 px-2 py-1 text-center text-xs italic"
                       >
                         … {hiddenRows} more row(s) not shown in preview
                       </td>
