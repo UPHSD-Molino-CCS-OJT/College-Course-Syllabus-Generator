@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { renderCanvasDocument } from '../utils/templateRenderer';
-import { graduateAttributeAPI, missionKeywordAPI, peoAPI, ploAPI, cloAPI } from '../services/api';
+import { graduateAttributeAPI, missionKeywordAPI, peoAPI, ploAPI, cloAPI, lloAPI } from '../services/api';
 
 // Page size configurations (in pixels, 96 DPI)
 const PAGE_SIZES = {
@@ -51,7 +51,7 @@ function computeCoveredCells(data) {
  */
 export default function TemplateRenderer({ template, syllabus }) {
   // Auxiliary data for relationship-matrix placeholder resolution
-  const [auxData, setAuxData] = useState({ gas: [], mks: [], peos: [], plos: [], clos: [] });
+  const [auxData, setAuxData] = useState({ gas: [], mks: [], peos: [], plos: [], clos: [], llos: [] });
 
   useEffect(() => {
     let cancelled = false;
@@ -61,7 +61,8 @@ export default function TemplateRenderer({ template, syllabus }) {
       peoAPI.getAll({ limit: 200 }),
       ploAPI.getAll({ limit: 200 }),
       cloAPI.getAll({ limit: 200 }),
-    ]).then(([gaRes, mkRes, peoRes, ploRes, cloRes]) => {
+      lloAPI.getAll({ limit: 500 }),
+    ]).then(([gaRes, mkRes, peoRes, ploRes, cloRes, lloRes]) => {
       if (cancelled) return;
       setAuxData({
         gas:  gaRes.data?.graduateAttributes || [],
@@ -69,6 +70,7 @@ export default function TemplateRenderer({ template, syllabus }) {
         peos: peoRes.data?.peos              || [],
         plos: ploRes.data?.plos              || [],
         clos: cloRes.data?.clos              || [],
+        llos: lloRes.data?.llos              || [],
       });
     }).catch(() => {}); // silently skip if offline / no data
     return () => { cancelled = true; };
