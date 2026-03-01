@@ -248,11 +248,12 @@ export function renderElement(element, syllabus, auxData = {}) {
               // Col 1+ = CLO check cells: preserve user-edited content (checkmarks)
               return {
                 ...cell,
-                content:       oldCell.content,
+                content:       oldCell.content       ?? cell.content,
                 width:         oldCell.width         ?? cell.width,
                 height:        oldCell.height        ?? cell.height,
                 fontSize:      oldCell.fontSize      ?? cell.fontSize,
                 fontFamily:    oldCell.fontFamily    ?? cell.fontFamily,
+                fontWeight:    oldCell.fontWeight    ?? cell.fontWeight,
                 fontStyle:     oldCell.fontStyle     ?? cell.fontStyle,
                 color:         oldCell.color         ?? cell.color,
                 verticalAlign: oldCell.verticalAlign ?? cell.verticalAlign,

@@ -238,11 +238,12 @@ export default function CanvasEditor({ template, onClose, onSave }) {
               // the user has manually toggled) and restore sizes.
               return {
                 ...cell,
-                content: oldCell.content, // keep user-edited checkmark
+                content:       oldCell.content       ?? cell.content, // keep user-edited checkmark
                 width:         oldCell.width         ?? cell.width,
                 height:        oldCell.height        ?? cell.height,
                 fontSize:      oldCell.fontSize      ?? cell.fontSize,
                 fontFamily:    oldCell.fontFamily    ?? cell.fontFamily,
+                fontWeight:    oldCell.fontWeight    ?? cell.fontWeight,
                 fontStyle:     oldCell.fontStyle     ?? cell.fontStyle,
                 color:         oldCell.color         ?? cell.color,
                 verticalAlign: oldCell.verticalAlign ?? cell.verticalAlign,
