@@ -225,7 +225,7 @@ export function renderElement(element, syllabus, auxData = {}) {
                 ...cell,
                 fontSize:      oldCell.fontSize      ?? cell.fontSize,
                 fontFamily:    oldCell.fontFamily    ?? cell.fontFamily,
-                fontWeight:    isHeader ? 'bold'    : (oldCell.fontWeight    ?? cell.fontWeight),
+                fontWeight:    cell.fontWeight,   // always enforce builder: bold for category rows, normal for data rows
                 fontStyle:     oldCell.fontStyle     ?? cell.fontStyle,
                 color:         oldCell.color         ?? cell.color,
                 align:         isHeader ? cell.align : (oldCell.align         ?? cell.align),
@@ -590,7 +590,7 @@ export function pasteAtAnchor(existingData, matrixData, anchorRow, anchorCol) {
           row[anchorCol + c] = {
             ...row[anchorCol + c],
             content:    srcCell.content    ?? '',
-            fontWeight: srcIsHeader ? 'bold'           : (row[anchorCol + c].fontWeight ?? srcCell.fontWeight),
+            fontWeight: srcCell.fontWeight,   // always enforce builder: bold for category rows, normal for data rows
             bg:         srcIsHeader ? srcCell.bg        : (row[anchorCol + c].bg        ?? srcCell.bg),
             align:      srcIsHeader ? srcCell.align     : (row[anchorCol + c].align     ?? srcCell.align),
             fontSize:   srcIsHeader ? srcCell.fontSize  : (row[anchorCol + c].fontSize  ?? srcCell.fontSize),

@@ -200,7 +200,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
             ...cell,
             fontSize:      oldCell.fontSize      ?? cell.fontSize,
             fontFamily:    oldCell.fontFamily    ?? cell.fontFamily,
-            fontWeight:    isHeader ? 'bold'    : (oldCell.fontWeight    ?? cell.fontWeight),
+            fontWeight:    cell.fontWeight,   // always enforce builder: bold for category rows, normal for data rows
             fontStyle:     oldCell.fontStyle     ?? cell.fontStyle,
             color:         oldCell.color         ?? cell.color,
             align:         isHeader ? cell.align : (oldCell.align         ?? cell.align),
