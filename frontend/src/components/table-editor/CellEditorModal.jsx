@@ -182,7 +182,7 @@ export default function CellEditorModal({
                 />
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Cells covered by this span will be hidden. Set back to 1 to unmerge.</p>
+            <p className="text-xs text-gray-500 mt-1">Cells covered by this span will be cleared and hidden. Set back to 1 to unmerge (covered cells will be empty).</p>
           </div>
 
           {/* Colors */}

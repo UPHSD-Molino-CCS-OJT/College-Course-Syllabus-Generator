@@ -188,7 +188,8 @@ export default function TableEditor({ table, onUpdate }) {
   };
 
   const handleCellUpdate = (rowIndex, colIndex, updates) => {
-    const newData = table.data.map((row, i) =>
+    // First pass: apply updates to the target cell + propagate width/height
+    let newData = table.data.map((row, i) =>
       row.map((cell, j) => {
         if (i === rowIndex && j === colIndex) return { ...cell, ...updates };
         // Propagate column width to every cell in the same column
@@ -198,6 +199,44 @@ export default function TableEditor({ table, onUpdate }) {
         return cell;
       })
     );
+
+    // Second pass: when colspan or rowspan changes, remove the cells that fall
+    // inside the new span so they don't retain stale content or cause issues.
+    if ('colspan' in updates || 'rowspan' in updates) {
+      const updatedCell = newData[rowIndex][colIndex];
+      const cs = updatedCell.colspan || 1;
+      const rs = updatedCell.rowspan || 1;
+
+      newData = newData.map((row, i) =>
+        row.map((cell, j) => {
+          // Skip the spanning cell itself
+          if (i === rowIndex && j === colIndex) return cell;
+          // If this cell falls within the span area, reset it to an empty cell
+          if (i >= rowIndex && i < rowIndex + rs && j >= colIndex && j < colIndex + cs) {
+            return {
+              content: '',
+              colspan: 1,
+              rowspan: 1,
+              fontSize: cell.fontSize,
+              fontFamily: cell.fontFamily,
+              fontWeight: cell.fontWeight,
+              color: cell.color,
+              align: cell.align,
+              verticalAlign: cell.verticalAlign,
+              bg: cell.bg,
+              width: cell.width,
+              height: cell.height,
+              showBorderTop: cell.showBorderTop,
+              showBorderRight: cell.showBorderRight,
+              showBorderBottom: cell.showBorderBottom,
+              showBorderLeft: cell.showBorderLeft,
+            };
+          }
+          return cell;
+        })
+      );
+    }
+
     onUpdate({ data: newData });
   };
 
