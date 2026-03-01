@@ -130,15 +130,70 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       } else if (el.matrixType === 'clo-plo' && clos.length && plos.length) {
         rebuilt = buildCLOPLOMatrix(clos, plos, pos);
       }
-      // Only replace when the structure actually differs
-      if (!rebuilt || (rebuilt.rows === el.rows && rebuilt.cols === el.cols)) return el;
+      if (!rebuilt) return el;
+
+      // Detect any structural or content change (row/col count, placeholder strings, etc.)
+      const structureChanged = rebuilt.rows !== el.rows || rebuilt.cols !== el.cols;
+      let contentChanged = structureChanged;
+      if (!contentChanged && el.data) {
+        // Compare placeholder content cell-by-cell to catch category restructuring,
+        // code renames, or any other change short of a full row/col count change.
+        outer: for (let r = 0; r < rebuilt.data.length; r++) {
+          const rebRow = rebuilt.data[r];
+          const elRow  = el.data[r];
+          if (!elRow || rebRow.length !== elRow.length) { contentChanged = true; break; }
+          for (let c = 0; c < rebRow.length; c++) {
+            if (rebRow[c]?.content !== elRow[c]?.content) { contentChanged = true; break outer; }
+          }
+        }
+      }
+      // Nothing changed — avoid a needless re-render.
+      if (!contentChanged) return el;
+
+      // When the structure is the same, merge per-cell user styles so that custom
+      // font, colour, background and border choices survive the rebuild.
+      let mergedData = rebuilt.data;
+      if (!structureChanged && el.data) {
+        mergedData = rebuilt.data.map((row, r) =>
+          row.map((cell, c) => {
+            const oldCell = el.data[r]?.[c];
+            if (!oldCell) return cell;
+            return {
+              ...cell,                              // rebuilt placeholder content + defaults
+              fontSize:      oldCell.fontSize      ?? cell.fontSize,
+              fontFamily:    oldCell.fontFamily    ?? cell.fontFamily,
+              fontWeight:    oldCell.fontWeight    ?? cell.fontWeight,
+              fontStyle:     oldCell.fontStyle     ?? cell.fontStyle,
+              color:         oldCell.color         ?? cell.color,
+              align:         oldCell.align         ?? cell.align,
+              verticalAlign: oldCell.verticalAlign ?? cell.verticalAlign,
+              bg:            oldCell.bg            ?? cell.bg,
+              width:         oldCell.width         ?? cell.width,
+              height:        oldCell.height        ?? cell.height,
+              // Preserve explicit per-cell border overrides
+              ...(oldCell.showBorderTop    !== undefined ? { showBorderTop:    oldCell.showBorderTop    } : {}),
+              ...(oldCell.showBorderRight  !== undefined ? { showBorderRight:  oldCell.showBorderRight  } : {}),
+              ...(oldCell.showBorderBottom !== undefined ? { showBorderBottom: oldCell.showBorderBottom } : {}),
+              ...(oldCell.showBorderLeft   !== undefined ? { showBorderLeft:   oldCell.showBorderLeft   } : {}),
+              ...(oldCell.borderColor      !== undefined ? { borderColor:      oldCell.borderColor      } : {}),
+              ...(oldCell.borderWidth      !== undefined ? { borderWidth:      oldCell.borderWidth      } : {}),
+              ...(oldCell.borderStyle      !== undefined ? { borderStyle:      oldCell.borderStyle      } : {}),
+            };
+          })
+        );
+      }
+
       return {
         ...rebuilt,
-        id: el.id,
+        id:          el.id,
+        data:        mergedData,
         borderColor: el.borderColor,
         borderWidth: el.borderWidth,
         borderStyle: el.borderStyle,
-        matrixType: el.matrixType,
+        // Preserve global cell-size overrides the user may have set in TableEditor
+        cellWidth:   el.cellWidth  ?? rebuilt.cellWidth,
+        cellHeight:  el.cellHeight ?? rebuilt.cellHeight,
+        matrixType:  el.matrixType,
       };
     };
 

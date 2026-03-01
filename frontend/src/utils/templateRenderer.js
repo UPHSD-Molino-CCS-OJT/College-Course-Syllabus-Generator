@@ -192,16 +192,53 @@ export function renderElement(element, syllabus, auxData = {}) {
       rebuilt = buildCLOPLOMatrix(clos, plos, pos);
     }
     if (rebuilt) {
+      const structureChanged = rebuilt.rows !== element.rows || rebuilt.cols !== element.cols;
+
+      // When the structure is the same, preserve per-cell user styles (fonts, colours,
+      // background, per-cell borders); only the placeholder content comes from rebuilt.
+      let mergedData = rebuilt.data;
+      if (!structureChanged && element.data) {
+        mergedData = rebuilt.data.map((row, r) =>
+          row.map((cell, c) => {
+            const oldCell = element.data[r]?.[c];
+            if (!oldCell) return cell;
+            return {
+              ...cell,
+              fontSize:      oldCell.fontSize      ?? cell.fontSize,
+              fontFamily:    oldCell.fontFamily    ?? cell.fontFamily,
+              fontWeight:    oldCell.fontWeight    ?? cell.fontWeight,
+              fontStyle:     oldCell.fontStyle     ?? cell.fontStyle,
+              color:         oldCell.color         ?? cell.color,
+              align:         oldCell.align         ?? cell.align,
+              verticalAlign: oldCell.verticalAlign ?? cell.verticalAlign,
+              bg:            oldCell.bg            ?? cell.bg,
+              width:         oldCell.width         ?? cell.width,
+              height:        oldCell.height        ?? cell.height,
+              ...(oldCell.showBorderTop    !== undefined ? { showBorderTop:    oldCell.showBorderTop    } : {}),
+              ...(oldCell.showBorderRight  !== undefined ? { showBorderRight:  oldCell.showBorderRight  } : {}),
+              ...(oldCell.showBorderBottom !== undefined ? { showBorderBottom: oldCell.showBorderBottom } : {}),
+              ...(oldCell.showBorderLeft   !== undefined ? { showBorderLeft:   oldCell.showBorderLeft   } : {}),
+              ...(oldCell.borderColor      !== undefined ? { borderColor:      oldCell.borderColor      } : {}),
+              ...(oldCell.borderWidth      !== undefined ? { borderWidth:      oldCell.borderWidth      } : {}),
+              ...(oldCell.borderStyle      !== undefined ? { borderStyle:      oldCell.borderStyle      } : {}),
+            };
+          })
+        );
+      }
+
       // Preserve user-customised styling from the stored element; only update structure
       rendered = {
         ...rebuilt,
-        id: element.id,
-        x: element.x,
-        y: element.y,
+        id:          element.id,
+        x:           element.x,
+        y:           element.y,
+        data:        mergedData,
         borderColor: element.borderColor ?? rebuilt.borderColor,
         borderWidth: element.borderWidth ?? rebuilt.borderWidth,
         borderStyle: element.borderStyle ?? rebuilt.borderStyle,
-        matrixType: element.matrixType,
+        cellWidth:   element.cellWidth   ?? rebuilt.cellWidth,
+        cellHeight:  element.cellHeight  ?? rebuilt.cellHeight,
+        matrixType:  element.matrixType,
       };
     }
   }
