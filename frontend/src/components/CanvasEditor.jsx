@@ -203,7 +203,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
             fontWeight:    cell.fontWeight,   // always enforce builder: bold for category rows, normal for data rows
             fontStyle:     oldCell.fontStyle     ?? cell.fontStyle,
             color:         oldCell.color         ?? cell.color,
-            align:         isHeader ? cell.align : (oldCell.align         ?? cell.align),
+            align:         cell.align,   // always use canonical builder alignment (data cells → center, label cells → left)
             verticalAlign: oldCell.verticalAlign ?? cell.verticalAlign,
             bg:            isHeader ? cell.bg    : (oldCell.bg            ?? cell.bg),
             width:         oldCell.width         ?? cell.width,
