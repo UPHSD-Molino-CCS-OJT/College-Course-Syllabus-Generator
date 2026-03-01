@@ -198,10 +198,25 @@ export function renderElement(element, syllabus, auxData = {}) {
       if (element.matrixType === 'clo-plo') {
         const mergedData = rebuilt.data.map((row, r) =>
           row.map((cell, c) => {
+            const stored = element.data?.[r]?.[c];
             // Preserve stored content+styles for the two constant header cells
             if (r === 0 && (c === 0 || c === 1)) {
-              const stored = element.data?.[r]?.[c];
               if (stored) return { ...cell, ...stored, rowspan: cell.rowspan, colspan: cell.colspan };
+            }
+            // For all other cells, preserve per-cell user customizations (width/height
+            // from canvas resizing, plus any colour or font overrides), but always take
+            // the rebuilt placeholder content and structural spans.
+            if (stored) {
+              return {
+                ...cell,
+                width:         stored.width         ?? cell.width,
+                height:        stored.height        ?? cell.height,
+                fontSize:      stored.fontSize      ?? cell.fontSize,
+                fontFamily:    stored.fontFamily    ?? cell.fontFamily,
+                color:         stored.color         ?? cell.color,
+                bg:            cell._header ? cell.bg : (stored.bg ?? cell.bg),
+                verticalAlign: stored.verticalAlign ?? cell.verticalAlign,
+              };
             }
             return cell;
           })
