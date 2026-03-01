@@ -193,6 +193,12 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       // keep their canonical styles intact; only data rows defer to stored styles.
       const mergedData = rebuilt.data.map((row, r) =>
         row.map((cell, c) => {
+          // For CLO-PLO: preserve the two constant header cells (row 0 col 0 = CLO title,
+          // row 0 col 1 = PLO title) so user edits to text/styling survive a rebuild.
+          if (el.matrixType === 'clo-plo' && r === 0 && (c === 0 || c === 1)) {
+            const stored = el.data?.[r]?.[c];
+            if (stored) return { ...cell, ...stored, rowspan: cell.rowspan, colspan: cell.colspan };
+          }
           // Static header cells (e.g. CLO×PLO title rows) always use canonical builder styles
           if (cell._header) return cell;
           const oldCell = el.data?.[r]?.[c];
