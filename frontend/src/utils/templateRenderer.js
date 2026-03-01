@@ -513,10 +513,9 @@ export function buildPLOPEOMatrix(plos, peos, pos) {
 /**
  * Build a CLO × PLO matrix table element.
  *
- * Layout (3+ rows):
- *   Row 0 – header: "COURSE LEARNING OUTCOMES (CLOs)" | "PROGRAM LEARNING OUTCOMES (PLOs)" (colspan = numPLOs)
- *   Row 1 – sub-header: "At the end of the course, the students can:" | PLO number per column
- *   Row 2+ – data: {{clo_N_label}} | {{clo_N_plo_M}} per PLO
+ * Layout:
+ *   Row 0 – PLO numbers header: blank label cell | PLO number per column
+ *   Row 1+ – data: {{clo_N_label}} | {{clo_N_plo_M}} per PLO
  *
  * Total table width is kept constant regardless of PLO count by computing
  * CHECK_W = TOTAL_CHECK_AREA / numPLOs  (columns grow/shrink inward).
@@ -528,7 +527,6 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
   const LABEL_W        = 400;
   const TOTAL_CHECK_W  = 260; // fixed total width of the check-cell area (matches 4 PLOs × 65 px)
   const ROW_H          = 60;
-  const HEADER1_H      = 36;
   const HEADER2_H      = 40;
   const HEADER_BG      = '#F2DCDB'; // light salmon – matches the existing template colour
 
@@ -541,32 +539,11 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
 
   const rows = [];
 
-  // ── Row 0: top header ────────────────────────────────────────────────────
-  // [0,0]  → "COURSE LEARNING OUTCOMES (CLOs)" – label column
-  // [0,1]  → "PROGRAM LEARNING OUTCOMES (PLOs)" with colspan = numPLOs
-  // [0,2…] → filler cells hidden by the colspan above
+  // ── Row 0: PLO numbers header ─────────────────────────────────────────────
   rows.push([
-    Object.assign(makeCell('COURSE LEARNING OUTCOMES (CLOs)', {
-      bold: true, bg: HEADER_BG, align: 'center',
-      width: LABEL_W, height: HEADER1_H, fontSize: 11,
-    }), { _header: true }),
-    Object.assign(
-      makeCell('PROGRAM LEARNING OUTCOMES (PLOs)', {
-        bold: true, bg: HEADER_BG, align: 'center',
-        width: CHECK_W, height: HEADER1_H, fontSize: 11,
-      }),
-      { colspan: numPLOs, _header: true }
-    ),
-    ...Array.from({ length: Math.max(0, numPLOs - 1) }, () =>
-      Object.assign(makeCell('', { bg: HEADER_BG, width: CHECK_W, height: HEADER1_H }), { _header: true })
-    ),
-  ]);
-
-  // ── Row 1: sub-header (description + PLO numbers) ────────────────────────
-  rows.push([
-    Object.assign(makeCell('At the end of the course, the students can:', {
-      bold: false, italic: true, bg: HEADER_BG, align: 'left',
-      width: LABEL_W, height: HEADER2_H, fontSize: 10,
+    Object.assign(makeCell('', {
+      bg: HEADER_BG, align: 'left',
+      width: LABEL_W, height: HEADER2_H,
     }), { _header: true }),
     ...sortedPLOs.map((plo, pi) =>
       Object.assign(makeCell(String(plo.number ?? pi + 1), {
