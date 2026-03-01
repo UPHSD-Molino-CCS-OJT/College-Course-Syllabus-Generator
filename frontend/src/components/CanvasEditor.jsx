@@ -559,6 +559,32 @@ export default function CanvasEditor({ template, onClose, onSave }) {
     setShowMatrixPicker(false);
   };
 
+  const handleUpdateExistingTable = (elementId, zone, pageIndex, newData) => {
+    if (zone === 'header' || zone === 'footer') {
+      setCanvasDocument(prev => ({
+        ...prev,
+        [zone]: {
+          ...prev[zone],
+          elements: prev[zone].elements.map(el =>
+            el.id === elementId ? { ...el, data: newData } : el
+          ),
+        },
+      }));
+    } else {
+      setCanvasDocument(prev => ({
+        ...prev,
+        pages: (prev.pages || []).map((page, idx) =>
+          idx === pageIndex
+            ? { ...page, elements: (page.elements || []).map(el =>
+                el.id === elementId ? { ...el, data: newData } : el
+              )}
+            : page
+        ),
+      }));
+    }
+    setShowMatrixPicker(false);
+  };
+
   const handleUpdateElement = (zone, elementId, updates) => {
     // Update selectedElement first for immediate visual feedback
     if (selectedElement?.id === elementId) {
@@ -1027,7 +1053,9 @@ export default function CanvasEditor({ template, onClose, onSave }) {
       {/* Relationship Matrix Picker Modal */}
       {showMatrixPicker && (
         <RelationshipMatrixPicker
+          canvasDocument={canvasDocument}
           onInsert={handleInsertMatrixElement}
+          onUpdate={handleUpdateExistingTable}
           onClose={() => setShowMatrixPicker(false)}
         />
       )}
