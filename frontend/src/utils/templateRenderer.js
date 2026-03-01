@@ -189,7 +189,7 @@ export function renderElement(element, syllabus, auxData = {}) {
     } else if (element.matrixType === 'plo-peo' && plos.length && peos.length) {
       rebuilt = buildPLOPEOMatrix(plos, peos, pos);
     } else if (element.matrixType === 'clo-plo' && clos.length && plos.length) {
-      rebuilt = buildCLOPLOMatrix(clos, plos, pos);
+      rebuilt = buildCLOPLOMatrix(clos, plos, { ...pos, existingData: element.data });
     }
     if (rebuilt) {
       // ── CLO-PLO: rebuild structure from DB but preserve the two constant header
@@ -571,18 +571,65 @@ export function buildPLOPEOMatrix(plos, peos, pos) {
  * @param {object[]} plos – populated from GET /plos
  */
 export function buildCLOPLOMatrix(clos, plos, pos) {
-  const LABEL_W        = 400;
-  const TOTAL_CHECK_W  = 260; // fixed total width of the check-cell area (matches 4 PLOs × 65 px)
-  const ROW_H          = 60;
-  const HEADER0_H      = 40;  // row 0 height
-  const HEADER1_H      = 40;  // row 1 (PLO numbers) height
+  // Default dimensions – used only when no existing table data is available
+  const DEFAULT_LABEL_W  = 400;
+  const DEFAULT_CHECK_W  = 65;
+  const DEFAULT_ROW_H    = 60;
+  const DEFAULT_HEADER_H = 40;
+
+  const existingData = pos?.existingData || null;
+
+  // Derive a stored width for a given column by scanning non-header data rows first,
+  // then falling back to the header rows. This correctly reflects any user resizes.
+  const getStoredColWidth = (colIndex) => {
+    if (!existingData) return null;
+    for (let r = 2; r < existingData.length; r++) {
+      const w = existingData[r]?.[colIndex]?.width;
+      if (w != null) return w;
+    }
+    // row 1 (PLO numbers) — safe for check columns since there is no colspan there
+    const w1 = existingData[1]?.[colIndex]?.width;
+    if (w1 != null) return w1;
+    // row 0 col 0 is the rowspan header — valid for the label column
+    if (colIndex === 0) {
+      const w0 = existingData[0]?.[0]?.width;
+      if (w0 != null) return w0;
+    }
+    return null;
+  };
+
+  const getStoredRowHeight = (rowIndex) => {
+    if (!existingData) return null;
+    const row = existingData[rowIndex];
+    if (!row) return null;
+    for (const cell of row) {
+      if (cell?.height != null) return cell.height;
+    }
+    return null;
+  };
+
+  // Height to use for CLO rows that are beyond what was previously stored
+  const lastStoredDataRowHeight = (() => {
+    if (!existingData) return null;
+    for (let r = existingData.length - 1; r >= 2; r--) {
+      const h = getStoredRowHeight(r);
+      if (h != null) return h;
+    }
+    return null;
+  })();
 
   const sortedCLOs = [...clos].sort((a, b) => (a.number || 0) - (b.number || 0));
   const sortedPLOs = [...plos].sort((a, b) => (a.number || 0) - (b.number || 0));
   const numPLOs    = sortedPLOs.length;
 
-  // Dynamic column width – columns shrink/grow inward so total width stays constant
-  const CHECK_W = numPLOs > 0 ? Math.max(28, Math.floor(TOTAL_CHECK_W / numPLOs)) : 65;
+  // Per-column widths: prefer stored, fall back to defaults
+  const LABEL_W   = getStoredColWidth(0) ?? DEFAULT_LABEL_W;
+  const checkWidths = sortedPLOs.map((_, pi) => getStoredColWidth(pi + 1) ?? DEFAULT_CHECK_W);
+
+  // Per-row heights: prefer stored, fall back to defaults
+  const HEADER0_H = getStoredRowHeight(0) ?? DEFAULT_HEADER_H;
+  const HEADER1_H = getStoredRowHeight(1) ?? DEFAULT_HEADER_H;
+  const ROW_H     = lastStoredDataRowHeight ?? DEFAULT_ROW_H;
 
   const rows = [];
 
@@ -596,11 +643,11 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
     }), { _header: true, rowspan: 2 }),
     Object.assign(makeCell('PROGRAM LEARNING OUTCOMES (PLOs)', {
       bold: true, bg: HEADER_BG, align: 'center',
-      width: CHECK_W, height: HEADER0_H, fontSize: 12, verticalAlign: 'middle',
+      width: checkWidths[0] ?? DEFAULT_CHECK_W, height: HEADER0_H, fontSize: 12, verticalAlign: 'middle',
     }), { _header: true, colspan: numPLOs }),
     // Empty placeholders for cells visually covered by the colspan above
-    ...Array.from({ length: numPLOs - 1 }, () =>
-      Object.assign(makeCell('', { bg: HEADER_BG, width: CHECK_W, height: HEADER0_H }), { _header: true })
+    ...Array.from({ length: numPLOs - 1 }, (_, pi) =>
+      Object.assign(makeCell('', { bg: HEADER_BG, width: checkWidths[pi + 1] ?? DEFAULT_CHECK_W, height: HEADER0_H }), { _header: true })
     ),
   ]);
 
@@ -611,7 +658,7 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
     ...sortedPLOs.map((plo, pi) =>
       Object.assign(makeCell(String(plo.number ?? pi + 1), {
         bold: true, bg: HEADER_BG, align: 'center',
-        width: CHECK_W, height: HEADER1_H, fontSize: 12, verticalAlign: 'middle',
+        width: checkWidths[pi] ?? DEFAULT_CHECK_W, height: HEADER1_H, fontSize: 12, verticalAlign: 'middle',
       }), { _header: true })
     ),
   ]);
@@ -619,10 +666,11 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
   // ── Data rows (row 2+): CLO label | check cells ───────────────────────────
   sortedCLOs.forEach((_clo, idx) => {
     const n = idx + 1;
+    const rowH = getStoredRowHeight(idx + 2) ?? ROW_H;
     rows.push([
-      makeCell(`{{clo_${n}_label}}`, { align: 'left', bg: 'transparent', width: LABEL_W, height: ROW_H, fontSize: 12, verticalAlign: 'middle' }),
+      makeCell(`{{clo_${n}_label}}`, { align: 'left', bg: 'transparent', width: LABEL_W, height: rowH, fontSize: 12, verticalAlign: 'middle' }),
       ...sortedPLOs.map((_plo, pi) =>
-        makeCell(`{{clo_${n}_plo_${pi + 1}}}`, { align: 'center', bg: 'transparent', width: CHECK_W, height: ROW_H, verticalAlign: 'middle' })
+        makeCell(`{{clo_${n}_plo_${pi + 1}}}`, { align: 'center', bg: 'transparent', width: checkWidths[pi] ?? DEFAULT_CHECK_W, height: rowH, verticalAlign: 'middle' })
       ),
     ]);
   });
