@@ -528,7 +528,6 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
   const TOTAL_CHECK_W  = 260; // fixed total width of the check-cell area (matches 4 PLOs × 65 px)
   const ROW_H          = 60;
   const HEADER2_H      = 40;
-  const HEADER_BG      = '#F2DCDB'; // light salmon – matches the existing template colour
 
   const sortedCLOs = [...clos].sort((a, b) => (a.number || 0) - (b.number || 0));
   const sortedPLOs = [...plos].sort((a, b) => (a.number || 0) - (b.number || 0));
@@ -542,12 +541,12 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
   // ── Row 0: PLO numbers header ─────────────────────────────────────────────
   rows.push([
     Object.assign(makeCell('', {
-      bg: HEADER_BG, align: 'left',
+      bg: 'transparent', align: 'left',
       width: LABEL_W, height: HEADER2_H,
     }), { _header: true }),
     ...sortedPLOs.map((plo, pi) =>
       Object.assign(makeCell(String(plo.number ?? pi + 1), {
-        bold: true, bg: HEADER_BG, align: 'center',
+        bold: true, bg: 'transparent', align: 'center',
         width: CHECK_W, height: HEADER2_H, fontSize: 11,
       }), { _header: true })
     ),
