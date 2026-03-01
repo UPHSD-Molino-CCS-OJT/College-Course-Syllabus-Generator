@@ -7,7 +7,13 @@ import ImageStylePanel from './ImageStylePanel';
 import LineStylePanel from './LineStylePanel';
 import RelationshipMatrixPicker from './RelationshipMatrixPicker';
 import { useAutoSave, AutoSaveIndicator } from '../utils/useAutoSave.jsx';
-import { templateAPI } from '../services/api';
+import { templateAPI, graduateAttributeAPI, missionKeywordAPI, peoAPI, ploAPI, cloAPI } from '../services/api';
+import {
+  buildGAMissionKeywordMatrix,
+  buildPEOGAMatrix,
+  buildPLOPEOMatrix,
+  buildCLOPLOMatrix,
+} from '../utils/templateRenderer';
 import PageSettings from './canvas-toolbar/PageSettings';
 import ZoneHeightControls from './canvas-toolbar/ZoneHeightControls';
 import ViewControls from './canvas-toolbar/ViewControls';
@@ -50,6 +56,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   const [gridSize, setGridSize] = useState(20); // Grid spacing in pixels
   const [clipboard, setClipboard] = useState(null); // Stores copied element with zone info
   const [showMatrixPicker, setShowMatrixPicker] = useState(false); // Relationship matrix modal
+  const [auxData, setAuxData] = useState({ gas: [], mks: [], peos: [], plos: [], clos: [], loaded: false });
   
   // History management for undo/redo
   const [history, setHistory] = useState([]);
@@ -81,6 +88,84 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   });
 
   const canvasRef = useRef(null);
+
+  // ── Fetch auxiliary data for matrix tables ─────────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      graduateAttributeAPI.getAll({ limit: 200 }),
+      missionKeywordAPI.getAll({ limit: 100 }),
+      peoAPI.getAll({ limit: 200 }),
+      ploAPI.getAll({ limit: 200 }),
+      cloAPI.getAll({ limit: 200 }),
+    ]).then(([gaRes, mkRes, peoRes, ploRes, cloRes]) => {
+      if (cancelled) return;
+      setAuxData({
+        gas:  gaRes.data?.graduateAttributes || [],
+        mks:  mkRes.data?.missionKeywords    || [],
+        peos: peoRes.data?.peos              || [],
+        plos: ploRes.data?.plos              || [],
+        clos: cloRes.data?.clos              || [],
+        loaded: true,
+      });
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  // ── Auto-rebuild stale matrix tables whenever aux data loads / changes ─────
+  useEffect(() => {
+    if (!auxData.loaded) return;
+    const { gas, mks, peos, plos, clos } = auxData;
+
+    const rebuildIfNeeded = (el) => {
+      if (el.type !== 'table' || !el.matrixType) return el;
+      const pos = { x: el.x, y: el.y };
+      let rebuilt = null;
+      if (el.matrixType === 'ga-mk' && gas.length && mks.length) {
+        rebuilt = buildGAMissionKeywordMatrix(gas, mks, pos);
+      } else if (el.matrixType === 'peo-ga' && peos.length && gas.length) {
+        rebuilt = buildPEOGAMatrix(peos, gas, pos);
+      } else if (el.matrixType === 'plo-peo' && plos.length && peos.length) {
+        rebuilt = buildPLOPEOMatrix(plos, peos, pos);
+      } else if (el.matrixType === 'clo-plo' && clos.length && plos.length) {
+        rebuilt = buildCLOPLOMatrix(clos, plos, pos);
+      }
+      // Only replace when the structure actually differs
+      if (!rebuilt || (rebuilt.rows === el.rows && rebuilt.cols === el.cols)) return el;
+      return {
+        ...rebuilt,
+        id: el.id,
+        borderColor: el.borderColor,
+        borderWidth: el.borderWidth,
+        borderStyle: el.borderStyle,
+        matrixType: el.matrixType,
+      };
+    };
+
+    // Use functional update so we always operate on the latest canvasDocument
+    // without needing it in the dependency array (avoids infinite loop).
+    isUndoRedoRef.current = true; // suppress history for auto-rebuild
+    setCanvasDocument(prev => {
+      let changed = false;
+      const rebuildList = (elements) =>
+        (elements || []).map(el => {
+          const r = rebuildIfNeeded(el);
+          if (r !== el) changed = true;
+          return r;
+        });
+      const newHeader = { ...prev.header, elements: rebuildList(prev.header?.elements) };
+      const newFooter = { ...prev.footer, elements: rebuildList(prev.footer?.elements) };
+      const newPages  = (prev.pages || []).map(p => ({ ...p, elements: rebuildList(p.elements) }));
+      if (!changed) return prev; // nothing to do — bail out without re-render
+      return { ...prev, header: newHeader, footer: newFooter, pages: newPages };
+    });
+    // Also refresh selectedElement if it is a matrix table that was rebuilt
+    setSelectedElement(prev => {
+      if (!prev?.matrixType) return prev;
+      return rebuildIfNeeded(prev);
+    });
+    setTimeout(() => { isUndoRedoRef.current = false; }, 0);
+  }, [auxData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Save current state to history
   const saveToHistory = useCallback((newDocument) => {
