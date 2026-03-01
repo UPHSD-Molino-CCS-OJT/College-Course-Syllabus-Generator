@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
-import { missionKeywordAPI, graduateAttributeAPI, peoAPI, ploAPI, cloAPI } from '../services/api';
+import { missionKeywordAPI, graduateAttributeAPI, peoAPI, ploAPI, cloAPI, lloAPI } from '../services/api';
 import {
   buildGAMissionKeywordMatrix,
   buildPEOGAMatrix,
   buildPLOPEOMatrix,
   buildCLOPLOMatrix,
+  buildLLOCLOMatrix,
   pasteAtAnchor,
 } from '../utils/templateRenderer';
 
@@ -37,6 +38,13 @@ const MATRICES = [
     icon: '📝',
     color: 'orange',
   },
+  {
+    id: 'llo-clo',
+    label: 'LLOs × Course Learning Outcomes',
+    description: 'Lesson Learning Outcomes mapped against the Course Learning Outcomes, grouped by period and week.',
+    icon: '📖',
+    color: 'teal',
+  },
 ];
 
 const COLOR_MAP = {
@@ -44,6 +52,7 @@ const COLOR_MAP = {
   green:  { card: 'border-green-500 bg-green-900/20 hover:bg-green-900/40', badge: 'bg-green-600' },
   purple: { card: 'border-purple-500 bg-purple-900/20 hover:bg-purple-900/40', badge: 'bg-purple-600' },
   orange: { card: 'border-orange-500 bg-orange-900/20 hover:bg-orange-900/40', badge: 'bg-orange-600' },
+  teal:   { card: 'border-teal-500 bg-teal-900/20 hover:bg-teal-900/40',     badge: 'bg-teal-600' },
 };
 
 /** Collect every table element from a canvasDocument with zone/page metadata */
@@ -134,6 +143,17 @@ async function fetchMatrixElement(matrixId) {
     const plos = ploRes.data?.plos || [];
     if (!clos.length || !plos.length) throw new Error('No CLOs or PLOs found.');
     return buildCLOPLOMatrix(clos, plos);
+  }
+  if (matrixId === 'llo-clo') {
+    const [lloRes, cloRes] = await Promise.all([
+      lloAPI.getAll({ limit: 500 }),
+      cloAPI.getAll({ limit: 100 }),
+    ]);
+    const llos = lloRes.data?.llos || [];
+    const clos = cloRes.data?.clos || [];
+    if (!llos.length) throw new Error('No Lesson Learning Outcomes found. Add LLOs first.');
+    if (!clos.length) throw new Error('No Course Learning Outcomes found. Add CLOs first.');
+    return buildLLOCLOMatrix(llos, clos);
   }
   throw new Error('Unknown matrix type.');
 }
