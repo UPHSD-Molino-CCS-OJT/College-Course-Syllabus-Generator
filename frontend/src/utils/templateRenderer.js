@@ -100,17 +100,23 @@ export function replacePlaceholders(text, syllabus, auxData = {}) {
       return linked.includes(code) ? CHECK : '';
     });
 
-    // peo_N_label
+    // Sort each collection by .number so positional index N always refers to the same item
+    // regardless of DB insertion order — this keeps builders and resolvers in sync.
+    const sortedPEOs = [...peos].sort((a, b) => (a.number || 0) - (b.number || 0));
+    const sortedPLOs = [...plos].sort((a, b) => (a.number || 0) - (b.number || 0));
+    const sortedCLOs = [...clos].sort((a, b) => (a.number || 0) - (b.number || 0));
+
+    // peo_N_label  — N is 1-based position in number-sorted PEO list
     result = result.replace(/\{\{peo_(\d+)_label\}\}/g, (_, n) => {
-      const peo = peos.find(p => p.number === Number(n));
+      const peo = sortedPEOs[Number(n) - 1];
       if (!peo) return '';
-      return `${peo.title}${peo.description ? ' ' + peo.description : ''}`;
+      return `${n}. ${peo.title}${peo.description ? ' ' + peo.description : ''}`;
     });
 
-    // peo_N_ga_M  (e.g. {{peo_2_ga_5}})
+    // peo_N_ga_M  — N = PEO position, M = GA position in category-sorted GA list
     result = result.replace(/\{\{peo_(\d+)_ga_(\d+)\}\}/g, (_, pn, gn) => {
-      const peo = peos.find(p => p.number === Number(pn));
-      const ga  = gas.find(g => g.number === Number(gn));
+      const peo = sortedPEOs[Number(pn) - 1];
+      const ga  = sortedGAs[Number(gn) - 1];
       if (!peo || !ga) return '';
       const linked = (peo.graduateAttributes || []).map(g =>
         typeof g === 'object' ? String(g._id) : String(g)
@@ -118,17 +124,17 @@ export function replacePlaceholders(text, syllabus, auxData = {}) {
       return linked.includes(String(ga._id)) ? CHECK : '';
     });
 
-    // plo_N_label
+    // plo_N_label  — N is 1-based position in number-sorted PLO list
     result = result.replace(/\{\{plo_(\d+)_label\}\}/g, (_, n) => {
-      const plo = plos.find(p => p.number === Number(n));
+      const plo = sortedPLOs[Number(n) - 1];
       if (!plo) return '';
-      return `${plo.title}${plo.description ? ' ' + plo.description : ''}`;
+      return `${n}. ${plo.title}${plo.description ? ' ' + plo.description : ''}`;
     });
 
-    // plo_N_peo_M  (e.g. {{plo_3_peo_1}})
+    // plo_N_peo_M  — N = PLO position, M = PEO position
     result = result.replace(/\{\{plo_(\d+)_peo_(\d+)\}\}/g, (_, plon, peon) => {
-      const plo = plos.find(p => p.number === Number(plon));
-      const peo = peos.find(p => p.number === Number(peon));
+      const plo = sortedPLOs[Number(plon) - 1];
+      const peo = sortedPEOs[Number(peon) - 1];
       if (!plo || !peo) return '';
       const linked = (plo.programEducationalObjectives || []).map(p =>
         typeof p === 'object' ? String(p._id) : String(p)
@@ -136,17 +142,17 @@ export function replacePlaceholders(text, syllabus, auxData = {}) {
       return linked.includes(String(peo._id)) ? CHECK : '';
     });
 
-    // clo_N_label
+    // clo_N_label  — N is 1-based position in number-sorted CLO list
     result = result.replace(/\{\{clo_(\d+)_label\}\}/g, (_, n) => {
-      const clo = clos.find(c => c.number === Number(n));
+      const clo = sortedCLOs[Number(n) - 1];
       if (!clo) return '';
-      return `${clo.title}${clo.description ? ' ' + clo.description : ''}`;
+      return `${n}. ${clo.title}${clo.description ? ' ' + clo.description : ''}`;
     });
 
-    // clo_N_plo_M  (e.g. {{clo_2_plo_4}})
+    // clo_N_plo_M  — N = CLO position, M = PLO position
     result = result.replace(/\{\{clo_(\d+)_plo_(\d+)\}\}/g, (_, clon, plon) => {
-      const clo = clos.find(c => c.number === Number(clon));
-      const plo = plos.find(p => p.number === Number(plon));
+      const clo = sortedCLOs[Number(clon) - 1];
+      const plo = sortedPLOs[Number(plon) - 1];
       if (!clo || !plo) return '';
       const linked = (clo.programLearningOutcomes || []).map(p =>
         typeof p === 'object' ? String(p._id) : String(p)
@@ -168,13 +174,43 @@ export function replacePlaceholders(text, syllabus, auxData = {}) {
 export function renderElement(element, syllabus, auxData = {}) {
   if (!element) return element;
 
-  const rendered = { ...element };
+  let rendered = { ...element };
+
+  // If the element is a tagged matrix table, rebuild its rows from current auxData
+  // so adding/removing items in the DB is automatically reflected.
+  if (element.type === 'table' && element.matrixType) {
+    const { gas = [], mks = [], peos = [], plos = [], clos = [] } = auxData;
+    let rebuilt = null;
+    const pos = { x: element.x, y: element.y };
+    if (element.matrixType === 'ga-mk' && gas.length && mks.length) {
+      rebuilt = buildGAMissionKeywordMatrix(gas, mks, pos);
+    } else if (element.matrixType === 'peo-ga' && peos.length && gas.length) {
+      rebuilt = buildPEOGAMatrix(peos, gas, pos);
+    } else if (element.matrixType === 'plo-peo' && plos.length && peos.length) {
+      rebuilt = buildPLOPEOMatrix(plos, peos, pos);
+    } else if (element.matrixType === 'clo-plo' && clos.length && plos.length) {
+      rebuilt = buildCLOPLOMatrix(clos, plos, pos);
+    }
+    if (rebuilt) {
+      // Preserve user-customised styling from the stored element; only update structure
+      rendered = {
+        ...rebuilt,
+        id: element.id,
+        x: element.x,
+        y: element.y,
+        borderColor: element.borderColor ?? rebuilt.borderColor,
+        borderWidth: element.borderWidth ?? rebuilt.borderWidth,
+        borderStyle: element.borderStyle ?? rebuilt.borderStyle,
+        matrixType: element.matrixType,
+      };
+    }
+  }
 
   if (element.type === 'text') {
     rendered.content = replacePlaceholders(element.content, syllabus, auxData);
-  } else if (element.type === 'table' && element.data && Array.isArray(element.data)) {
+  } else if (element.type === 'table' && rendered.data && Array.isArray(rendered.data)) {
     // Table structure uses element.data as a 2D array
-    rendered.data = element.data.map((row) =>
+    rendered.data = rendered.data.map((row) =>
       Array.isArray(row) ? row.map((cell) => ({
         ...cell,
         content: replacePlaceholders(cell.content, syllabus, auxData),
@@ -277,10 +313,10 @@ function makeCell(content, { bold = false, bg = '#ffffff', align = 'center', wid
 }
 
 /** Build a canvas table element from a 2-D array of cell descriptors */
-function buildTableElement(rows2d, { x = 60, y = 100 } = {}) {
+function buildTableElement(rows2d, { x = 60, y = 100, matrixType = null } = {}) {
   const numRows = rows2d.length;
   const numCols = rows2d[0]?.length || 0;
-  return {
+  const el = {
     id: `table-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     type: 'table',
     x,
@@ -299,6 +335,8 @@ function buildTableElement(rows2d, { x = 60, y = 100 } = {}) {
     headerBg: '#f3f4f6',
     data: rows2d,
   };
+  if (matrixType) el.matrixType = matrixType;
+  return el;
 }
 
 const CATEG_BG   = '#f8f0d0'; // very light for category rows
@@ -358,7 +396,7 @@ export function buildGAMissionKeywordMatrix(graduateAttributes, missionKeywords,
     });
   }
 
-  return buildTableElement(rows, pos);
+  return buildTableElement(rows, { ...pos, matrixType: 'ga-mk' });
 }
 
 /**
@@ -371,16 +409,19 @@ export function buildPEOGAMatrix(peos, graduateAttributes, pos) {
   const CHECK_W  = 55;
   const ROW_H    = 60;
 
+  const sortedPEOs = [...peos].sort((a, b) => (a.number || 0) - (b.number || 0));
+  const sortedGAsForCols = sortGAs(graduateAttributes);
   const rows = [];
 
-  peos.forEach(peo => {
+  sortedPEOs.forEach((_peo, idx) => {
+    const n = idx + 1;
     rows.push([
-      makeCell(`{{peo_${peo.number}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
-      ...graduateAttributes.map(ga => makeCell(`{{peo_${peo.number}_ga_${ga.number}}}`, { align: 'center', width: CHECK_W, height: ROW_H })),
+      makeCell(`{{peo_${n}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+      ...sortedGAsForCols.map((_ga, gi) => makeCell(`{{peo_${n}_ga_${gi + 1}}}`, { align: 'center', width: CHECK_W, height: ROW_H })),
     ]);
   });
 
-  return buildTableElement(rows, pos);
+  return buildTableElement(rows, { ...pos, matrixType: 'peo-ga' });
 }
 
 /**
@@ -393,16 +434,19 @@ export function buildPLOPEOMatrix(plos, peos, pos) {
   const CHECK_W  = 65;
   const ROW_H    = 60;
 
+  const sortedPLOs = [...plos].sort((a, b) => (a.number || 0) - (b.number || 0));
+  const sortedPEOs = [...peos].sort((a, b) => (a.number || 0) - (b.number || 0));
   const rows = [];
 
-  plos.forEach(plo => {
+  sortedPLOs.forEach((_plo, idx) => {
+    const n = idx + 1;
     rows.push([
-      makeCell(`{{plo_${plo.number}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
-      ...peos.map(peo => makeCell(`{{plo_${plo.number}_peo_${peo.number}}}`, { align: 'center', width: CHECK_W, height: ROW_H })),
+      makeCell(`{{plo_${n}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+      ...sortedPEOs.map((_peo, pi) => makeCell(`{{plo_${n}_peo_${pi + 1}}}`, { align: 'center', width: CHECK_W, height: ROW_H })),
     ]);
   });
 
-  return buildTableElement(rows, pos);
+  return buildTableElement(rows, { ...pos, matrixType: 'plo-peo' });
 }
 
 /**
@@ -415,16 +459,19 @@ export function buildCLOPLOMatrix(clos, plos, pos) {
   const CHECK_W  = 65;
   const ROW_H    = 60;
 
+  const sortedCLOs = [...clos].sort((a, b) => (a.number || 0) - (b.number || 0));
+  const sortedPLOs = [...plos].sort((a, b) => (a.number || 0) - (b.number || 0));
   const rows = [];
 
-  clos.forEach(clo => {
+  sortedCLOs.forEach((_clo, idx) => {
+    const n = idx + 1;
     rows.push([
-      makeCell(`{{clo_${clo.number}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
-      ...plos.map(plo => makeCell(`{{clo_${clo.number}_plo_${plo.number}}}`, { align: 'center', width: CHECK_W, height: ROW_H })),
+      makeCell(`{{clo_${n}_label}}`, { align: 'left', width: LABEL_W, height: ROW_H, fontSize: 10 }),
+      ...sortedPLOs.map((_plo, pi) => makeCell(`{{clo_${n}_plo_${pi + 1}}}`, { align: 'center', width: CHECK_W, height: ROW_H })),
     ]);
   });
 
-  return buildTableElement(rows, pos);
+  return buildTableElement(rows, { ...pos, matrixType: 'clo-plo' });
 }
 
 // ─── End Relationship Matrix Builders ─────────────────────────────────────────
