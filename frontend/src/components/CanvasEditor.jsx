@@ -370,15 +370,65 @@ export default function CanvasEditor({ template, onClose, onSave }) {
     isUndoRedoRef.current = true; // suppress history for matrix rebuild
     setCanvasDocument(prev => {
       let changed = false;
-      const rebuildList = (elements) =>
-        (elements || []).map(el => {
-          const r = rebuildIfNeeded(el);
-          if (r !== el) changed = true;
-          return r;
+
+      // ── Merge paginated matrix fragments before rebuilding ─────────────────
+      // When a matrix table has been split across pages by the auto-paginator,
+      // each fragment retains `matrixType` (via the spread).  Rebuilding each
+      // fragment in isolation is wrong: the first fragment only has the top N
+      // rows as `existingData` (losing user styles stored in the continuation
+      // rows), and every continuation fragment would independently produce a
+      // full rebuilt table — creating duplicate content.
+      //
+      // Fix: collect all fragments for each paginationGroupId, merge their rows
+      // back into the first fragment (identical to what dePaginate() does), then
+      // rebuild from the complete data.  Continuation fragments are dropped here;
+      // the auto-pagination effect will re-split the rebuilt table automatically.
+      const fragmentGroups = new Map(); // groupId → [{ pi, ei, el }]
+      (prev.pages || []).forEach((page, pi) => {
+        (page.elements || []).forEach((el, ei) => {
+          const gid = el.paginationGroupId;
+          if (!gid || el.type !== 'table' || !el.matrixType) return;
+          if (!fragmentGroups.has(gid)) fragmentGroups.set(gid, []);
+          fragmentGroups.get(gid).push({ pi, ei, el });
         });
-      const newHeader = { ...prev.header, elements: rebuildList(prev.header?.elements) };
-      const newFooter = { ...prev.footer, elements: rebuildList(prev.footer?.elements) };
-      const newPages  = (prev.pages || []).map(p => ({ ...p, elements: rebuildList(p.elements) }));
+      });
+
+      // pi-ei string → merged element that replaces the first fragment
+      const mergedByKey  = new Map();
+      // pi-ei strings to drop entirely (continuation fragments)
+      const dropKeys     = new Set();
+
+      for (const frags of fragmentGroups.values()) {
+        if (frags.length <= 1) continue; // nothing to merge
+        frags.sort((a, b) => (a.el.continuationIndex ?? 0) - (b.el.continuationIndex ?? 0));
+        const first      = frags[0];
+        const mergedData = frags.flatMap(f => f.el.data ?? []);
+        mergedByKey.set(`${first.pi}-${first.ei}`, {
+          ...first.el,
+          data:              mergedData,
+          rows:              mergedData.length,
+          id:                first.el.paginationGroupId, // restore canonical id
+          paginationGroupId: undefined,
+          continuationIndex: undefined,
+          _colWidths:        undefined,
+        });
+        frags.slice(1).forEach(({ pi, ei }) => dropKeys.add(`${pi}-${ei}`));
+      }
+
+      const rebuildList = (elements, pi) =>
+        (elements || []).map((el, ei) => {
+          const key = `${pi}-${ei}`;
+          if (dropKeys.has(key)) { changed = true; return null; }
+          // Use the merged (full-data) element when this fragment was split
+          const effective = mergedByKey.get(key) ?? el;
+          const r = rebuildIfNeeded(effective);
+          if (r !== effective || effective !== el) changed = true;
+          return r;
+        }).filter(Boolean);
+
+      const newHeader = { ...prev.header, elements: rebuildList(prev.header?.elements ?? [], -1) };
+      const newFooter = { ...prev.footer, elements: rebuildList(prev.footer?.elements ?? [], -2) };
+      const newPages  = (prev.pages || []).map((p, pi) => ({ ...p, elements: rebuildList(p.elements, pi) }));
       if (!changed) return prev; // nothing to do — bail out without re-render
       return { ...prev, header: newHeader, footer: newFooter, pages: newPages };
     });
