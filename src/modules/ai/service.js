@@ -1,4 +1,4 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { GoogleGenAI } = require("@google/genai");
 const PLO = require("../plos/model");
 const CLO = require("../clos/model");
 const LLO = require("../llos/model");
@@ -112,9 +112,16 @@ Rules for LLOs:
 - Return ONLY the raw JSON object`;
 };
 
-const callGemini = async (model, prompt) => {
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
+const callGemini = async (ai, prompt) => {
+  const response = await ai.models.generateContent({
+    model: GEMINI_MODEL,
+    contents: prompt,
+    config: {
+      temperature: 0.7,
+      maxOutputTokens: 8192,
+    },
+  });
+  const text = response.text;
   try {
     return JSON.parse(text);
   } catch {
@@ -130,15 +137,7 @@ const generateSyllabusContent = async ({ courseTitle, courseCode, department, cr
     throw new Error("GEMINI_API_KEY environment variable is not set.");
   }
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: GEMINI_MODEL,
-    generationConfig: {
-      responseMimeType: "application/json",
-      temperature: 0.7,
-      maxOutputTokens: 8192,
-    },
-  });
+  const ai = new GoogleGenAI({ apiKey });
 
   // Fetch existing PLOs from DB to use as mapping context
   const existingPLOs = await PLO.find({ isActive: true })
@@ -148,8 +147,8 @@ const generateSyllabusContent = async ({ courseTitle, courseCode, department, cr
 
   // Run two AI calls in parallel: syllabus fields + outcomes generation
   const [syllabusFields, outcomesData] = await Promise.all([
-    callGemini(model, buildSyllabusPrompt({ courseTitle, courseCode, department, credits })),
-    callGemini(model, buildOutcomesPrompt({ courseTitle, courseCode, department, credits, plos: existingPLOs })),
+    callGemini(ai, buildSyllabusPrompt({ courseTitle, courseCode, department, credits })),
+    callGemini(ai, buildOutcomesPrompt({ courseTitle, courseCode, department, credits, plos: existingPLOs })),
   ]);
 
   // Build a PLO number → ObjectId map
