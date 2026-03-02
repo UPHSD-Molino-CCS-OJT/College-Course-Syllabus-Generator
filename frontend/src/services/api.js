@@ -260,12 +260,13 @@ export const cloAPI = {
 
 // AI Generation API
 export const aiAPI = {
-  generateSyllabus: async ({ courseTitle, courseCode, department, credits }) => {
+  generateSyllabus: async ({ courseTitle, courseCode, department, credits, existingCLOIds = [] }) => {
     const response = await api.post('/ai/generate-syllabus', {
       courseTitle,
       courseCode,
       department,
       credits,
+      existingCLOIds,
     });
     return response.data;
   },

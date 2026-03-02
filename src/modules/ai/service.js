@@ -145,7 +145,7 @@ const callGemini = async (ai, prompt) => {
   }
 };
 
-const generateSyllabusContent = async ({ courseTitle, courseCode, department, credits }) => {
+const generateSyllabusContent = async ({ courseTitle, courseCode, department, credits, existingCLOIds = [] }) => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY environment variable is not set.");
@@ -164,6 +164,12 @@ const generateSyllabusContent = async ({ courseTitle, courseCode, department, cr
     callGemini(ai, buildSyllabusPrompt({ courseTitle, courseCode, department, credits })),
     callGemini(ai, buildOutcomesPrompt({ courseTitle, courseCode, department, credits, plos: existingPLOs })),
   ]);
+
+  // Delete previously generated CLOs (and their LLOs) linked to this syllabus
+  if (existingCLOIds.length > 0) {
+    await LLO.deleteMany({ courseLearningOutcomes: { $in: existingCLOIds } });
+    await CLO.deleteMany({ _id: { $in: existingCLOIds } });
+  }
 
   // Build a PLO number → ObjectId map
   const ploIdByNumber = {};

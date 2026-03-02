@@ -484,6 +484,7 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
         courseCode: formData.courseCode,
         department: formData.department,
         credits: formData.credits,
+        existingCLOIds: formData.courseLearningOutcomes || [],
       });
       const generated = response.data.generated;
       const createdCLOIds = generated.createdCLOIds || [];
@@ -510,11 +511,8 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
         lateSubmissionPolicy: generated.lateSubmissionPolicy || prev.lateSubmissionPolicy,
         academicIntegrity: generated.academicIntegrity || prev.academicIntegrity,
         disabilities: generated.disabilities || prev.disabilities,
-        // Link the newly created CLOs to this syllabus
-        courseLearningOutcomes:
-          createdCLOIds.length > 0
-            ? [...new Set([...prev.courseLearningOutcomes, ...createdCLOIds])]
-            : prev.courseLearningOutcomes,
+        // Replace all linked CLOs with the freshly generated ones
+        courseLearningOutcomes: createdCLOIds,
       }));
 
       // Refresh CLO and LLO lists so the new records appear in the UI
@@ -523,7 +521,7 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
       const parts = [];
       if (generated.cloCount > 0) parts.push(`${generated.cloCount} CLO${generated.cloCount !== 1 ? 's' : ''}`);
       if (generated.lloCount > 0) parts.push(`${generated.lloCount} LLO${generated.lloCount !== 1 ? 's' : ''}`);
-      const outcomesSummary = parts.length > 0 ? ` Created and linked ${parts.join(' and ')}.` : '';
+      const outcomesSummary = parts.length > 0 ? ` ${formData.courseLearningOutcomes?.length > 0 ? 'Regenerated' : 'Created'} and linked ${parts.join(' and ')}.` : '';
       setAiSuccess(`Syllabus content generated successfully.${outcomesSummary}`);
     } catch (err) {
       setAiError(err.response?.data?.message || err.message || 'AI generation failed.');

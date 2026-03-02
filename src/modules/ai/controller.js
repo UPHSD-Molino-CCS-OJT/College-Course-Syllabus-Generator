@@ -2,7 +2,7 @@ const aiService = require("./service");
 
 const generateSyllabus = async (req, res) => {
   try {
-    const { courseTitle, courseCode, department, credits } = req.body;
+    const { courseTitle, courseCode, department, credits, existingCLOIds } = req.body;
 
     if (!courseTitle) {
       return res.status(400).json({ status: "error", message: "courseTitle is required" });
@@ -13,6 +13,7 @@ const generateSyllabus = async (req, res) => {
       courseCode,
       department,
       credits,
+      existingCLOIds: existingCLOIds || [],
     });
 
     res.status(200).json({ status: "success", data: { generated } });
