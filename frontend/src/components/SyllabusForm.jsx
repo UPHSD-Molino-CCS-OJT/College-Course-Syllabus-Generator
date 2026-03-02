@@ -61,6 +61,7 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
   // AI generation
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState('');
+  const [aiSuccess, setAiSuccess] = useState('');
 
   // Graduate Attributes management
   const [gaList, setGaList] = useState([]);
@@ -476,6 +477,7 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
     }
     setAiLoading(true);
     setAiError('');
+    setAiSuccess('');
     try {
       const response = await aiAPI.generateSyllabus({
         courseTitle: formData.courseTitle,
@@ -484,6 +486,8 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
         credits: formData.credits,
       });
       const generated = response.data.generated;
+      const createdCLOIds = generated.createdCLOIds || [];
+
       setFormData((prev) => ({
         ...prev,
         description: generated.description || prev.description,
@@ -506,7 +510,21 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
         lateSubmissionPolicy: generated.lateSubmissionPolicy || prev.lateSubmissionPolicy,
         academicIntegrity: generated.academicIntegrity || prev.academicIntegrity,
         disabilities: generated.disabilities || prev.disabilities,
+        // Link the newly created CLOs to this syllabus
+        courseLearningOutcomes:
+          createdCLOIds.length > 0
+            ? [...new Set([...prev.courseLearningOutcomes, ...createdCLOIds])]
+            : prev.courseLearningOutcomes,
       }));
+
+      // Refresh CLO and LLO lists so the new records appear in the UI
+      await Promise.all([fetchCLOs(), fetchLLOList()]);
+
+      const parts = [];
+      if (generated.cloCount > 0) parts.push(`${generated.cloCount} CLO${generated.cloCount !== 1 ? 's' : ''}`);
+      if (generated.lloCount > 0) parts.push(`${generated.lloCount} LLO${generated.lloCount !== 1 ? 's' : ''}`);
+      const outcomesSummary = parts.length > 0 ? ` Created and linked ${parts.join(' and ')}.` : '';
+      setAiSuccess(`Syllabus content generated successfully.${outcomesSummary}`);
     } catch (err) {
       setAiError(err.response?.data?.message || err.message || 'AI generation failed.');
     } finally {
@@ -708,7 +726,7 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
                     ✨ Generate Syllabus Content with Gemma 3 27B
                   </p>
                   <p className="text-xs text-purple-600 mt-0.5">
-                    Uses Google Gemini AI (gemma-3-27b-it) to auto-fill description, outcomes, schedule, policies, and grading.
+                    Uses Google Gemini AI to auto-fill description, schedule, grading, policies, and creates mapped CLOs &amp; LLOs aligned to existing PLOs.
                   </p>
                 </div>
                 <button
@@ -733,6 +751,11 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
               {aiError && (
                 <p className="mt-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
                   {aiError}
+                </p>
+              )}
+              {aiSuccess && (
+                <p className="mt-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
+                  ✓ {aiSuccess}
                 </p>
               )}
             </div>
