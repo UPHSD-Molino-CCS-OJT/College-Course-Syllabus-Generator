@@ -417,6 +417,14 @@ export default function CanvasEditor({ template, onClose, onSave }) {
     return () => clearTimeout(autoPaginateTimerRef.current);
   }, [canvasDocument, pageSize, orientation]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Clamp currentPageIndex when overflow pages are removed ──────────────────
+  useEffect(() => {
+    const pageCount = canvasDocument.pages?.length ?? 1;
+    if (currentPageIndex >= pageCount) {
+      setCurrentPageIndex(Math.max(0, pageCount - 1));
+    }
+  }, [canvasDocument.pages?.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Save current state to history
   const saveToHistory = useCallback((newDocument) => {
     if (isUndoRedoRef.current || isDraggingRef.current) return; // Don't save during undo/redo or dragging
