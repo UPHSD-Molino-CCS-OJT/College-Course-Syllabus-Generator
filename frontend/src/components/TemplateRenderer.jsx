@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { renderCanvasDocument } from '../utils/templateRenderer';
+import { paginateDocument } from '../utils/paginateDocument';
 import { graduateAttributeAPI, missionKeywordAPI, peoAPI, ploAPI, cloAPI, lloAPI } from '../services/api';
 
 // Page size configurations (in pixels, 96 DPI)
@@ -76,11 +77,16 @@ export default function TemplateRenderer({ template, syllabus }) {
     return () => { cancelled = true; };
   }, []);
 
-  // Render template with actual syllabus data - automatically updates when syllabus or auxData changes
+  // Render template with actual syllabus data - automatically updates when syllabus or auxData changes.
+  // After placeholder substitution the tables may be much taller than in the editor, so we run
+  // paginateDocument to split any overflowing tables across pages before rendering.
   const renderedDocument = useMemo(() => {
     if (!template?.canvasDocument) return null;
-    return renderCanvasDocument(template.canvasDocument, syllabus, auxData);
-  }, [template?.canvasDocument, syllabus, auxData]);
+    const ps   = PAGE_SIZES[template.pageSize] || PAGE_SIZES.longBond;
+    const dims = ps[template.orientation] || ps.landscape;
+    const rendered = renderCanvasDocument(template.canvasDocument, syllabus, auxData);
+    return paginateDocument(rendered, dims);
+  }, [template?.canvasDocument, template?.pageSize, template?.orientation, syllabus, auxData]);
 
   if (!template || !template.canvasDocument) {
     return null;

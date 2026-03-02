@@ -352,6 +352,7 @@ export default function CanvasPage({
         style={{
           top: document.header.height,
           bottom: document.footer.height,
+          overflow: 'hidden', // clip elements that exceed the content zone
           pointerEvents: 'none' // Let clicks pass through to elements
         }}
       >
