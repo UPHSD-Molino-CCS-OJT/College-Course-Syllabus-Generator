@@ -84,8 +84,8 @@ Generate a JSON object with exactly these two fields:
   ],
   "llos": [
     {
-      "text": "LLO outcome statement starting with an action verb",
-      "domain": "K",
+      "text": "LLO outcome statement",
+      "domain": "A",
       "period": "PRELIM",
       "weekLabel": "FIRST WEEK",
       "periodOrder": 1,
@@ -102,14 +102,28 @@ Rules for CLOs:
 - CLO descriptions must use measurable Bloom's taxonomy verbs (define, explain, analyze, evaluate, design, demonstrate, etc.)
 
 Rules for LLOs:
-- Generate exactly 16 LLOs distributed across 3 periods: PRELIM (weeks 1-5, periodOrder=1), MIDTERM (weeks 6-10, periodOrder=2), FINAL (weeks 11-16, periodOrder=3)
-- Each LLO must map to at least one CLO using its number
-- domain must be one of: "K" (Knowledge/Cognitive), "S" (Skills/Psychomotor), "A" (Attitude/Affective)
-- weekLabel examples: "FIRST WEEK", "SECOND WEEK", "THIRD WEEK – FOURTH WEEK"
-- weekOrder is the sequential week number within the period (1-based)
-- order is the LLO order within that week (1-based)
-- Vary domains across K, S, and A throughout the semester
-- Return ONLY the raw JSON object`;
+CRITICAL: For every week or week-range, you MUST generate EXACTLY 3 LLOs in this fixed order:
+  1. domain "A" (Attitude/Affective), order=1
+  2. domain "S" (Skills/Psychomotor), order=2
+  3. domain "K" (Knowledge/Cognitive), order=3
+
+Text format per domain — follow these templates precisely:
+  A: "Learners will develop an appreciation for [topic], valuing [why it matters in the course context]."
+  S: "Learners will be able to apply [skill] by [specific observable action relevant to the topic]."
+  K: "Learners will be able to [explain/describe/analyze/identify] [concept], [and describe/compare/demonstrate a related concept]."
+
+Week grouping structure — 3 periods, group weeks as follows:
+  PRELIM   (periodOrder=1): FIRST WEEK, SECOND WEEK, THIRD WEEK, FOURTH – FIFTH WEEK  → 4 groups × 3 LLOs = 12 LLOs
+  MIDTERM  (periodOrder=2): SIXTH WEEK, SEVENTH WEEK, EIGHTH WEEK, NINTH – TENTH WEEK → 4 groups × 3 LLOs = 12 LLOs
+  FINAL    (periodOrder=3): ELEVENTH WEEK, TWELFTH WEEK, THIRTEENTH WEEK, FOURTEENTH WEEK, FIFTEENTH – SIXTEENTH WEEK → 5 groups × 3 LLOs = 15 LLOs
+
+Total: exactly 39 LLOs.
+
+weekOrder is the group's sequential position within its period (1, 2, 3, … etc.)
+periodOrder values: PRELIM=1, MIDTERM=2, FINAL=3
+Each LLO must map to at least one CLO using its cloNumbers
+All LLO text must be specific to the course subject matter — no generic statements.
+Return ONLY the raw JSON object`;
 };
 
 const callGemini = async (ai, prompt) => {
