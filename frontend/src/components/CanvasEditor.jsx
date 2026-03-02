@@ -16,7 +16,7 @@ import {
   buildLLOCLOMatrix,
   pasteAtAnchor,
 } from '../utils/templateRenderer';
-import { paginateDocument } from '../utils/paginateDocument';
+import { paginateDocument, hasOverflowingElements } from '../utils/paginateDocument';
 import PageSettings from './canvas-toolbar/PageSettings';
 import ZoneHeightControls from './canvas-toolbar/ZoneHeightControls';
 import ViewControls from './canvas-toolbar/ViewControls';
@@ -66,6 +66,7 @@ export default function CanvasEditor({ template, onClose, onSave }) {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const isUndoRedoRef = useRef(false); // Prevent history tracking during undo/redo
   const isDraggingRef = useRef(false); // Prevent history tracking during active drag
+  const autoPaginateTimerRef = useRef(null); // Debounce handle for auto-pagination
   const maxHistorySize = 50; // Limit history to prevent memory issues
   
   // Document structure with multi-page support
@@ -394,6 +395,27 @@ export default function CanvasEditor({ template, onClose, onSave }) {
     isUndoRedoRef.current = false; // this IS a user-visible structural change — save to history
     setCanvasDocument(prev => paginateDocument(prev, PAGE_SIZES[pageSize][orientation]));
   }, [pageSize, orientation]);
+
+  // ── Auto-paginate: runs automatically whenever any element overflows ─────────
+  useEffect(() => {
+    // Skip during drag so we don't interrupt mid-move repositioning
+    if (isDraggingRef.current) return;
+
+    const currentPageSizeLocal = PAGE_SIZES[pageSize][orientation];
+    if (!hasOverflowingElements(canvasDocument, currentPageSizeLocal)) return;
+
+    clearTimeout(autoPaginateTimerRef.current);
+    autoPaginateTimerRef.current = setTimeout(() => {
+      if (isDraggingRef.current) return; // re-check after debounce
+      // Silent correction — don't add to undo history so Ctrl+Z reverts
+      // the user's underlying edit, not just the pagination step.
+      isUndoRedoRef.current = true;
+      setCanvasDocument(prev => paginateDocument(prev, PAGE_SIZES[pageSize][orientation]));
+      setTimeout(() => { isUndoRedoRef.current = false; }, 0);
+    }, 600);
+
+    return () => clearTimeout(autoPaginateTimerRef.current);
+  }, [canvasDocument, pageSize, orientation]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Save current state to history
   const saveToHistory = useCallback((newDocument) => {
