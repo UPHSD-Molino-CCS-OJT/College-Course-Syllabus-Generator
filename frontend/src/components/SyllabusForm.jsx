@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { syllabusAPI, templateAPI, cloAPI, ploAPI, peoAPI, graduateAttributeAPI, missionKeywordAPI, lloAPI } from '../services/api';
+import { syllabusAPI, templateAPI, cloAPI, ploAPI, peoAPI, graduateAttributeAPI, missionKeywordAPI, lloAPI, aiAPI } from '../services/api';
 import { useAutoSave, AutoSaveIndicator } from '../utils/useAutoSave.jsx';
 
 const INITIAL_FORM_DATA = {
@@ -57,6 +57,10 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
   const [cloLoading, setCloLoading] = useState(false);
   const [cloForm, setCloForm] = useState(null);
   const [cloSubmitting, setCloSubmitting] = useState(false);
+
+  // AI generation
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
 
   // Graduate Attributes management
   const [gaList, setGaList] = useState([]);
@@ -465,6 +469,51 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
     setFormData({ ...formData, [name]: value });
   };
 
+  const handleAIGenerate = async () => {
+    if (!formData.courseTitle.trim()) {
+      setAiError('Please enter a Course Title before generating.');
+      return;
+    }
+    setAiLoading(true);
+    setAiError('');
+    try {
+      const response = await aiAPI.generateSyllabus({
+        courseTitle: formData.courseTitle,
+        courseCode: formData.courseCode,
+        department: formData.department,
+        credits: formData.credits,
+      });
+      const generated = response.data.generated;
+      setFormData((prev) => ({
+        ...prev,
+        description: generated.description || prev.description,
+        prerequisites: generated.prerequisites || prev.prerequisites,
+        learningOutcomes:
+          generated.learningOutcomes?.length > 0
+            ? generated.learningOutcomes
+            : prev.learningOutcomes,
+        textbooks: generated.textbooks || prev.textbooks,
+        additionalMaterials: generated.additionalMaterials || prev.additionalMaterials,
+        gradingComponents:
+          generated.gradingComponents?.length > 0
+            ? generated.gradingComponents
+            : prev.gradingComponents,
+        weeklySchedule:
+          generated.weeklySchedule?.length > 0
+            ? generated.weeklySchedule
+            : prev.weeklySchedule,
+        attendancePolicy: generated.attendancePolicy || prev.attendancePolicy,
+        lateSubmissionPolicy: generated.lateSubmissionPolicy || prev.lateSubmissionPolicy,
+        academicIntegrity: generated.academicIntegrity || prev.academicIntegrity,
+        disabilities: generated.disabilities || prev.disabilities,
+      }));
+    } catch (err) {
+      setAiError(err.response?.data?.message || err.message || 'AI generation failed.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const addLearningOutcome = () => {
     setFormData({
       ...formData,
@@ -649,6 +698,43 @@ export default function SyllabusForm({ onSyllabusCreated, editSyllabus, onSyllab
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Introduction to Computer Science"
               />
+            </div>
+
+            {/* AI Generate Button */}
+            <div className="rounded-lg border border-purple-200 bg-purple-50 p-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-purple-800">
+                    ✨ Generate Syllabus Content with Gemma 3 27B
+                  </p>
+                  <p className="text-xs text-purple-600 mt-0.5">
+                    Uses Google Gemini AI (gemma-3-27b-it) to auto-fill description, outcomes, schedule, policies, and grading.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAIGenerate}
+                  disabled={aiLoading || !formData.courseTitle.trim()}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {aiLoading ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                      </svg>
+                      Generating...
+                    </>
+                  ) : (
+                    '✨ Generate with Gemma'
+                  )}
+                </button>
+              </div>
+              {aiError && (
+                <p className="mt-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+                  {aiError}
+                </p>
+              )}
             </div>
 
             <div>
