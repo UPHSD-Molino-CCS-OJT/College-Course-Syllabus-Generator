@@ -25,6 +25,39 @@ function rowHeight(row, fallbackCellHeight) {
 }
 
 /**
+ * Derive per-column pixel widths from a table element's full data.
+ * Prefers the first row where every cell has colspan === 1 (no spanning).
+ * If no such row exists, expands each spanning cell proportionally across
+ * the columns it covers so the total width is always correct.
+ */
+export function tableColWidths(el) {
+  if (!Array.isArray(el.data) || el.data.length === 0) {
+    const cols = el.cols ?? 1;
+    const cw   = el.cellWidth ?? 150;
+    return Array(cols).fill(cw);
+  }
+
+  // Best case: a row where every cell occupies exactly one column
+  for (const row of el.data) {
+    if (row.every(cell => !cell.colspan || cell.colspan === 1)) {
+      return row.map(cell => cell.width || el.cellWidth || 150);
+    }
+  }
+
+  // Fallback: expand spanning cells proportionally across their columns.
+  // Use the first row and distribute each cell's width evenly across its span.
+  const row     = el.data[0];
+  const widths  = [];
+  for (const cell of row) {
+    const span     = cell.colspan || 1;
+    const cellW    = cell.width || el.cellWidth || 150;
+    const perCol   = cellW / span;
+    for (let i = 0; i < span; i++) widths.push(perCol);
+  }
+  return widths;
+}
+
+/**
  * Estimate the rendered height of a non-table element.
  * Uses the same heuristic as CanvasPage.jsx boundary constraints.
  */
@@ -83,6 +116,7 @@ function dePaginate(pages) {
         id:                first.el.paginationGroupId,
         paginationGroupId: undefined,
         continuationIndex: undefined,
+        _colWidths:        undefined, // cleared — recomputed fresh on next pass
       });
       frags.slice(1).forEach(({ pi, ei }) => removeSet.add(`${pi}-${ei}`));
     } else {
@@ -158,6 +192,7 @@ export function paginateDocument(canvasDoc, currentPageSize) {
             const groupId = el.paginationGroupId ?? el.id;
             overflow.push({
               ...el,
+              _colWidths:        el._colWidths ?? tableColWidths(el),
               y:                 4,
               paginationGroupId: groupId,
               continuationIndex: el.continuationIndex ?? 0,
@@ -182,11 +217,15 @@ export function paginateDocument(canvasDoc, currentPageSize) {
 
         const groupId  = el.paginationGroupId ?? el.id;
         const curIndex = el.continuationIndex ?? 0;
+        // Compute canonical column widths from the FULL original table so that
+        // continuation fragments always render at the same total width.
+        const colWidths = el._colWidths ?? tableColWidths(el);
 
         if (splitRow > 0) {
           const firstRows = el.data.slice(0, splitRow);
           kept.push({
             ...el,
+            _colWidths:        colWidths,
             data:              firstRows,
             rows:              firstRows.length,
             paginationGroupId: groupId,
@@ -199,6 +238,7 @@ export function paginateDocument(canvasDoc, currentPageSize) {
         if (restRows.length > 0) {
           overflow.push({
             ...el,
+            _colWidths:        colWidths,
             id:                `${groupId}-cont-p${pageIdx + 1}`,
             data:              restRows,
             rows:              restRows.length,

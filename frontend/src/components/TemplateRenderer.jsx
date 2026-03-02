@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { renderCanvasDocument } from '../utils/templateRenderer';
-import { paginateDocument } from '../utils/paginateDocument';
+import { paginateDocument, tableColWidths } from '../utils/paginateDocument';
 import { graduateAttributeAPI, missionKeywordAPI, peoAPI, ploAPI, cloAPI, lloAPI } from '../services/api';
 
 // Page size configurations (in pixels, 96 DPI)
@@ -202,18 +202,10 @@ export default function TemplateRenderer({ template, syllabus }) {
       const bs = element.borderStyle || 'solid';
       const bc = element.borderColor || '#000000';
 
-      // Derive per-column widths from the first row that has no spanning cells
-      // (i.e. all cells have colspan === 1). For matrices the data rows satisfy this.
-      const colWidths = (() => {
-        for (const row of element.data) {
-          if (row.every(cell => !cell.colspan || cell.colspan === 1)) {
-            return row.map(cell => cell.width || element.cellWidth || 150);
-          }
-        }
-        // fallback: use last row
-        const last = element.data[element.data.length - 1];
-        return last.map(cell => cell.width || element.cellWidth || 150);
-      })();
+      // Use pre-computed column widths from paginateDocument when available
+      // (ensures continuation fragments always match the original table's total width).
+      // Fall back to the robust span-aware derivation otherwise.
+      const colWidths = element._colWidths ?? tableColWidths(element);
       const totalTableWidth = colWidths.reduce((s, w) => s + w, 0);
 
       return (
