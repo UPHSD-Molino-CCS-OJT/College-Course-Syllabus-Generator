@@ -1,8 +1,0 @@
-@import "tailwindcss";
-
-/* Suppress browser default block margins inside table cell content (display and edit modes) */
-.table-cell-content *,
-[data-cell-editor] * {
-  margin: 0;
-  padding: 0;
-}
