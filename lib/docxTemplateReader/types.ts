@@ -163,6 +163,23 @@ export interface ParagraphSpacing {
   lineRule?: "auto" | "exact" | "atLeast";
 }
 
+/**
+ * List / numbering information resolved from the document's numbering.xml.
+ * Present on paragraphs that belong to a bulleted or numbered list.
+ */
+export interface ListInfo {
+  /** Numbering definition ID from w:numId in w:numPr */
+  numId: number;
+  /** 0-based indent level from w:ilvl in w:numPr */
+  level: number;
+  /** "bullet" for unordered lists, "ordered" for numbered lists, "none" for suppressed numbering */
+  listType: "bullet" | "ordered" | "none";
+  /** Raw number format string, e.g. "bullet", "decimal", "lowerLetter", "lowerRoman" */
+  numFmt?: string;
+  /** Level text template, e.g. "\u2022", "%1." */
+  levelText?: string;
+}
+
 /** A paragraph block extracted from the document */
 export interface Paragraph {
   type: "paragraph";
@@ -181,6 +198,8 @@ export interface Paragraph {
   indentation?: ParagraphIndentation;
   /** Paragraph spacing (from w:spacing) */
   spacing?: ParagraphSpacing;
+  /** List / bullet information when this paragraph is part of a numbered or bulleted list */
+  listInfo?: ListInfo;
 }
 
 /** A single cell in a table row */
@@ -194,6 +213,18 @@ export interface TableCell {
   gridSpan?: number;
   /** Vertical merge: "restart" begins the merged group; "continue" is a spanned continuation */
   vMerge?: "restart" | "continue";
+  /**
+   * Number of rows this cell spans.
+   * Computed from vMerge markers; only present on "restart" cells that span > 1 row.
+   * Equivalent to the HTML `rowspan` attribute.
+   */
+  rowSpan?: number;
+  /**
+   * Cell background fill color as a 6-digit hex string, e.g. "FF0000" for red.
+   * Derived from the w:fill attribute of w:shd in w:tcPr.
+   * Absent when the fill is "auto" or unset.
+   */
+  backgroundColor?: string;
 }
 
 /** A row of cells in a table */

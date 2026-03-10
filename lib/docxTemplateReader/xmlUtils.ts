@@ -22,6 +22,7 @@ import type {
   DocumentSection,
   EmbeddedObject,
   Image,
+  ListInfo,
   Paragraph,
   ParagraphIndentation,
   ParagraphSpacing,
@@ -60,6 +61,26 @@ export interface ImageMapEntry {
 
 /** Maps a relationship ID (per-part) to its resolved image data. */
 export type ImageMap = Record<string, ImageMapEntry>;
+
+// ---------------------------------------------------------------------------
+// NumberingMap — resolved list/bullet metadata from word/numbering.xml
+// ---------------------------------------------------------------------------
+
+/** Resolved list format for a single (numId, ilvl) pair. */
+export interface NumberingEntry {
+  /** "bullet" for unordered lists, "ordered" for numbered lists, "none" otherwise */
+  listType: "bullet" | "ordered" | "none";
+  /** Raw OOXML number format, e.g. "bullet", "decimal", "lowerLetter" */
+  numFmt: string;
+  /** Level text template, e.g. "\u2022", "%1." — absent when not defined */
+  levelText?: string;
+}
+
+/**
+ * Lookup map keyed by `"${numId}:${ilvl}"` → resolved NumberingEntry.
+ * Built from word/numbering.xml and passed through extraction.
+ */
+export type NumberingMap = Map<string, NumberingEntry>;
 
 /** Maps common image file extensions to MIME types. */
 export const MIME_TYPES: Record<string, string> = {
@@ -502,7 +523,8 @@ function extractRun(runNode: XNode, imageMap: ImageMap = {}): TextRun {
 
 function extractParagraph(
   paraNode: XNode,
-  imageMap: ImageMap = {}
+  imageMap: ImageMap = {},
+  numberingMap: NumberingMap = new Map()
 ): Paragraph {
   const children = childrenOf(paraNode);
   const pPrNode = firstChild(children, "w:pPr");
@@ -579,6 +601,30 @@ function extractParagraph(
     }
   }
 
+  // ── List / numbering (w:numPr) ───────────────────────────────────────────
+  // w:numPr holds a reference into word/numbering.xml.
+  // w:numId identifies the list definition; w:ilvl is the 0-based indent level.
+  const numPrNode = firstChild(pPrChildren, "w:numPr");
+  let listInfo: ListInfo | undefined;
+  if (numPrNode) {
+    const npChildren  = childrenOf(numPrNode);
+    const numIdNode   = firstChild(npChildren, "w:numId");
+    const ilvlNode    = firstChild(npChildren, "w:ilvl");
+    const numId       = numIdNode ? Number(attrsOf(numIdNode)["@_w:val"] ?? 0) : 0;
+    const level       = ilvlNode  ? Number(attrsOf(ilvlNode)["@_w:val"]  ?? 0) : 0;
+    // numId=0 is a special value Word uses to suppress inherited list numbering
+    if (numId !== 0) {
+      const entry = numberingMap.get(`${numId}:${level}`);
+      listInfo = {
+        numId,
+        level,
+        listType:  entry?.listType  ?? "bullet",
+        ...(entry?.numFmt    ? { numFmt:    entry.numFmt }    : {}),
+        ...(entry?.levelText ? { levelText: entry.levelText } : {}),
+      };
+    }
+  }
+
   return {
     type: "paragraph",
     runs,
@@ -589,10 +635,57 @@ function extractParagraph(
     ...(embeddedObjects.length > 0 ? { embeddedObjects } : {}),
     ...(indentation ? { indentation } : {}),
     ...(spacing     ? { spacing }     : {}),
+    ...(listInfo    ? { listInfo }    : {}),
   };
 }
 
-function extractTable(tblNode: XNode, imageMap: ImageMap = {}): Table {
+/**
+ * Computes the `rowSpan` for cells that start a vertical merge group
+ * (vMerge === "restart"). Modifies the provided rows in place.
+ *
+ * The algorithm resolves column positions by accumulating gridSpan values
+ * so that both horizontal and vertical merges interact correctly.
+ */
+function computeRowSpans(rows: TableRow[]): void {
+  // Pre-compute the grid column start index for every cell in every row.
+  const colPositions: number[][] = rows.map((row) => {
+    const positions: number[] = [];
+    let col = 0;
+    for (const cell of row.cells) {
+      positions.push(col);
+      col += cell.gridSpan ?? 1;
+    }
+    return positions;
+  });
+
+  for (let ri = 0; ri < rows.length; ri++) {
+    for (let ci = 0; ci < rows[ri].cells.length; ci++) {
+      const cell = rows[ri].cells[ci];
+      if (cell.vMerge !== "restart") continue;
+
+      const targetCol = colPositions[ri][ci];
+      let span = 1;
+
+      for (let rj = ri + 1; rj < rows.length; rj++) {
+        const continuationIdx = colPositions[rj]?.findIndex((pos) => pos === targetCol);
+        if (
+          continuationIdx === -1 ||
+          continuationIdx === undefined ||
+          rows[rj].cells[continuationIdx]?.vMerge !== "continue"
+        ) break;
+        span++;
+      }
+
+      if (span > 1) cell.rowSpan = span;
+    }
+  }
+}
+
+function extractTable(
+  tblNode: XNode,
+  imageMap: ImageMap = {},
+  numberingMap: NumberingMap = new Map()
+): Table {
   // ── Table-level properties (w:tblPr) ────────────────────────────────────
   const tblChildren = childrenOf(tblNode);
   const tblPrNode = firstChild(tblChildren, "w:tblPr");
@@ -620,12 +713,13 @@ function extractTable(tblNode: XNode, imageMap: ImageMap = {}): Table {
       if (tagOf(trChild) !== "w:tc") continue;
 
       // ── Cell-level properties (w:tcPr) ──────────────────────────────────
-      const trChildren  = childrenOf(trChild);
-      const tcPrNode    = firstChild(trChildren, "w:tcPr");
+      const trChildren   = childrenOf(trChild);
+      const tcPrNode     = firstChild(trChildren, "w:tcPr");
       const tcPrChildren = tcPrNode ? childrenOf(tcPrNode) : [];
       const tcWNode      = firstChild(tcPrChildren, "w:tcW");
       const gridSpanNode = firstChild(tcPrChildren, "w:gridSpan");
       const vMergeNode   = firstChild(tcPrChildren, "w:vMerge");
+      const shdNode      = firstChild(tcPrChildren, "w:shd");
 
       let cellWidthPt: number | undefined;
       if (tcWNode) {
@@ -633,29 +727,45 @@ function extractTable(tblNode: XNode, imageMap: ImageMap = {}): Table {
         const w  = Number(wa["@_w:w"] ?? 0);
         if ((wa["@_w:type"] ?? "dxa") === "dxa" && w > 0) cellWidthPt = w / 20;
       }
+
       const gridSpan = gridSpanNode ? Number(attrsOf(gridSpanNode)["@_w:val"]) : undefined;
+
       let vMerge: TableCell["vMerge"];
       if (vMergeNode) {
+        // <w:vMerge w:val="restart"> starts a merge group;
+        // <w:vMerge/> (no val) marks a continuation cell.
         const val = attrsOf(vMergeNode)["@_w:val"];
         vMerge = val === "restart" ? "restart" : "continue";
+      }
+
+      // ── Cell background color (w:shd) ───────────────────────────────────
+      // w:fill holds the hex fill color; "auto" means no explicit color.
+      let backgroundColor: string | undefined;
+      if (shdNode) {
+        const fill = attrsOf(shdNode)["@_w:fill"];
+        if (fill && fill !== "auto") backgroundColor = fill;
       }
 
       const paragraphs: Paragraph[] = [];
       for (const tcChild of trChildren) {
         if (tagOf(tcChild) === "w:p")
-          paragraphs.push(extractParagraph(tcChild, imageMap));
+          paragraphs.push(extractParagraph(tcChild, imageMap, numberingMap));
       }
 
       cells.push({
         paragraphs,
         text: paragraphs.map((p) => p.text).join("\n"),
-        ...(cellWidthPt !== undefined                  ? { widthPt: cellWidthPt } : {}),
-        ...(gridSpan   !== undefined && gridSpan > 1   ? { gridSpan }             : {}),
-        ...(vMerge     !== undefined                   ? { vMerge }               : {}),
+        ...(cellWidthPt    !== undefined                ? { widthPt: cellWidthPt }       : {}),
+        ...(gridSpan       !== undefined && gridSpan > 1 ? { gridSpan }                  : {}),
+        ...(vMerge         !== undefined                ? { vMerge }                     : {}),
+        ...(backgroundColor !== undefined               ? { backgroundColor }             : {}),
       });
     }
     rows.push({ cells });
   }
+
+  // Second pass: compute rowSpan on vMerge="restart" cells.
+  computeRowSpans(rows);
 
   return {
     type: "table",
@@ -687,7 +797,8 @@ export function parseXml(xml: string): XNode[] {
  */
 export function extractSection(
   nodes: XNode[],
-  imageMap: ImageMap = {}
+  imageMap: ImageMap = {},
+  numberingMap: NumberingMap = new Map()
 ): DocumentSection {
   const blocks: DocumentBlock[] = [];
 
@@ -696,10 +807,10 @@ export function extractSection(
       const tag = tagOf(node);
 
       if (tag === "w:p") {
-        blocks.push(extractParagraph(node, imageMap));
+        blocks.push(extractParagraph(node, imageMap, numberingMap));
 
       } else if (tag === "w:tbl") {
-        blocks.push(extractTable(node, imageMap));
+        blocks.push(extractTable(node, imageMap, numberingMap));
 
       } else if (tag === "w:sdt") {
         // Block-level structured document tags — unwrap and recurse

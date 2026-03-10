@@ -28,7 +28,7 @@
 import PizZip from "pizzip";
 import { parseXml, extractSection, tagOf, childrenOf, attrsOf, firstChild, findChildren, MIME_TYPES } from "./xmlUtils";
 import type { DocxTemplateData, DocumentSection, PageSettings, PageSize, PageMargins, PageColumns, PageNumbering } from "./types";
-import type { XNode, ImageMap } from "./xmlUtils";
+import type { XNode, ImageMap, NumberingMap, NumberingEntry } from "./xmlUtils";
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -122,10 +122,11 @@ function getPartNodes(xmlContent: string, rootTag: string): XNode[] {
 function parseSection(
   xmlContent: string,
   rootTag: string,
-  imageMap: ImageMap = {}
+  imageMap: ImageMap = {},
+  numberingMap: NumberingMap = new Map()
 ): DocumentSection {
   const nodes = getPartNodes(xmlContent, rootTag);
-  return extractSection(nodes, imageMap);
+  return extractSection(nodes, imageMap, numberingMap);
 }
 
 // ---------------------------------------------------------------------------
@@ -155,6 +156,71 @@ function parseRelationships(relsXml: string): RelationshipMap {
     const type = attrs["@_Type"] ?? "";
     const target = attrs["@_Target"] ?? "";
     if (id) map[id] = { type, filename: `word/${target}` };
+  }
+
+  return map;
+}
+
+// ---------------------------------------------------------------------------
+// Numbering map (from word/numbering.xml)
+// ---------------------------------------------------------------------------
+
+/**
+ * Parses word/numbering.xml and builds a flat NumberingMap keyed by
+ * `"${numId}:${ilvl}"` that paragraphs use to resolve their list format.
+ *
+ * OOXML chain:
+ *   w:num[@w:numId] → w:abstractNumId → w:abstractNum
+ *     → w:lvl[@w:ilvl] → w:numFmt + w:lvlText
+ */
+function parseNumbering(numberingXml: string): NumberingMap {
+  const map: NumberingMap = new Map();
+  const parsed = parseXml(numberingXml);
+
+  const root = parsed.find((n) => tagOf(n) === "w:numbering");
+  if (!root) return map;
+
+  const children = childrenOf(root);
+
+  // ── Build abstractNum lookup: abstractNumId → (ilvl → format) ────────────
+  const abstractNums = new Map<string, Map<number, { numFmt: string; levelText?: string }>>();
+
+  for (const child of children) {
+    if (tagOf(child) !== "w:abstractNum") continue;
+    const abstractNumId = attrsOf(child)["@_w:abstractNumId"] ?? "";
+    const levelMap = new Map<number, { numFmt: string; levelText?: string }>();
+
+    for (const lvl of findChildren(childrenOf(child), "w:lvl")) {
+      const ilvl       = Number(attrsOf(lvl)["@_w:ilvl"] ?? 0);
+      const lvlChildren = childrenOf(lvl);
+      const numFmtNode  = firstChild(lvlChildren, "w:numFmt");
+      const lvlTextNode = firstChild(lvlChildren, "w:lvlText");
+      const numFmt    = numFmtNode  ? (attrsOf(numFmtNode)["@_w:val"]  ?? "") : "";
+      const levelText = lvlTextNode ? (attrsOf(lvlTextNode)["@_w:val"] || undefined) : undefined;
+      levelMap.set(ilvl, { numFmt, levelText });
+    }
+
+    abstractNums.set(abstractNumId, levelMap);
+  }
+
+  // ── Resolve numId → abstractNumId → per-level entries ──────────────────
+  for (const child of children) {
+    if (tagOf(child) !== "w:num") continue;
+    const numId = attrsOf(child)["@_w:numId"] ?? "";
+    const abstractNumIdNode = firstChild(childrenOf(child), "w:abstractNumId");
+    if (!abstractNumIdNode) continue;
+    const abstractNumId = attrsOf(abstractNumIdNode)["@_w:val"] ?? "";
+
+    const levelMap = abstractNums.get(abstractNumId);
+    if (!levelMap) continue;
+
+    for (const [ilvl, { numFmt, levelText }] of levelMap) {
+      const listType: NumberingEntry["listType"] =
+        numFmt === "bullet" ? "bullet" :
+        numFmt === "none"   ? "none"   :
+        "ordered";
+      map.set(`${numId}:${ilvl}`, { listType, numFmt, levelText });
+    }
   }
 
   return map;
@@ -314,7 +380,11 @@ export async function readDocxTemplate(
   // ── 3. Build image map for the document body part ───────────────────────
   const documentImageMap = buildImageMapForPart("word/document.xml", zip);
 
-  const content = parseSection(documentXml, "w:document", documentImageMap);
+  // ── 4. Parse word/numbering.xml for list/bullet metadata ────────────────
+  const numberingXml = zip.files["word/numbering.xml"]?.asText();
+  const numberingMap: NumberingMap = numberingXml ? parseNumbering(numberingXml) : new Map();
+
+  const content = parseSection(documentXml, "w:document", documentImageMap, numberingMap);
 
   // ── 4. Build the relationship map (for header/footer part resolution) ───
   const relsXml = zip.files["word/_rels/document.xml.rels"]?.asText();
@@ -334,7 +404,7 @@ export async function readDocxTemplate(
     const xml = zip.files[filename]?.asText();
     if (!xml) return null;
     const imageMap = buildImageMapForPart(filename, zip);
-    return parseSection(xml, rootTag, imageMap);
+    return parseSection(xml, rootTag, imageMap, numberingMap);
   };
 
   // ── 5. Resolve each header/footer reference ──────────────────────────────
@@ -395,5 +465,5 @@ export async function readDocxTemplate(
 }
 
 // Re-export types so consumers only need one import path.
-export type { DocxTemplateData, DocumentSection, DocumentBlock, Paragraph, Table, TextRun, Image, EmbeddedObject } from "./types";
-export type { ImageMap, ImageMapEntry } from "./xmlUtils";
+export type { DocxTemplateData, DocumentSection, DocumentBlock, Paragraph, Table, TextRun, Image, EmbeddedObject, ListInfo } from "./types";
+export type { ImageMap, ImageMapEntry, NumberingEntry, NumberingMap } from "./xmlUtils";
